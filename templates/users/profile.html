@@ -9,7 +9,7 @@
 {% block breadcrumb %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}">Dashboard</a></li>
         <li class="breadcrumb-item active">My Profile</li>
     </ol>
 </nav>
@@ -229,7 +229,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Save Changes
                         </button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        <a href="{% url 'dashboard:index' %}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
             </div>

@@ -1,0 +1,655 @@
+<!-- templates/campaigns/campaign_agents.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Agents - {{ campaign.name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'campaigns:list' %}">Campaigns</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'campaigns:detail' campaign.pk %}">{{ campaign.name }}</a></li>
+        <li class="breadcrumb-item active">Manage Agents</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Agent Management CSS -->
+<style>
+    .agent-card {
+        transition: all 0.3s ease;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+    
+    .agent-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    }
+    
+    .agent-card.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    }
+    
+    .agent-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+    
+    .performance-meter {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .performance-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.3s ease;
+    }
+    
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    
+    .status-available { background: #10b981; }
+    .status-busy { background: #f59e0b; }
+    .status-offline { background: #6b7280; }
+    
+    .transfer-section {
+        min-height: 400px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 2px dashed #cbd5e1;
+    }
+    
+    .section-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="section-header">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h1 class="h3 mb-2">Manage Campaign Agents</h1>
+            <p class="mb-0 opacity-75">Assign and manage agents for: <strong>{{ campaign.name }}</strong></p>
+        </div>
+        <div class="col-lg-4 text-end">
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-light" onclick="selectAllAvailable()">
+                    <i class="fas fa-check-double me-2"></i>Select All
+                </button>
+                <button class="btn btn-success" onclick="assignSelected()">
+                    <i class="fas fa-user-plus me-2"></i>Assign Selected
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campaign Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 text-primary mb-1">{{ assigned_agents|length }}</div>
+                <div class="text-muted">Assigned Agents</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 text-success mb-1">{{ available_agents|length }}</div>
+                <div class="text-muted">Available Agents</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 text-info mb-1">
+                    {% for agent in assigned_agents %}
+                        {% if agent.user.agent_status.status == 'available' %}{{ forloop.counter0|add:1 }}{% endif %}
+                    {% empty %}0{% endfor %}
+                </div>
+                <div class="text-muted">Online Now</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 text-warning mb-1">
+                    {% for agent in assigned_agents %}{{ agent.calls_made|add:forloop.counter0 }}{% empty %}0{% endfor %}
+                </div>
+                <div class="text-muted">Total Calls</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Assignment Interface -->
+<div class="row g-4">
+    <!-- Available Agents -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users text-primary me-2"></i>Available Agents
+                    </h5>
+                    <span class="badge bg-primary">{{ available_agents|length }} available</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if available_agents %}
+                <div class="list-group list-group-flush">
+                    {% for agent in available_agents %}
+                    <div class="list-group-item agent-card" data-agent-id="{{ agent.id }}" onclick="toggleAgentSelection(this)">
+                        <div class="d-flex align-items-center">
+                            <div class="form-check me-3">
+                                <input class="form-check-input" type="checkbox" name="selected_agents" value="{{ agent.id }}">
+                            </div>
+                            
+                            <div class="agent-avatar me-3">
+                                {{ agent.first_name.0|default:agent.username.0|upper }}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <h6 class="mb-0 me-2">{{ agent.get_full_name|default:agent.username }}</h6>
+                                    {% if agent.agent_status %}
+                                    <span class="status-dot status-{{ agent.agent_status.status }}"></span>
+                                    <small class="text-muted">{{ agent.agent_status.get_status_display }}</small>
+                                    {% else %}
+                                    <span class="status-dot status-offline"></span>
+                                    <small class="text-muted">Offline</small>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="row g-2 small text-muted">
+                                    <div class="col-6">
+                                        <i class="fas fa-phone me-1"></i>
+                                        Ext: {{ agent.profile.extension|default:"None" }}
+                                    </div>
+                                    <div class="col-6">
+                                        <i class="fas fa-building me-1"></i>
+                                        {{ agent.profile.department|default:"No Dept" }}
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2 mt-1 small">
+                                    <div class="col-6">
+                                        <div class="text-primary fw-semibold">{{ agent.profile.total_calls_made|default:0 }}</div>
+                                        <div class="text-muted">Total Calls</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-success fw-semibold">
+                                            {% if agent.profile.total_calls_made > 0 %}
+                                                {{ agent.profile.total_calls_answered|mul:100|div:agent.profile.total_calls_made|floatformat:1 }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-muted">Contact Rate</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <i class="fas fa-arrow-right text-muted"></i>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <p class="mb-0">No available agents to assign</p>
+                    <small>All agents are already assigned to this campaign</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assigned Agents -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check text-success me-2"></i>Assigned Agents
+                    </h5>
+                    <span class="badge bg-success">{{ assigned_agents|length }} assigned</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if assigned_agents %}
+                <div class="list-group list-group-flush">
+                    {% for assignment in assigned_agents %}
+                    <div class="list-group-item">
+                        <div class="d-flex align-items-center">
+                            <div class="form-check me-3">
+                                <input class="form-check-input" type="checkbox" name="remove_agents" value="{{ assignment.id }}">
+                            </div>
+                            
+                            <div class="agent-avatar me-3">
+                                {{ assignment.user.first_name.0|default:assignment.user.username.0|upper }}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <h6 class="mb-0">{{ assignment.user.get_full_name|default:assignment.user.username }}</h6>
+                                    <div class="d-flex align-items-center">
+                                        {% if assignment.user.agent_status %}
+                                        <span class="status-dot status-{{ assignment.user.agent_status.status }}"></span>
+                                        <small class="text-muted">{{ assignment.user.agent_status.get_status_display }}</small>
+                                        {% else %}
+                                        <span class="status-dot status-offline"></span>
+                                        <small class="text-muted">Offline</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2 small text-muted mb-2">
+                                    <div class="col-4">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Assigned: {{ assignment.assigned_date|date:"M d" }}
+                                    </div>
+                                    <div class="col-4">
+                                        <i class="fas fa-star me-1"></i>
+                                        Priority: {{ assignment.priority }}
+                                    </div>
+                                    <div class="col-4">
+                                        {% if assignment.max_calls_per_day %}
+                                        <i class="fas fa-limit me-1"></i>
+                                        Max: {{ assignment.max_calls_per_day }}
+                                        {% else %}
+                                        <i class="fas fa-infinity me-1"></i>
+                                        No Limit
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Performance Stats -->
+                                <div class="row g-2 small">
+                                    <div class="col-4">
+                                        <div class="text-primary fw-semibold">{{ assignment.calls_made }}</div>
+                                        <div class="text-muted">Calls Made</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-success fw-semibold">{{ assignment.calls_answered }}</div>
+                                        <div class="text-muted">Answered</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-warning fw-semibold">{{ assignment.sales_made }}</div>
+                                        <div class="text-muted">Sales</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Performance Bar -->
+                                <div class="performance-meter mt-2">
+                                    <div class="performance-bar" style="width: {% if assignment.calls_made > 0 %}{{ assignment.calls_answered|mul:100|div:assignment.calls_made }}{% else %}0{% endif %}%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="editAssignment({{ assignment.id }})">
+                                            <i class="fas fa-edit me-2"></i>Edit Settings
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="fas fa-chart-bar me-2"></i>View Performance
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" onclick="removeAgent({{ assignment.id }})">
+                                            <i class="fas fa-user-minus me-2"></i>Remove from Campaign
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Bulk Actions for Assigned Agents -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-warning btn-sm" onclick="removeSelected()">
+                            <i class="fas fa-user-minus me-1"></i>Remove Selected
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="bulkEditSettings()">
+                            <i class="fas fa-cog me-1"></i>Bulk Edit Settings
+                        </button>
+                    </div>
+                </div>
+                
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-user-plus fa-3x mb-3"></i>
+                    <p class="mb-0">No agents assigned yet</p>
+                    <small>Select agents from the left to assign them to this campaign</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Settings Modal -->
+<div class="modal fade" id="assignmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-cog me-2"></i>Agent Assignment Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignmentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Max Calls Per Day</label>
+                        <input type="number" class="form-control" id="maxCallsPerDay" min="1" max="1000" placeholder="Leave empty for no limit">
+                        <div class="form-text">Maximum number of calls this agent can make per day</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" id="agentPriority">
+                            <option value="1">1 - Highest</option>
+                            <option value="2">2 - High</option>
+                            <option value="3">3 - Medium</option>
+                            <option value="4">4 - Low</option>
+                            <option value="5">5 - Lowest</option>
+                        </select>
+                        <div class="form-text">Higher priority agents get leads first</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveAssignmentSettings()">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedAgents = [];
+let currentAssignmentId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+function toggleAgentSelection(element) {
+    const checkbox = element.querySelector('input[type="checkbox"]');
+    const agentId = element.dataset.agentId;
+    
+    checkbox.checked = !checkbox.checked;
+    
+    if (checkbox.checked) {
+        element.classList.add('selected');
+        selectedAgents.push(agentId);
+    } else {
+        element.classList.remove('selected');
+        selectedAgents = selectedAgents.filter(id => id !== agentId);
+    }
+    
+    updateAssignButton();
+}
+
+function selectAllAvailable() {
+    const availableCards = document.querySelectorAll('.agent-card[data-agent-id]');
+    
+    availableCards.forEach(card => {
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        const agentId = card.dataset.agentId;
+        
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+            card.classList.add('selected');
+            selectedAgents.push(agentId);
+        }
+    });
+    
+    updateAssignButton();
+}
+
+function updateAssignButton() {
+    const assignBtn = document.querySelector('button[onclick="assignSelected()"]');
+    if (selectedAgents.length > 0) {
+        assignBtn.classList.remove('btn-success');
+        assignBtn.classList.add('btn-primary');
+        assignBtn.innerHTML = `<i class="fas fa-user-plus me-2"></i>Assign ${selectedAgents.length} Agent${selectedAgents.length > 1 ? 's' : ''}`;
+    } else {
+        assignBtn.classList.remove('btn-primary');
+        assignBtn.classList.add('btn-success');
+        assignBtn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Assign Selected';
+    }
+}
+
+function assignSelected() {
+    if (selectedAgents.length === 0) {
+        showNotification('Please select at least one agent to assign.', 'warning');
+        return;
+    }
+    
+    // Show assignment modal
+    currentAssignmentId = null;
+    document.getElementById('maxCallsPerDay').value = '';
+    document.getElementById('agentPriority').value = '1';
+    
+    const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+    modal.show();
+}
+
+function saveAssignmentSettings() {
+    const maxCalls = document.getElementById('maxCallsPerDay').value;
+    const priority = document.getElementById('agentPriority').value;
+    
+    const formData = new FormData();
+    formData.append('action', 'assign');
+    formData.append('max_calls_per_day', maxCalls);
+    formData.append('priority', priority);
+    
+    selectedAgents.forEach(agentId => {
+        formData.append('user_ids', agentId);
+    });
+    
+    fetch(`/campaigns/{{ campaign.pk }}/agents/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            showNotification('Agents assigned successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Failed to assign agents.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while assigning agents.', 'error');
+    });
+    
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentModal'));
+    modal.hide();
+}
+
+function removeSelected() {
+    const selectedCheckboxes = document.querySelectorAll('input[name="remove_agents"]:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        showNotification('Please select at least one agent to remove.', 'warning');
+        return;
+    }
+    
+    if (confirm(`Remove ${selectedCheckboxes.length} agent(s) from this campaign?`)) {
+        const formData = new FormData();
+        formData.append('action', 'remove');
+        
+        selectedCheckboxes.forEach(checkbox => {
+            formData.append('agent_ids', checkbox.value);
+        });
+        
+        fetch(`/campaigns/{{ campaign.pk }}/agents/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('Agents removed successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Failed to remove agents.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while removing agents.', 'error');
+        });
+    }
+}
+
+function removeAgent(assignmentId) {
+    if (confirm('Remove this agent from the campaign?')) {
+        const formData = new FormData();
+        formData.append('action', 'remove');
+        formData.append('agent_ids', assignmentId);
+        
+        fetch(`/campaigns/{{ campaign.pk }}/agents/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('Agent removed successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Failed to remove agent.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while removing the agent.', 'error');
+        });
+    }
+}
+
+function editAssignment(assignmentId) {
+    currentAssignmentId = assignmentId;
+    
+    // You would fetch current assignment data here
+    // For now, we'll just open the modal
+    const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+    modal.show();
+}
+
+function bulkEditSettings() {
+    const selectedCheckboxes = document.querySelectorAll('input[name="remove_agents"]:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        showNotification('Please select at least one agent to edit settings.', 'warning');
+        return;
+    }
+    
+    // Open modal for bulk editing
+    currentAssignmentId = 'bulk';
+    const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+    modal.show();
+}
+
+// Utility function for notifications
+function showNotification(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'a' && e.ctrlKey) {
+        e.preventDefault();
+        selectAllAvailable();
+    } else if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        assignSelected();
+    }
+});
+
+// Auto-refresh agent status every 30 seconds
+setInterval(function() {
+    // Update agent status indicators
+    // This would make an AJAX call to get current agent statuses
+    console.log('Refreshing agent statuses...');
+}, 30000);
+</script>
+{% endblock %}

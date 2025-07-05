@@ -1,0 +1,620 @@
+<!-- templates/campaigns/campaign_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load math_filters %}
+
+{% block title %}Campaign Management - AutoDialer Pro{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Campaigns</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Campaign List CSS -->
+<style>
+    .campaign-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .campaign-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .campaign-status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10;
+    }
+    
+    .progress-ring {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .progress-circle {
+        fill: none;
+        stroke-width: 4;
+        stroke-linecap: round;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    
+    .campaign-stats {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-2">
+            <i class="fas fa-bullhorn text-primary me-3"></i>
+            Campaign Management
+        </h1>
+        <p class="text-muted mb-0">Create, manage, and monitor your calling campaigns</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.is_staff or user.profile.is_manager %}
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-download me-2"></i>Actions
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i>Export Campaigns</a></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-upload me-2"></i>Import Campaigns</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-copy me-2"></i>Bulk Clone</a></li>
+            </ul>
+        </div>
+        <a href="{% url 'campaigns:create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Campaign
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Campaign Statistics -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-white position-relative">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="display-6 fw-bold">{{ total_campaigns }}</div>
+                        <div>Total Campaigns</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-bullhorn fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="card-body text-white position-relative">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="display-6 fw-bold">{{ active_campaigns }}</div>
+                        <div>Active Campaigns</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-play fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="card-body text-dark position-relative">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="display-6 fw-bold">{{ paused_campaigns }}</div>
+                        <div>Paused Campaigns</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-pause fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+            <div class="card-body text-dark position-relative">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="display-6 fw-bold">{{ completed_campaigns }}</div>
+                        <div>Completed</div>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-check-circle fa-3x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="filter-card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end" id="campaignSearchForm">
+            <div class="col-lg-4 col-md-6">
+                <label for="search" class="form-label fw-semibold">
+                    <i class="fas fa-search me-1"></i>Search Campaigns
+                </label>
+                <div class="position-relative">
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           placeholder="Search by name, ID, or description..."
+                           value="{{ request.GET.search }}">
+                    <div class="position-absolute top-50 end-0 translate-middle-y pe-3">
+                        <i class="fas fa-search text-muted"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-2 col-md-6">
+                <label for="status" class="form-label fw-semibold">
+                    <i class="fas fa-flag me-1"></i>Status
+                </label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="active" {% if request.GET.status == "active" %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if request.GET.status == "inactive" %}selected{% endif %}>Inactive</option>
+                    <option value="paused" {% if request.GET.status == "paused" %}selected{% endif %}>Paused</option>
+                    <option value="completed" {% if request.GET.status == "completed" %}selected{% endif %}>Completed</option>
+                    <option value="archived" {% if request.GET.status == "archived" %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+            
+            <div class="col-lg-2 col-md-6">
+                <label for="campaign_type" class="form-label fw-semibold">
+                    <i class="fas fa-tags me-1"></i>Type
+                </label>
+                <select class="form-select" id="campaign_type" name="campaign_type">
+                    <option value="">All Types</option>
+                    <option value="outbound" {% if request.GET.campaign_type == "outbound" %}selected{% endif %}>Outbound</option>
+                    <option value="inbound" {% if request.GET.campaign_type == "inbound" %}selected{% endif %}>Inbound</option>
+                    <option value="blended" {% if request.GET.campaign_type == "blended" %}selected{% endif %}>Blended</option>
+                </select>
+            </div>
+            
+            <div class="col-lg-2 col-md-6">
+                <label for="created_by" class="form-label fw-semibold">
+                    <i class="fas fa-user me-1"></i>Creator
+                </label>
+                <select class="form-select" id="created_by" name="created_by">
+                    <option value="">All Creators</option>
+                    {% for manager in managers %}
+                    <option value="{{ manager.id }}" {% if request.GET.created_by == manager.id|stringformat:"s" %}selected{% endif %}>
+                        {{ manager.get_full_name|default:manager.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-lg-2 col-md-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Campaign Cards -->
+{% if campaigns %}
+<div class="row g-4">
+    {% for campaign in campaigns %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="card campaign-card h-100">
+            <!-- Status Badge -->
+            <div class="campaign-status-badge">
+                <span class="badge {% if campaign.status == 'active' %}bg-success{% elif campaign.status == 'paused' %}bg-warning{% elif campaign.status == 'completed' %}bg-info{% else %}bg-secondary{% endif %}">
+                    {% if campaign.status == 'active' %}
+                        <i class="fas fa-play me-1"></i>Active
+                    {% elif campaign.status == 'paused' %}
+                        <i class="fas fa-pause me-1"></i>Paused
+                    {% elif campaign.status == 'completed' %}
+                        <i class="fas fa-check me-1"></i>Completed
+                    {% else %}
+                        <i class="fas fa-stop me-1"></i>Inactive
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="card-header campaign-stats py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-1">
+                            <a href="{% url 'campaigns:detail' campaign.pk %}" class="text-decoration-none">
+                                {{ campaign.name }}
+                            </a>
+                        </h5>
+                        <small class="text-muted">
+                            <i class="fas fa-hashtag me-1"></i>{{ campaign.campaign_id }}
+                        </small>
+                    </div>
+                    
+                    <!-- Progress Ring -->
+                    <div class="progress-ring">
+                        <svg class="progress-ring" width="60" height="60">
+                            <circle class="progress-circle bg-secondary" 
+                                    stroke="#e2e8f0" 
+                                    cx="30" 
+                                    cy="30" 
+                                    r="26">
+                            </circle>
+                            <circle class="progress-circle" 
+                                    stroke="{% if campaign.status == 'active' %}#10b981{% elif campaign.status == 'paused' %}#f59e0b{% else %}#6b7280{% endif %}" 
+                                    cx="30" 
+                                    cy="30" 
+                                    r="26"
+                                    stroke-dasharray="{% if campaign.total_leads > 0 %}{{ 163|mul:campaign.leads_called|div:campaign.total_leads }}{% else %}0{% endif %} 163">
+                            </circle>
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                            <div class="small fw-bold">
+                                {% if campaign.total_leads > 0 %}
+                                    {{ campaign.leads_called|mul:100|div:campaign.total_leads|floatformat:0 }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Campaign Info -->
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary me-2">
+                            {{ campaign.get_campaign_type_display }}
+                        </span>
+                        <span class="badge bg-info bg-opacity-10 text-info">
+                            {{ campaign.get_dial_method_display }}
+                        </span>
+                    </div>
+                    
+                    {% if campaign.description %}
+                    <p class="text-muted small mb-2">{{ campaign.description|truncatechars:80 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Stats -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="fw-bold text-primary">{{ campaign.total_leads|default:0 }}</div>
+                            <div class="small text-muted">Total Leads</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="fw-bold text-success">{{ campaign.assigned_agents_count|default:0 }}</div>
+                            <div class="small text-muted">Agents</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="fw-bold text-info">{{ campaign.calls_today|default:0 }}</div>
+                            <div class="small text-muted">Calls Today</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="fw-bold text-warning">{{ campaign.total_calls_made|default:0 }}</div>
+                            <div class="small text-muted">Total Calls</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Campaign Details -->
+                <div class="small text-muted mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-user me-1"></i>Created by:</span>
+                        <span>{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-calendar me-1"></i>Created:</span>
+                        <span>{{ campaign.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    {% if campaign.start_date %}
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-play me-1"></i>Start Date:</span>
+                        <span>{{ campaign.start_date|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-footer bg-transparent">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
+                    
+                    {% if user.is_staff or campaign.created_by == user or user.profile.is_manager %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}">
+                                    <i class="fas fa-edit me-2"></i>Edit Campaign
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}">
+                                    <i class="fas fa-users me-2"></i>Manage Agents
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% if campaign.status == 'inactive' %}
+                            <li>
+                                <a class="dropdown-item text-success" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
+                                    <i class="fas fa-play me-2"></i>Start Campaign
+                                </a>
+                            </li>
+                            {% elif campaign.status == 'active' %}
+                            <li>
+                                <a class="dropdown-item text-warning" href="#" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
+                                    <i class="fas fa-pause me-2"></i>Pause Campaign
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
+                                    <i class="fas fa-stop me-2"></i>Stop Campaign
+                                </a>
+                            </li>
+                            {% elif campaign.status == 'paused' %}
+                            <li>
+                                <a class="dropdown-item text-success" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
+                                    <i class="fas fa-play me-2"></i>Resume Campaign
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
+                                    <i class="fas fa-stop me-2"></i>Stop Campaign
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
+                                    <i class="fas fa-copy me-2"></i>Clone Campaign
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Campaign pagination" class="mt-5">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+    
+    <div class="text-center text-muted">
+        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} campaigns
+    </div>
+</nav>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-bullhorn fa-5x text-muted"></i>
+    </div>
+    <h3 class="text-muted mb-3">No Campaigns Found</h3>
+    {% if request.GET.search or request.GET.status or request.GET.campaign_type or request.GET.created_by %}
+        <p class="text-muted mb-4">No campaigns match your current search criteria.</p>
+        <a href="{% url 'campaigns:list' %}" class="btn btn-outline-primary me-3">
+            <i class="fas fa-times me-2"></i>Clear Filters
+        </a>
+    {% else %}
+        <p class="text-muted mb-4">Create your first campaign to get started with calling.</p>
+    {% endif %}
+    
+    {% if user.is_staff or user.profile.is_manager %}
+    <a href="{% url 'campaigns:create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Create First Campaign
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit search form on input changes
+    const searchInput = document.getElementById('search');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 3 || this.value.length === 0) {
+                document.getElementById('campaignSearchForm').submit();
+            }
+        }, 500);
+    });
+    
+    // Auto-submit on filter changes
+    document.querySelectorAll('#campaignSearchForm select').forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('campaignSearchForm').submit();
+        });
+    });
+    
+    // Campaign card hover effects
+    document.querySelectorAll('.campaign-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.borderColor = '#667eea';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.borderColor = '#e2e8f0';
+        });
+    });
+});
+
+// Campaign control functions
+function controlCampaign(campaignId, action) {
+    const actionText = action.charAt(0).toUpperCase() + action.slice(1);
+    
+    if (confirm(`Are you sure you want to ${action} this campaign?`)) {
+        fetch(`/campaigns/${campaignId}/control/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Failed to control campaign', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while controlling the campaign', 'error');
+        });
+    }
+}
+
+function cloneCampaign(campaignId) {
+    if (confirm('Clone this campaign with all its settings?')) {
+        fetch(`/campaigns/${campaignId}/clone/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                if (data.redirect_url) {
+                    setTimeout(() => window.location.href = data.redirect_url, 1000);
+                } else {
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } else {
+                showNotification(data.error || 'Failed to clone campaign', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while cloning the campaign', 'error');
+        });
+    }
+}
+
+// Utility function for notifications
+function showNotification(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

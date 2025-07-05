@@ -8,14 +8,14 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
     path('users/', include('users.urls')),
-#    path('campaigns/', include('campaigns.urls')),
+    path('campaigns/', include('campaigns.urls')),
 #    path('leads/', include('leads.urls')),
 #    path('telephony/', include('telephony.urls')),
 #    path('agents/', include('agents.urls')),
 #    path('calls/', include('calls.urls')),
 #    path('reports/', include('reports.urls')),
 #    path('settings/', include('settings.urls')),
-    path('dashboard/', include('core.urls')),
+    path('dashboard/', include('core.urls', namespace='dashboard')),
 ]
 
 if settings.DEBUG:

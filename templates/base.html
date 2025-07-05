@@ -1,30 +1,43 @@
-<!-- templates/base.html -->
-
+<!-- Enhanced Base Template for Autodialer System -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Autodialer System{% endblock %}</title>
+    <title>{% block title %}Professional Autodialer System{% endblock %}</title>
+    
+    <!-- Preload fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link href="{% load static %}{% static 'css/style.css' %}" rel="stylesheet">
+    
+    <!-- Custom Enhanced CSS -->
+    {% load static %}
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    
+    <!-- Meta tags for SEO and social sharing -->
+    <meta name="description" content="Professional Autodialer System - Streamline your call center operations">
+    <meta name="keywords" content="autodialer, call center, telephony, CRM">
+    <meta name="author" content="Autodialer System">
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Enhanced Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-phone"></i> Autodialer
+            <a class="navbar-brand" href="{% url 'dashboard:index' %}">
+                <i class="fas fa-phone-volume"></i>
+                <span>AutoDialer Pro</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -32,69 +45,128 @@
                 <ul class="navbar-nav me-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            <a class="nav-link {% if request.resolver_match.namespace == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>Dashboard</span>
                             </a>
                         </li>
                         
-                        {% if user.is_staff %}
+                        {% if user.is_staff or user.profile.is_manager %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="campaignsDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-bullhorn"></i> Campaigns
+                            <a class="nav-link dropdown-toggle" href="#" id="campaignsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bullhorn"></i>
+                                <span>Campaigns</span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="">View Campaigns</a></li>
-                                <li><a class="dropdown-item" href="">Create Campaign</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-list"></i> All Campaigns</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-plus"></i> Create Campaign</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar"></i> Campaign Reports</a></li>
                             </ul>
                         </li>
                         
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="leadsDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-users"></i> Leads
+                            <a class="nav-link dropdown-toggle" href="#" id="leadsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-users"></i>
+                                <span>Leads</span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="">View Leads</a></li>
-                                <li><a class="dropdown-item" href="">Import Leads</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-database"></i> All Leads</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-upload"></i> Import Leads</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-filter"></i> Lead Filters</a></li>
                             </ul>
                         </li>
                         
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-chart-bar"></i> Reports
+                            <a class="nav-link dropdown-toggle" href="#" id="usersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-friends"></i>
+                                <span>Users</span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="">Dashboard</a></li>
-                                <li><a class="dropdown-item" href="">Campaign Reports</a></li>
-                                <li><a class="dropdown-item" href="">Agent Reports</a></li>
+                                <li><a class="dropdown-item" href="{% url 'users:list' %}"><i class="fas fa-list"></i> All Users</a></li>
+                                <li><a class="dropdown-item" href="{% url 'users:create' %}"><i class="fas fa-user-plus"></i> Add User</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-users-cog"></i> Roles & Permissions</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Reports</span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-chart-pie"></i> Call Analytics</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-clock"></i> Agent Performance</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-download"></i> Export Data</a></li>
                             </ul>
                         </li>
                         {% endif %}
                         
+                        {% if user.profile.is_agent %}
                         <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-headset"></i> Agent Interface
+                            <a class="nav-link" href="#" id="agentPanel">
+                                <i class="fas fa-headset"></i>
+                                <span>Agent Panel</span>
                             </a>
                         </li>
+                        {% endif %}
                     {% endif %}
                 </ul>
                 
+                <!-- Right side navigation -->
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
+                        <!-- Live notifications -->
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user"></i> {{ user.username }}
+                            <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    3
+                                    <span class="visually-hidden">unread notifications</span>
+                                </span>
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="">Profile</a></li>
-                                <li><a class="dropdown-item" href="">Change Password</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Notifications</h6></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-phone text-success"></i> New call received</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-user text-info"></i> Agent went offline</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-exclamation-triangle text-warning"></i> Campaign paused</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'users:logout' %}">Logout</a></li>
+                                <li><a class="dropdown-item text-center" href="#">View all notifications</a></li>
                             </ul>
+                        </li>
+                        
+                        <!-- User profile dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" alt="Profile" class="rounded-circle me-2" width="32" height="32">
+                                {% else %}
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                {% endif %}
+                                <span>{{ user.get_full_name|default:user.username }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="fas fa-user"></i> Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'users:change_password' %}"><i class="fas fa-key"></i> Change Password</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Live status indicator -->
+                        <li class="nav-item d-flex align-items-center ms-3">
+                            <div class="status-indicator status-online">
+                                <i class="fas fa-circle"></i>
+                                <span>Online</span>
+                            </div>
                         </li>
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'users:login' %}">
-                                <i class="fas fa-sign-in-alt"></i> Login
+                                <i class="fas fa-sign-in-alt"></i>
+                                <span>Login</span>
                             </a>
                         </li>
                     {% endif %}
@@ -102,182 +174,303 @@
             </div>
         </div>
     </nav>
-
-    <!-- Main Content -->
-    <div class="container-fluid">
-        <div class="row">
-            {% if user.is_authenticated %}
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        
-                        {% if user.is_staff %}
-                        <li class="nav-item">
-                            <h6 class="sidebar-heading">Management</h6>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-bullhorn"></i> Campaigns
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-users"></i> Leads
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-server"></i> Telephony
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-users-cog"></i> Users
-                            </a>
-                        </li>
+    
+    <!-- Enhanced Sidebar -->
+    {% if user.is_authenticated %}
+    <div class="sidebar d-none d-lg-block">
+        <div class="sidebar-content">
+            <!-- Quick stats section -->
+            <div class="sidebar-section px-3 py-3">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" alt="Profile" class="rounded-circle" width="48" height="48">
+                        {% else %}
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="fas fa-user text-white fs-5"></i>
+                            </div>
                         {% endif %}
-                        
-                        <li class="nav-item">
-                            <h6 class="sidebar-heading">Operations</h6>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-headset"></i> Agent Interface
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-phone-alt"></i> Call History
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <h6 class="sidebar-heading">Reports</h6>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-chart-line"></i> Analytics
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="">
-                                <i class="fas fa-eye"></i> Real-time Monitor
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <!-- Main content area -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            {% else %}
-            <!-- Full width for non-authenticated users -->
-            <main class="col-12">
-            {% endif %}
-                
-                <!-- Breadcrumb -->
-                {% block breadcrumb %}{% endblock %}
-                
-                <!-- Messages -->
-                {% if messages %}
-                <div class="alert-container">
-                    {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    {% endfor %}
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                        <small class="text-muted">{{ user.profile.get_role_display|default:"User" }}</small>
+                    </div>
                 </div>
+                
+                <!-- Quick stats -->
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="fs-6 fw-bold text-primary">{{ user.profile.total_calls_made|default:0 }}</div>
+                            <div class="small text-muted">Calls Made</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center p-2 bg-light rounded">
+                            <div class="fs-6 fw-bold text-success">{{ user.profile.total_calls_answered|default:0 }}</div>
+                            <div class="small text-muted">Answered</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation menu -->
+            <nav class="nav flex-column">
+                <div class="sidebar-heading">Main Menu</div>
+                
+                <a class="nav-link {% if request.resolver_match.namespace == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                {% if user.profile.is_agent %}
+                <div class="sidebar-heading">Agent Tools</div>
+                
+                <a class="nav-link" href="#" id="dialerPanel">
+                    <i class="fas fa-phone"></i>
+                    <span>Dialer</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-list-alt"></i>
+                    <span>My Leads</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-history"></i>
+                    <span>Call History</span>
+                </a>
                 {% endif %}
                 
-                <!-- Page Content -->
-                {% block content %}{% endblock %}
-            </main>
+                {% if user.is_staff or user.profile.is_manager %}
+                <div class="sidebar-heading">Management</div>
+                
+                <a class="nav-link {% if request.resolver_match.namespace == 'users' %}active{% endif %}" href="{% url 'users:list' %}">
+                    <i class="fas fa-users"></i>
+                    <span>User Management</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Campaigns</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-database"></i>
+                    <span>Lead Management</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                {% endif %}
+                
+                {% if user.is_superuser %}
+                <div class="sidebar-heading">System</div>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-server"></i>
+                    <span>Telephony</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-cogs"></i>
+                    <span>System Settings</span>
+                </a>
+                
+                <a class="nav-link" href="/admin/" target="_blank">
+                    <i class="fas fa-tools"></i>
+                    <span>Admin Panel</span>
+                </a>
+                {% endif %}
+                
+                <div class="sidebar-heading">Support</div>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help & Support</span>
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <i class="fas fa-book"></i>
+                    <span>Documentation</span>
+                </a>
+            </nav>
         </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="bg-dark text-light text-center py-3 mt-5">
-        <div class="container">
-            <p>&copy; 2025 Autodialer System. All rights reserved.</p>
+    {% endif %}
+    
+    <!-- Main Content Area -->
+    <main class="{% if user.is_authenticated %}main-content{% else %}container-fluid{% endif %}">
+        <!-- Breadcrumb Navigation -->
+        {% if user.is_authenticated %}
+            {% block breadcrumb %}
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}"><i class="fas fa-home"></i> Home</a></li>
+                    {% block breadcrumb_items %}{% endblock %}
+                </ol>
+            </nav>
+            {% endblock %}
+        {% endif %}
+        
+        <!-- Page Header -->
+        {% block page_header %}{% endblock %}
+        
+        <!-- Messages/Alerts -->
+        {% if messages %}
+            <div class="messages-container mb-4">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle me-2"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                        {% elif message.tags == 'info' %}
+                            <i class="fas fa-info-circle me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <!-- Main Content -->
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.5); z-index: 9999;">
+        <div class="d-flex align-items-center justify-content-center h-100">
+            <div class="text-center text-white">
+                <div class="loading-spinner mx-auto mb-3"></div>
+                <h5>Loading...</h5>
+            </div>
         </div>
-    </footer>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.5"></script>
-    <!-- Alpine.js -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- Custom JS -->
-    <script src="{% load static %}{% static 'js/app.js' %}"></script>
+    </div>
+    
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Enhanced UI interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+            
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+                alerts.forEach(alert => {
+                    if (alert.classList.contains('show')) {
+                        bootstrap.Alert.getOrCreateInstance(alert).close();
+                    }
+                });
+            }, 5000);
+            
+            // Loading overlay functions
+            window.showLoading = function() {
+                document.getElementById('loadingOverlay').classList.remove('d-none');
+            };
+            
+            window.hideLoading = function() {
+                document.getElementById('loadingOverlay').classList.add('d-none');
+            };
+            
+            // Form enhancement
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    showLoading();
+                });
+            });
+            
+            // Mobile sidebar toggle
+            const sidebarToggle = document.querySelector('.navbar-toggler');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+            
+            // Real-time status updates (placeholder for WebSocket integration)
+            function updateAgentStatus() {
+                // This would connect to your WebSocket for real-time updates
+                console.log('Checking agent status...');
+            }
+            
+            // Update status every 30 seconds
+            setInterval(updateAgentStatus, 30000);
+        });
+        
+        // Utility functions
+        function showNotification(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+        
+        // CSRF token handling for AJAX requests
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        const csrftoken = getCookie('csrftoken');
+        
+        // Configure AJAX defaults
+        if (window.fetch) {
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                if (options.method && options.method.toUpperCase() !== 'GET') {
+                    options.headers = options.headers || {};
+                    options.headers['X-CSRFToken'] = csrftoken;
+                }
+                return originalFetch(url, options);
+            };
+        }
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-
-<!-- ================================ -->
-<!-- templates/includes/pagination.html -->
-
-{% if is_paginated %}
-<nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page=1">&laquo; First</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-            </li>
-        {% endif %}
-        
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <li class="page-item active">
-                    <span class="page-link">{{ num }}</span>
-                </li>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
-            {% endif %}
-        {% endfor %}
-        
-        {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
-            </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
-
-<!-- ================================ -->
-<!-- templates/includes/form_errors.html -->
-
-{% if form.errors %}
-<div class="alert alert-danger">
-    <h6>Please correct the following errors:</h6>
-    <ul class="mb-0">
-        {% for field in form %}
-            {% for error in field.errors %}
-                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
-            {% endfor %}
-        {% endfor %}
-        {% for error in form.non_field_errors %}
-            <li>{{ error }}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}

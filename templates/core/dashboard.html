@@ -1,0 +1,405 @@
+<!-- templates/core/dashboard.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Autodialer System{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active">Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt"></i> Dashboard
+        <span class="connection-status text-success small">Connected</span>
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row dashboard-stats">
+    {% if user.is_staff %}
+    <!-- Manager/Admin Statistics -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="total_campaigns">{{ total_campaigns|default:0 }}</div>
+                        <div class="stat-label">Total Campaigns</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-bullhorn"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="active_campaigns">{{ active_campaigns|default:0 }}</div>
+                        <div class="stat-label">Active Campaigns</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="total_leads">{{ total_leads|default:0 }}</div>
+                        <div class="stat-label">Total Leads</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="today_calls">{{ today_calls|default:0 }}</div>
+                        <div class="stat-label">Today's Calls</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Agent Statistics -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="my_calls_today">{{ my_calls_today|default:0 }}</div>
+                        <div class="stat-label">My Calls Today</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="my_dispositioned_calls">{{ my_dispositioned_calls|default:0 }}</div>
+                        <div class="stat-label">Dispositioned</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" data-stat="conversion_rate">
+                            {% if my_calls_today > 0 %}
+                                {{ my_dispositioned_calls|floatformat:0 }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">Conversion Rate</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row">
+    {% if user.is_staff %}
+    <!-- Recent Campaigns -->
+    <div class="col-lg-8 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-bullhorn"></i> Recent Campaigns
+                </h5>
+                <a href="{% url 'campaigns:list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_campaigns %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Leads</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for campaign in recent_campaigns %}
+                            <tr data-campaign-id="{{ campaign.id }}">
+                                <td>
+                                    <a href="{% url 'campaigns:detail' campaign.id %}">{{ campaign.name }}</a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ campaign.get_campaign_type_display }}</span>
+                                </td>
+                                <td>
+                                    <span class="campaign-status badge bg-{{ campaign.status|default:'secondary' }}">
+                                        {{ campaign.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ campaign.total_leads|default:0 }}</td>
+                                <td>{{ campaign.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No campaigns found. <a href="{% url 'campaigns:create' %}">Create your first campaign</a></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Status -->
+    <div class="col-lg-4 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-server"></i> System Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Asterisk Server</span>
+                    <span class="status-indicator status-online"></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Database</span>
+                    <span class="status-indicator status-online"></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Redis Cache</span>
+                    <span class="status-indicator status-online"></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Active Agents</span>
+                    <span class="badge bg-primary" data-stat="active_agents">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card dashboard-card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'campaigns:create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Campaign
+                    </a>
+                    <a href="{% url 'leads:import' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload"></i> Import Leads
+                    </a>
+                    <a href="{% url 'reports:realtime' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-eye"></i> Monitor Center
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Agent Interface Preview -->
+    <div class="col-lg-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-headset"></i> Agent Interface
+                </h5>
+                <a href="{% url 'agents:interface' %}" class="btn btn-sm btn-primary">Go to Interface</a>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <span class="agent-status badge bg-offline">Offline</span>
+                </div>
+                <p class="text-muted">Click "Go to Interface" to start taking calls</p>
+                
+                <div class="call-controls">
+                    <button class="btn call-control-btn answer" disabled>
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button class="btn call-control-btn hangup" disabled>
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-lg-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history"></i> Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <!-- Activity items will be loaded via AJAX -->
+                    <div class="text-center">
+                        <div class="loading-spinner"></div>
+                        <p class="text-muted">Loading recent activity...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Real-time Updates Chart -->
+<div class="row">
+    <div class="col-12">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area"></i> Real-time Call Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="callActivityChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="text-center text-white">
+        <div class="loading-spinner mb-3" style="width: 40px; height: 40px;"></div>
+        <p>Loading...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js for dashboard charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Initialize call activity chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('callActivityChart').getContext('2d');
+    
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: 12}, (_, i) => {
+                const time = new Date();
+                time.setMinutes(time.getMinutes() - (11 - i) * 5);
+                return time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }),
+            datasets: [{
+                label: 'Active Calls',
+                data: Array.from({length: 12}, () => Math.floor(Math.random() * 20)),
+                borderColor: 'rgb(52, 144, 220)',
+                backgroundColor: 'rgba(52, 144, 220, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 3,
+                    hoverRadius: 6
+                }
+            }
+        }
+    });
+    
+    // Update chart data every 30 seconds
+    setInterval(() => {
+        const newLabel = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const newData = Math.floor(Math.random() * 20);
+        
+        chart.data.labels.shift();
+        chart.data.labels.push(newLabel);
+        chart.data.datasets[0].data.shift();
+        chart.data.datasets[0].data.push(newData);
+        chart.update('none');
+    }, 30000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,294 @@
+<!-- ================================ -->
+<!-- templates/users/user_detail.html -->
+
+{% extends 'base.html' %}
+{% load user_tags %}
+
+{% block title %}{{ user_obj.get_full_name|default:user_obj.username }} - User Details{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'users:list' %}">Users</a></li>
+        <li class="breadcrumb-item active">{{ user_obj.username }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user"></i> {{ user_obj.get_full_name|default:user_obj.username }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if user.is_superuser or user|has_group:"Manager" %}
+        <a href="{% url 'users:edit' user_obj.pk %}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit User
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <!-- User Profile Card -->
+        <div class="card dashboard-card">
+            <div class="card-body text-center">
+                {% if user_obj.profile.avatar %}
+                    <img src="{{ user_obj.profile.avatar.url }}" class="rounded-circle mb-3" width="120" height="120" alt="Avatar">
+                {% else %}
+                    <div class="bg-primary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style="width: 120px; height: 120px;">
+                        <i class="fas fa-user fa-3x text-white"></i>
+                    </div>
+                {% endif %}
+                
+                <h4>{{ user_obj.get_full_name|default:user_obj.username }}</h4>
+                <p class="text-muted">{{ user_obj.profile.get_role }}</p>
+                
+                {% if user_obj.profile.department %}
+                <p class="text-muted">
+                    <i class="fas fa-building"></i> {{ user_obj.profile.department }}
+                </p>
+                {% endif %}
+                
+                <div class="mt-3">
+                    {% if user_obj.agent_status %}
+                    <span class="status-indicator status-{{ user_obj.agent_status.status }}"></span>
+                    <span class="badge bg-{{ user_obj.agent_status.status|default:'secondary' }}">
+                        {{ user_obj.agent_status.get_status_display|default:'Offline' }}
+                    </span>
+                    {% endif %}
+                    
+                    <br>
+                    
+                    <span class="badge bg-{{ user_obj.is_active|yesno:'success,danger' }} mt-2">
+                        {{ user_obj.is_active|yesno:'Active,Inactive' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="card dashboard-card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-address-card"></i> Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Email:</strong><br>
+                    <a href="mailto:{{ user_obj.email }}">{{ user_obj.email }}</a>
+                </div>
+                
+                {% if user_obj.profile.phone_number %}
+                <div class="mb-2">
+                    <strong>Phone:</strong><br>
+                    {{ user_obj.profile.phone_number }}
+                </div>
+                {% endif %}
+                
+                {% if user_obj.profile.extension %}
+                <div class="mb-2">
+                    <strong>Extension:</strong><br>
+                    {{ user_obj.profile.extension }}
+                </div>
+                {% endif %}
+                
+                {% if user_obj.profile.employee_id %}
+                <div class="mb-2">
+                    <strong>Employee ID:</strong><br>
+                    {{ user_obj.profile.employee_id }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary">{{ stats.total_calls }}</h3>
+                        <small class="text-muted">Total Calls</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-success">{{ stats.total_sessions }}</h3>
+                        <small class="text-muted">Login Sessions</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-warning">{{ stats.active_sessions }}</h3>
+                        <small class="text-muted">Active Sessions</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <h3 class="text-info">{{ user_obj.profile.skill_level|capfirst }}</h3>
+                        <small class="text-muted">Skill Level</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Details -->
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> User Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Username:</strong></td>
+                                <td>{{ user_obj.username }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Full Name:</strong></td>
+                                <td>{{ user_obj.get_full_name|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Role:</strong></td>
+                                <td>
+                                    {% for group in user_obj.groups.all %}
+                                        <span class="badge bg-info me-1">{{ group.name }}</span>
+                                    {% empty %}
+                                        <span class="text-muted">No roles assigned</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Department:</strong></td>
+                                <td>{{ user_obj.profile.department|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Skill Level:</strong></td>
+                                <td>{{ user_obj.profile.get_skill_level_display }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Date Joined:</strong></td>
+                                <td>{{ user_obj.date_joined|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Last Login:</strong></td>
+                                <td>
+                                    {% if user_obj.last_login %}
+                                        {{ user_obj.last_login|date:"M d, Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Timezone:</strong></td>
+                                <td>{{ user_obj.profile.timezone }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Shift:</strong></td>
+                                <td>
+                                    {% if user_obj.profile.shift_start and user_obj.profile.shift_end %}
+                                        {{ user_obj.profile.shift_start }} - {{ user_obj.profile.shift_end }}
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Theme:</strong></td>
+                                <td>{{ user_obj.profile.get_theme_preference_display }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Permissions -->
+                <h6 class="border-bottom pb-2 mt-3">Permissions</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if user_obj.profile.can_make_outbound %}checked{% endif %} disabled>
+                            <label class="form-check-label">Can Make Outbound Calls</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if user_obj.profile.can_receive_inbound %}checked{% endif %} disabled>
+                            <label class="form-check-label">Can Receive Inbound Calls</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if user_obj.profile.can_transfer_calls %}checked{% endif %} disabled>
+                            <label class="form-check-label">Can Transfer Calls</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" {% if user_obj.profile.can_conference_calls %}checked{% endif %} disabled>
+                            <label class="form-check-label">Can Conference Calls</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Sessions -->
+        <div class="card dashboard-card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Login Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_sessions %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Login Time</th>
+                                <th>IP Address</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in recent_sessions %}
+                            <tr>
+                                <td>{{ session.login_time|date:"M d, Y H:i" }}</td>
+                                <td>{{ session.ip_address }}</td>
+                                <td>
+                                    {% if session.logout_time %}
+                                        {{ session.duration }}
+                                    {% else %}
+                                        <span class="text-success">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ session.is_active|yesno:'success,secondary' }}">
+                                        {{ session.is_active|yesno:'Active,Ended' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No login sessions found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

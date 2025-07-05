@@ -1,0 +1,245 @@
+<!-- ================================ -->
+<!-- templates/users/user_list.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management - Autodialer System{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="">Dashboard</a></li>
+        <li class="breadcrumb-item active">Users</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-users"></i> User Management
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if user.is_superuser or user.profile.is_manager %}
+        <a href="{% url 'users:create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add User
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card dashboard-card stat-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number">{{ total_users }}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number">{{ active_users }}</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number" id="online-agents">0</div>
+                        <div class="stat-label">Online Agents</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card dashboard-card stat-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-number">{{ total_users|add:'-1' }}</div>
+                        <div class="stat-label">Regular Users</div>
+                    </div>
+                    <div class="fs-2 text-white-50">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card dashboard-card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                {{ search_form.search }}
+            </div>
+            <div class="col-md-2">
+                {{ search_form.role }}
+            </div>
+            <div class="col-md-3">
+                {{ search_form.department }}
+            </div>
+            <div class="col-md-2">
+                {{ search_form.is_active }}
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card dashboard-card">
+    <div class="card-header">
+        <h5><i class="fas fa-list"></i> Users ({{ page_obj.paginator.count }} total)</h5>
+    </div>
+    <div class="card-body">
+        {% if users %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Contact</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user_obj in users %}
+                    <tr data-user-id="{{ user_obj.id }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if user_obj.profile.avatar %}
+                                    <img src="{{ user_obj.profile.avatar.url }}" class="rounded-circle me-2" width="32" height="32" alt="Avatar">
+                                {% else %}
+                                    <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ user_obj.get_full_name|default:user_obj.username }}</div>
+                                    <small class="text-muted">@{{ user_obj.username }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ user_obj.profile.get_role }}</span>
+                        </td>
+                        <td>{{ user_obj.profile.department|default:"-" }}</td>
+                        <td>
+                            <div>{{ user_obj.email }}</div>
+                            {% if user_obj.profile.phone_number %}
+                            <small class="text-muted">{{ user_obj.profile.phone_number }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-indicator status-{{ user_obj.agent_status.status|default:'offline' }}"></span>
+                            <span class="badge bg-{{ user_obj.is_active|yesno:'success,secondary' }}">
+                                {{ user_obj.is_active|yesno:'Active,Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user_obj.last_login %}
+                                {{ user_obj.last_login|date:"M d, Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'users:detail' user_obj.pk %}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if user.is_superuser or user.profile.is_manager %}
+                                <a href="{% url 'users:edit' user_obj.pk %}" class="btn btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% include 'includes/pagination.html' %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h5>No users found</h5>
+            <p class="text-muted">Try adjusting your search criteria</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update online agents count periodically
+function updateOnlineAgents() {
+    fetch('/users/ajax/status/')
+        .then(response => response.json())
+        .then(data => {
+            const onlineCount = data.users.filter(user => user.status !== 'offline').length;
+            document.getElementById('online-agents').textContent = onlineCount;
+            
+            // Update status indicators
+            data.users.forEach(user => {
+                const row = document.querySelector(`[data-user-id="${user.id}"]`);
+                if (row) {
+                    const indicator = row.querySelector('.status-indicator');
+                    if (indicator) {
+                        indicator.className = `status-indicator status-${user.status}`;
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error updating agent status:', error));
+}
+
+// Update every 30 seconds
+setInterval(updateOnlineAgents, 30000);
+updateOnlineAgents(); // Initial load
+</script>
+{% endblock %}

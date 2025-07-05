@@ -1,0 +1,216 @@
+<!-- ================================ -->
+<!-- templates/users/user_edit.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Edit {{ user_obj.username }} - Autodialer System{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'users:list' %}">Users</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'users:detail' user_obj.pk %}">{{ user_obj.username }}</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card dashboard-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-user-edit"></i> Edit User: {{ user_obj.username }}</h5>
+                <a href="{% url 'users:detail' user_obj.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to Details
+                </a>
+            </div>
+            <div class="card-body">
+                {% include 'includes/form_errors.html' %}
+                
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                                {{ form.phone_number }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Information -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Profile Information</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.employee_id.id_for_label }}" class="form-label">Employee ID</label>
+                                {{ form.employee_id }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.extension.id_for_label }}" class="form-label">Extension</label>
+                                {{ form.extension }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.department.id_for_label }}" class="form-label">Department</label>
+                                {{ form.department }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.skill_level.id_for_label }}" class="form-label">Skill Level</label>
+                                {{ form.skill_level }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Work Schedule -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Work Schedule</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.shift_start.id_for_label }}" class="form-label">Shift Start</label>
+                                {{ form.shift_start }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.shift_end.id_for_label }}" class="form-label">Shift End</label>
+                                {{ form.shift_end }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.timezone.id_for_label }}" class="form-label">Timezone</label>
+                                {{ form.timezone }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User Roles and Status -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Roles and Status</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">User Roles</label>
+                                <div>
+                                    {% for group in available_groups %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="groups" value="{{ group.id }}"
+                                               {% if group in user_groups %}checked{% endif %} id="group_{{ group.id }}">
+                                        <label class="form-check-label" for="group_{{ group.id }}">
+                                            {{ group.name }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_active" 
+                                           {% if user_obj.is_active %}checked{% endif %} id="is_active">
+                                    <label class="form-check-label" for="is_active">
+                                        Account Active
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.theme_preference.id_for_label }}" class="form-label">Theme Preference</label>
+                                {{ form.theme_preference }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Permissions -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Call Permissions</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                {{ form.can_make_outbound }}
+                                <label class="form-check-label" for="{{ form.can_make_outbound.id_for_label }}">
+                                    Can Make Outbound Calls
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                {{ form.can_receive_inbound }}
+                                <label class="form-check-label" for="{{ form.can_receive_inbound.id_for_label }}">
+                                    Can Receive Inbound Calls
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                {{ form.can_transfer_calls }}
+                                <label class="form-check-label" for="{{ form.can_transfer_calls.id_for_label }}">
+                                    Can Transfer Calls
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                {{ form.can_conference_calls }}
+                                <label class="form-check-label" for="{{ form.can_conference_calls.id_for_label }}">
+                                    Can Conference Calls
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Avatar -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Avatar</h6>
+                    <div class="mb-3">
+                        {{ form.avatar }}
+                        {% if user_obj.profile.avatar %}
+                        <div class="mt-2">
+                            <small class="text-muted">Current avatar:</small><br>
+                            <img src="{{ user_obj.profile.avatar.url }}" class="rounded" width="80" height="80" alt="Current Avatar">
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'users:detail' user_obj.pk %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

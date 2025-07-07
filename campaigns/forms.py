@@ -113,25 +113,15 @@ class CampaignCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Add timezone choices
-        timezone_choices = [
-            ('UTC', 'UTC'),
-            ('America/New_York', 'Eastern Time'),
-            ('America/Chicago', 'Central Time'),
-            ('America/Denver', 'Mountain Time'),
-            ('America/Los_Angeles', 'Pacific Time'),
-            ('America/Phoenix', 'Arizona Time'),
-            ('America/Anchorage', 'Alaska Time'),
-            ('Pacific/Honolulu', 'Hawaii Time'),
-        ]
-        self.fields['timezone'].choices = timezone_choices
-        
         # Set default values
         self.fields['start_date'].initial = timezone.now().replace(
             hour=9, minute=0, second=0, microsecond=0
         )
         self.fields['daily_start_time'].initial = time(9, 0)
         self.fields['daily_end_time'].initial = time(17, 0)
+        
+        # Set default timezone to India Standard Time
+        self.fields['timezone'].initial = 'Asia/Kolkata'
 
     def clean(self):
         cleaned_data = super().clean()
@@ -559,9 +549,4 @@ class CampaignImportForm(forms.Form):
                 f'Invalid file type. Allowed types: {", ".join(allowed_extensions)}'
             )
         
-        return file(attrs={'class': 'form-select'})
-
-    campaign_type = forms.ChoiceField(
-        choices=[('', 'All Types')] + Campaign.CAMPAIGN_TYPES,
-        required=False,
-        widget=forms.Select)
+        return file

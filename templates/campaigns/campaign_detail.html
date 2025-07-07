@@ -1,26 +1,16 @@
-<!-- templates/campaigns/campaign_detail.html -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}{{ campaign.name }} - Campaign Details{% endblock %}
 
-{% block breadcrumb %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'campaigns:list' %}">Campaigns</a></li>
-        <li class="breadcrumb-item active">{{ campaign.name }}</li>
-    </ol>
-</nav>
-{% endblock %}
-
-{% block content %}
-<!-- Enhanced Campaign Detail CSS -->
+{% block extra_css %}
 <style>
     .campaign-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
     }
@@ -28,1290 +18,622 @@
     .campaign-header::before {
         content: '';
         position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/><circle cx="50" cy="50" r="25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg>');
+        opacity: 0.3;
+    }
+    
+    .status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .info-card-header {
+        background: #f8f9fa;
+        border-radius: 12px 12px 0 0;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .control-panel {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .control-panel.paused {
+        background: linear-gradient(45deg, #ffc107, #fd7e14);
+    }
+    
+    .control-panel.inactive {
+        background: linear-gradient(45deg, #6c757d, #495057);
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.25rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: #0d6efd;
         border-radius: 50%;
     }
     
-    .stat-card-detail {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        border-left: 4px solid;
+    .timeline-item.success::before {
+        background: #198754;
     }
     
-    .stat-card-detail:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    .timeline-item.warning::before {
+        background: #ffc107;
     }
     
-    .stat-card-detail.primary { border-left-color: #667eea; }
-    .stat-card-detail.success { border-left-color: #10b981; }
-    .stat-card-detail.warning { border-left-color: #f59e0b; }
-    .stat-card-detail.info { border-left-color: #3b82f6; }
+    .timeline-item.danger::before {
+        background: #dc3545;
+    }
     
-    .progress-bar-custom {
-        height: 8px;
-        border-radius: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+    .progress-ring {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+    }
+    
+    .progress-ring-circle {
+        stroke: #e9ecef;
+        stroke-width: 8;
+        fill: transparent;
+        r: 52;
+        cx: 60;
+        cy: 60;
+    }
+    
+    .progress-ring-progress {
+        stroke: #0d6efd;
+        stroke-width: 8;
+        stroke-linecap: round;
+        fill: transparent;
+        r: 52;
+        cx: 60;
+        cy: 60;
+        stroke-dasharray: 326.56;
+        stroke-dashoffset: 326.56;
+        transition: stroke-dashoffset 0.5s ease;
     }
     
     .agent-avatar {
         width: 40px;
         height: 40px;
         border-radius: 50%;
+        background: linear-gradient(45deg, #667eea, #764ba2);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
         color: white;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        font-weight: bold;
+        margin-right: 1rem;
+    }
+    
+    .quick-actions {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+    }
+    
+    .quick-action-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        transition: transform 0.3s ease;
+    }
+    
+    .quick-action-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    @media (max-width: 768px) {
+        .stat-number {
+            font-size: 2rem;
+        }
+        
+        .quick-actions {
+            bottom: 1rem;
+            right: 1rem;
+        }
+        
+        .quick-action-btn {
+            width: 50px;
+            height: 50px;
+        }
     }
 </style>
-
-<!-- Campaign Header -->
-<div class="campaign-header p-4 mb-4">
-    <div class="position-relative">
-        <div class="row align-items-center">
-            <div class="col-lg-8">
-                <div class="d-flex align-items-center mb-3">
-                    <h1 class="h2 mb-0 me-3">{{ campaign.name }}</h1>
-                    <span class="badge {% if campaign.status == 'active' %}bg-success{% elif campaign.status == 'paused' %}bg-warning{% elif campaign.status == 'completed' %}bg-info{% else %}bg-secondary{% endif %} fs-6">
-                        {% if campaign.status == 'active' %}
-                            <i class="fas fa-play me-1"></i>Active
-                        {% elif campaign.status == 'paused' %}
-                            <i class="fas fa-pause me-1"></i>Paused
-                        {% elif campaign.status == 'completed' %}
-                            <i class="fas fa-check me-1"></i>Completed
-                        {% else %}
-                            <i class="fas fa-stop me-1"></i>Inactive
-                        {% endif %}
-                    </span>
-                </div>
-                
-                <div class="row g-3 text-white-50">
-                    <div class="col-md-6">
-                        <div><i class="fas fa-hashtag me-2"></i><strong>ID:</strong> {{ campaign.campaign_id }}</div>
-                        <div><i class="fas fa-tag me-2"></i><strong>Type:</strong> {{ campaign.get_campaign_type_display }}</div>
-                        <div><i class="fas fa-phone me-2"></i><strong>Method:</strong> {{ campaign.get_dial_method_display }}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div><i class="fas fa-user me-2"></i><strong>Created by:</strong> {{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</div>
-                        <div><i class="fas fa-calendar me-2"></i><strong>Created:</strong> {{ campaign.created_at|date:"M d, Y" }}</div>
-                        <div><i class="fas fa-clock me-2"></i><strong>Last Updated:</strong> {{ campaign.updated_at|timesince }} ago</div>
-                    </div>
-                </div>
-                
-                {% if campaign.description %}
-                <div class="mt-3">
-                    <p class="mb-0 text-white-75">{{ campaign.description }}</p>
-                </div>
-                {% endif %}
-            </div>
-            
-            <div class="col-lg-4 text-end">
-                {% if can_edit %}
-                <div class="btn-group" role="group">
-                    {% if campaign.status == 'inactive' %}
-                    <button class="btn btn-success" onclick="controlCampaign({{ campaign.pk }}, 'start')">
-                        <i class="fas fa-play me-2"></i>Start Campaign
-                    </button>
-                    {% elif campaign.status == 'active' %}
-                    <button class="btn btn-warning me-2" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
-                        <i class="fas fa-pause me-2"></i>Pause
-                    </button>
-                    <button class="btn btn-danger" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
-                        <i class="fas fa-stop me-2"></i>Stop
-                    </button>
-                    {% elif campaign.status == 'paused' %}
-                    <button class="btn btn-success me-2" onclick="controlCampaign({{ campaign.pk }}, 'start')">
-                        <i class="fas fa-play me-2"></i>Resume
-                    </button>
-                    <button class="btn btn-danger" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
-                        <i class="fas fa-stop me-2"></i>Stop
-                    </button>
-                    {% endif %}
-                </div>
-                
-                <div class="dropdown mt-3">
-                    <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-cog me-2"></i>Manage
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}"><i class="fas fa-edit me-2"></i>Edit Campaign</a></li>
-                        <li><a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}"><i class="fas fa-users me-2"></i>Manage Agents</a></li>
-                        <li><a class="dropdown-item" href="{% url 'campaigns:scripts' campaign.pk %}"><i class="fas fa-file-alt me-2"></i>Manage Scripts</a></li>
-                        <li><a class="dropdown-item" href="{% url 'campaigns:dispositions' campaign.pk %}"><i class="fas fa-tags me-2"></i>Manage Dispositions</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})"><i class="fas fa-copy me-2"></i>Clone Campaign</a></li>
-                    </ul>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Real-time Statistics -->
-<div class="row g-4 mb-5">
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail primary p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="totalLeads">{{ campaign.total_leads }}</div>
-                    <div class="text-muted">Total Leads</div>
-                </div>
-                <div class="fs-1 text-primary opacity-25">
-                    <i class="fas fa-database"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="progress" style="height: 6px;">
-                    <div class="progress-bar bg-primary" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail success p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="callsMade">{{ today_stats.calls_made|default:0 }}</div>
-                    <div class="text-muted">Calls Made Today</div>
-                </div>
-                <div class="fs-1 text-success opacity-25">
-                    <i class="fas fa-phone"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="small text-muted">
-                    <i class="fas fa-arrow-up text-success me-1"></i>
-                    Total: {{ weekly_stats.total_calls|default:0 }} this week
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail warning p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="callsAnswered">{{ today_stats.calls_answered|default:0 }}</div>
-                    <div class="text-muted">Calls Answered</div>
-                </div>
-                <div class="fs-1 text-warning opacity-25">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="small text-muted">
-                    Contact Rate: 
-                    <span class="fw-bold">
-                        {% if today_stats.calls_made > 0 %}
-                            {{ today_stats.calls_answered|mul:100|div:today_stats.calls_made|floatformat:1 }}%
-                        {% else %}
-                            0%
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail info p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="activeAgents">{{ agent_performance|length }}</div>
-                    <div class="text-muted">Active Agents</div>
-                </div>
-                <div class="fs-1 text-info opacity-25">
-                    <i class="fas fa-headset"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="small text-muted">
-                    <i class="fas fa-users me-1"></i>
-                    {{ agent_performance|length }} assigned agents
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Campaign Progress and Agent Performance -->
-<div class="row g-4 mb-5">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar text-primary me-2"></i>Campaign Progress
-                    </h5>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary active" data-period="today">Today</button>
-                        <button class="btn btn-outline-primary" data-period="week">This Week</button>
-                        <button class="btn btn-outline-primary" data-period="month">This Month</button>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- Progress Overview -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="text-center">
-                            <div class="h4 text-primary mb-1">{{ campaign.leads_called }}</div>
-                            <div class="text-muted">Leads Called</div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div class="progress-bar-custom" style="width: {% if campaign.total_leads > 0 %}{{ campaign.leads_called|mul:100|div:campaign.total_leads }}{% else %}0{% endif %}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="text-center">
-                            <div class="h4 text-success mb-1">{{ campaign.leads_remaining }}</div>
-                            <div class="text-muted">Remaining Leads</div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div class="progress-bar bg-success" style="width: {% if campaign.total_leads > 0 %}{{ campaign.leads_remaining|mul:100|div:campaign.total_leads }}{% else %}100{% endif %}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Chart Placeholder -->
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-chart-line fa-3x mb-3"></i>
-                    <p>Call volume and performance charts will be displayed here</p>
-                    <small>Charts will be implemented with the telephony integration</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">
-                    <i class="fas fa-cog text-primary me-2"></i>Campaign Settings
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Dial Method:</span>
-                            <span class="fw-semibold">{{ campaign.get_dial_method_display }}</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Max Lines:</span>
-                            <span class="fw-semibold">{{ campaign.max_lines }}</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Dial Ratio:</span>
-                            <span class="fw-semibold">{{ campaign.dial_ratio }}:1</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Abandon Rate:</span>
-                            <span class="fw-semibold">{{ campaign.abandon_rate }}%</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Call Timeout:</span>
-                            <span class="fw-semibold">{{ campaign.call_timeout }}s</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Max Attempts:</span>
-                            <span class="fw-semibold">{{ campaign.max_attempts }}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">Recording:</span>
-                            <span class="badge {% if campaign.enable_recording %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if campaign.enable_recording %}Enabled{% else %}Disabled{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">AMD:</span>
-                            <span class="badge {% if campaign.amd_enabled %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if campaign.amd_enabled %}Enabled{% else %}Disabled{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">DNC Check:</span>
-                            <span class="badge {% if campaign.use_internal_dnc %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if campaign.use_internal_dnc %}Enabled{% else %}Disabled{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Agent Performance -->
-{% if agent_performance %}
-<div class="row g-4 mb-5">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-users text-primary me-2"></i>Agent Performance
-                    </h5>
-                    {% if can_manage_agents %}
-                    <a href="{% url 'campaigns:agents' campaign.pk %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-cog me-1"></i>Manage Agents
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Agent</th>
-                                <th>Status</th>
-                                <th>Calls Made</th>
-                                <th>Calls Answered</th>
-                                <th>Sales</th>
-                                <th>Performance</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for performance in agent_performance %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="agent-avatar me-3">
-                                            {{ performance.user.first_name.0|default:performance.user.username.0|upper }}
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold">{{ performance.user.get_full_name|default:performance.user.username }}</div>
-                                            <small class="text-muted">{{ performance.user.profile.extension|default:"No ext" }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge {% if performance.user.agent_status.status == 'available' %}bg-success{% elif performance.user.agent_status.status == 'busy' %}bg-warning{% else %}bg-secondary{% endif %}">
-                                        {{ performance.user.agent_status.get_status_display|default:"Offline" }}
-                                    </span>
-                                </td>
-                                <td><span class="fw-bold">{{ performance.calls_made }}</span></td>
-                                <td><span class="fw-bold text-success">{{ performance.calls_answered }}</span></td>
-                                <td><span class="fw-bold text-primary">{{ performance.sales_made }}</span></td>
-                                <td>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-primary" style="width: {% if performance.calls_made > 0 %}{% widthratio performance.calls_answered performance.calls_made 100 %}{% else %}0{% endif %}%"></div>
-                                    </div>
-                                    <small class="text-muted">
-                                        {% if performance.calls_made > 0 %}
-                                            {% widthratio performance.calls_answered performance.calls_made 100 %}% contact rate
-                                        {% else %}
-                                            No calls yet
-                                        {% endif %}
-                                    </small>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        {% if can_manage_agents %}
-                                        <button class="btn btn-outline-warning" title="Edit Assignment">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Campaign Configuration Tabs -->
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#scripts-tab">
-                            <i class="fas fa-file-alt me-2"></i>Scripts
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dispositions-tab">
-                            <i class="fas fa-tags me-2"></i>Dispositions
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#schedule-tab">
-                            <i class="fas fa-clock me-2"></i>Schedule
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings-tab">
-                            <i class="fas fa-cog me-2"></i>Settings
-                        </button>
-                    </li>
-                </ul>
-            </div>
-            <div class="card-body">
-                <div class="tab-content">
-                    <!-- Scripts Tab -->
-                    <div class="tab-pane fade show active" id="scripts-tab">
-                        {% if campaign.scripts.all %}
-                        <div class="row g-3">
-                            {% for script in campaign.scripts.all %}
-                            <div class="col-lg-6">
-                                <div class="card border">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="card-title mb-1">{{ script.name }}</h6>
-                                            <span class="badge bg-info">{{ script.get_script_type_display }}</span>
-                                        </div>
-                                        <p class="card-text text-muted small">
-                                            {{ script.content|truncatechars:100 }}
-                                        </p>
-                                        {% if can_edit %}
-                                        <button class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-edit me-1"></i>Edit
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-file-alt fa-3x mb-3"></i>
-                            <p>No scripts assigned to this campaign</p>
-                            {% if can_edit %}
-                            <a href="{% url 'campaigns:scripts' campaign.pk %}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Add Scripts
-                            </a>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Dispositions Tab -->
-                    <div class="tab-pane fade" id="dispositions-tab">
-                        {% if campaign.dispositions.all %}
-                        <div class="row g-3">
-                            {% for camp_disp in campaign.dispositions.all %}
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card border">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: {{ camp_disp.disposition.color }};"></div>
-                                            <h6 class="card-title mb-0">{{ camp_disp.disposition.name }}</h6>
-                                        </div>
-                                        <p class="card-text small text-muted">{{ camp_disp.disposition.description|default:"No description" }}</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="badge bg-secondary">{{ camp_disp.disposition.code }}</span>
-                                            {% if camp_disp.disposition.hotkey %}
-                                            <kbd>{{ camp_disp.disposition.hotkey }}</kbd>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-tags fa-3x mb-3"></i>
-                            <p>No dispositions configured for this campaign</p>
-                            {% if can_edit %}
-                            <a href="{% url 'campaigns:dispositions' campaign.pk %}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Configure Dispositions
-                            </a>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Schedule Tab -->
-                    <div class="tab-pane fade" id="schedule-tab">
-                        {% if campaign.operating_hours.all %}
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Day</th>
-                                        <th>Start Time</th>
-                                        <th>End Time</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for hours in campaign.operating_hours.all %}
-                                    <tr>
-                                        <td>{{ hours.get_day_of_week_display }}</td>
-                                        <td>{{ hours.start_time }}</td>
-                                        <td>{{ hours.end_time }}</td>
-                                        <td>
-                                            <span class="badge {% if hours.is_active %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if hours.is_active %}Active{% else %}Inactive{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-clock fa-3x mb-3"></i>
-                            <p>No operating hours configured</p>
-                            {% if can_edit %}
-                            <button class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Configure Hours
-                            </button>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Settings Tab -->
-                    <div class="tab-pane fade" id="settings-tab">
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <h6>Dialing Settings</h6>
-                                <table class="table table-sm">
-                         <!-- templates/campaigns/campaign_detail.html -->
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}{{ campaign.name }} - Campaign Details{% endblock %}
-
-{% block breadcrumb %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'campaigns:list' %}">Campaigns</a></li>
-        <li class="breadcrumb-item active">{{ campaign.name }}</li>
-    </ol>
-</nav>
 {% endblock %}
 
 {% block content %}
-<!-- Enhanced Campaign Detail CSS -->
-<style>
-    .campaign-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .campaign-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        border-radius: 50%;
-    }
-    
-    .stat-card-detail {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        border-left: 4px solid;
-    }
-    
-    .stat-card-detail:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stat-card-detail.primary { border-left-color: #667eea; }
-    .stat-card-detail.success { border-left-color: #10b981; }
-    .stat-card-detail.warning { border-left-color: #f59e0b; }
-    .stat-card-detail.info { border-left-color: #3b82f6; }
-    
-    .progress-bar-custom {
-        height: 8px;
-        border-radius: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-    }
-    
-    .agent-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        color: white;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-    }
-</style>
-
-<!-- Campaign Header -->
-<div class="campaign-header p-4 mb-4">
-    <div class="position-relative">
+<div class="container-fluid px-4">
+    <!-- Campaign Header -->
+    <div class="campaign-header">
+        <span class="status-badge badge 
+            {% if campaign.status == 'active' %}bg-success
+            {% elif campaign.status == 'paused' %}bg-warning
+            {% elif campaign.status == 'completed' %}bg-info
+            {% else %}bg-secondary{% endif %}">
+            {% if campaign.status == 'active' %}
+                <i class="fas fa-play me-1"></i>Active
+            {% elif campaign.status == 'paused' %}
+                <i class="fas fa-pause me-1"></i>Paused
+            {% elif campaign.status == 'completed' %}
+                <i class="fas fa-check me-1"></i>Completed
+            {% else %}
+                <i class="fas fa-stop me-1"></i>Inactive
+            {% endif %}
+        </span>
+        
         <div class="row align-items-center">
             <div class="col-lg-8">
-                <div class="d-flex align-items-center mb-3">
-                    <h1 class="h2 mb-0 me-3">{{ campaign.name }}</h1>
-                    <span class="badge {% if campaign.status == 'active' %}bg-success{% elif campaign.status == 'paused' %}bg-warning{% elif campaign.status == 'completed' %}bg-info{% else %}bg-secondary{% endif %} fs-6">
-                        {% if campaign.status == 'active' %}
-                            <i class="fas fa-play me-1"></i>Active
-                        {% elif campaign.status == 'paused' %}
-                            <i class="fas fa-pause me-1"></i>Paused
-                        {% elif campaign.status == 'completed' %}
-                            <i class="fas fa-check me-1"></i>Completed
-                        {% else %}
-                            <i class="fas fa-stop me-1"></i>Inactive
-                        {% endif %}
+                <h1 class="h2 mb-2">{{ campaign.name }}</h1>
+                <p class="mb-3 opacity-75">{{ campaign.description|default:"No description provided" }}</p>
+                
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-bullhorn me-1"></i>{{ campaign.get_campaign_type_display }}
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-phone me-1"></i>{{ campaign.get_dial_method_display }}
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-calendar me-1"></i>Created {{ campaign.created_at|date:"M d, Y" }}
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-user me-1"></i>{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}
                     </span>
                 </div>
-                
-                <div class="row g-3 text-white-50">
-                    <div class="col-md-6">
-                        <div><i class="fas fa-hashtag me-2"></i><strong>ID:</strong> {{ campaign.campaign_id }}</div>
-                        <div><i class="fas fa-tag me-2"></i><strong>Type:</strong> {{ campaign.get_campaign_type_display }}</div>
-                        <div><i class="fas fa-phone me-2"></i><strong>Method:</strong> {{ campaign.get_dial_method_display }}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div><i class="fas fa-user me-2"></i><strong>Created by:</strong> {{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</div>
-                        <div><i class="fas fa-calendar me-2"></i><strong>Created:</strong> {{ campaign.created_at|date:"M d, Y" }}</div>
-                        <div><i class="fas fa-clock me-2"></i><strong>Last Updated:</strong> {{ campaign.updated_at|timesince }} ago</div>
-                    </div>
-                </div>
-                
-                {% if campaign.description %}
-                <div class="mt-3">
-                    <p class="mb-0 text-white-75">{{ campaign.description }}</p>
-                </div>
-                {% endif %}
             </div>
             
-            <div class="col-lg-4 text-end">
-                {% if can_edit %}
-                <div class="btn-group" role="group">
+            <div class="col-lg-4 text-lg-end">
+                {% if user.is_staff or campaign.created_by == user or user.profile.is_manager %}
+                <div class="d-flex flex-column gap-2">
                     {% if campaign.status == 'inactive' %}
                     <button class="btn btn-success" onclick="controlCampaign({{ campaign.pk }}, 'start')">
                         <i class="fas fa-play me-2"></i>Start Campaign
                     </button>
                     {% elif campaign.status == 'active' %}
-                    <button class="btn btn-warning me-2" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
-                        <i class="fas fa-pause me-2"></i>Pause
+                    <button class="btn btn-warning" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
+                        <i class="fas fa-pause me-2"></i>Pause Campaign
                     </button>
                     <button class="btn btn-danger" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
-                        <i class="fas fa-stop me-2"></i>Stop
+                        <i class="fas fa-stop me-2"></i>Stop Campaign
                     </button>
                     {% elif campaign.status == 'paused' %}
-                    <button class="btn btn-success me-2" onclick="controlCampaign({{ campaign.pk }}, 'start')">
-                        <i class="fas fa-play me-2"></i>Resume
+                    <button class="btn btn-success" onclick="controlCampaign({{ campaign.pk }}, 'resume')">
+                        <i class="fas fa-play me-2"></i>Resume Campaign
                     </button>
                     <button class="btn btn-danger" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
-                        <i class="fas fa-stop me-2"></i>Stop
+                        <i class="fas fa-stop me-2"></i>Stop Campaign
                     </button>
                     {% endif %}
-                </div>
-                
-                <div class="dropdown mt-3">
-                    <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-cog me-2"></i>Manage
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}"><i class="fas fa-edit me-2"></i>Edit Campaign</a></li>
-                        <li><a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}"><i class="fas fa-users me-2"></i>Manage Agents</a></li>
-                        <li><a class="dropdown-item" href="{% url 'campaigns:scripts' campaign.pk %}"><i class="fas fa-file-alt me-2"></i>Manage Scripts</a></li>
-                        <li><a class="dropdown-item" href="{% url 'campaigns:dispositions' campaign.pk %}"><i class="fas fa-tags me-2"></i>Manage Dispositions</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})"><i class="fas fa-copy me-2"></i>Clone Campaign</a></li>
-                    </ul>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-2"></i>Manage
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}">
+                                <i class="fas fa-edit me-2"></i>Edit Campaign</a></li>
+                            <li><a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}">
+                                <i class="fas fa-users me-2"></i>Manage Agents</a></li>
+                            <li><a class="dropdown-item" href="{% url 'campaigns:scripts' campaign.pk %}">
+                                <i class="fas fa-file-alt me-2"></i>Manage Scripts</a></li>
+                            <li><a class="dropdown-item" href="{% url 'campaigns:dispositions' campaign.pk %}">
+                                <i class="fas fa-tags me-2"></i>Manage Dispositions</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
+                                <i class="fas fa-copy me-2"></i>Clone Campaign</a></li>
+                        </ul>
+                    </div>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
-</div>
 
-<!-- Real-time Statistics -->
-<div class="row g-4 mb-5">
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail primary p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="totalLeads">{{ campaign.total_leads }}</div>
-                    <div class="text-muted">Total Leads</div>
+    <!-- Real-time Statistics -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="stat-number text-primary" id="totalLeads">
+                            {{ campaign.total_leads|default:0 }}
+                        </div>
+                        <div class="stat-label">Total Leads</div>
+                    </div>
+                    <div class="fs-1 text-primary opacity-25">
+                        <i class="fas fa-database"></i>
+                    </div>
                 </div>
-                <div class="fs-1 text-primary opacity-25">
-                    <i class="fas fa-database"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="progress" style="height: 6px;">
-                    <div class="progress-bar bg-primary" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail success p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="callsMade">{{ today_stats.calls_made|default:0 }}</div>
-                    <div class="text-muted">Calls Made Today</div>
-                </div>
-                <div class="fs-1 text-success opacity-25">
-                    <i class="fas fa-phone"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="small text-muted">
-                    <i class="fas fa-arrow-up text-success me-1"></i>
-                    Total: {{ weekly_stats.total_calls|default:0 }} this week
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail warning p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="callsAnswered">{{ today_stats.calls_answered|default:0 }}</div>
-                    <div class="text-muted">Calls Answered</div>
-                </div>
-                <div class="fs-1 text-warning opacity-25">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="small text-muted">
-                    Contact Rate: 
-                    <span class="fw-bold">
-                        {% if today_stats.calls_made > 0 %}
-                            {{ today_stats.calls_answered|mul:100|div:today_stats.calls_made|floatformat:1 }}%
-                        {% else %}
-                            0%
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="stat-card-detail info p-4">
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1">
-                    <div class="h3 mb-1 fw-bold" id="activeAgents">{{ agent_performance|length }}</div>
-                    <div class="text-muted">Active Agents</div>
-                </div>
-                <div class="fs-1 text-info opacity-25">
-                    <i class="fas fa-headset"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <div class="small text-muted">
-                    <i class="fas fa-users me-1"></i>
-                    {{ agent_performance|length }} assigned agents
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Campaign Progress and Agent Performance -->
-<div class="row g-4 mb-5">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar text-primary me-2"></i>Campaign Progress
-                    </h5>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary active" data-period="today">Today</button>
-                        <button class="btn btn-outline-primary" data-period="week">This Week</button>
-                        <button class="btn btn-outline-primary" data-period="month">This Month</button>
+                <div class="mt-3">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: 100%"></div>
                     </div>
                 </div>
             </div>
-            <div class="card-body">
-                <!-- Progress Overview -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <div class="text-center">
-                            <div class="h4 text-primary mb-1">{{ campaign.leads_called }}</div>
-                            <div class="text-muted">Leads Called</div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div class="progress-bar-custom" style="width: {% if campaign.total_leads > 0 %}{{ campaign.leads_called|mul:100|div:campaign.total_leads }}{% else %}0{% endif %}%"></div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card success">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="stat-number text-success" id="callsMade">
+                            {{ today_stats.calls_made|default:0 }}
+                        </div>
+                        <div class="stat-label">Calls Made Today</div>
+                    </div>
+                    <div class="fs-1 text-success opacity-25">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        +{{ today_stats.calls_made_change|default:0 }}% from yesterday
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card warning">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="stat-number text-warning" id="callsAnswered">
+                            {{ today_stats.calls_answered|default:0 }}
+                        </div>
+                        <div class="stat-label">Calls Answered</div>
+                    </div>
+                    <div class="fs-1 text-warning opacity-25">
+                        <i class="fas fa-phone-volume"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        {{ today_stats.answer_rate|default:0 }}% answer rate
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card danger">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="stat-number text-danger" id="salesMade">
+                            {{ today_stats.sales_made|default:0 }}
+                        </div>
+                        <div class="stat-label">Sales Today</div>
+                    </div>
+                    <div class="fs-1 text-danger opacity-25">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        {{ today_stats.conversion_rate|default:0 }}% conversion rate
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Campaign Configuration -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Campaign Configuration
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Schedule Settings</h6>
+                            <div class="mb-2">
+                                <strong>Start Date:</strong>
+                                <span class="text-muted">{{ campaign.start_date|date:"M d, Y H:i" }}</span>
+                            </div>
+                            {% if campaign.end_date %}
+                            <div class="mb-2">
+                                <strong>End Date:</strong>
+                                <span class="text-muted">{{ campaign.end_date|date:"M d, Y H:i" }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="mb-2">
+                                <strong>Daily Hours:</strong>
+                                <span class="text-muted">{{ campaign.daily_start_time }} - {{ campaign.daily_end_time }}</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Timezone:</strong>
+                                <span class="text-muted">{{ campaign.timezone }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Call Settings</h6>
+                            <div class="mb-2">
+                                <strong>Max Attempts:</strong>
+                                <span class="text-muted">{{ campaign.max_attempts }}</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Call Timeout:</strong>
+                                <span class="text-muted">{{ campaign.call_timeout }}s</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Retry Delay:</strong>
+                                <span class="text-muted">{{ campaign.retry_delay }}s</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Dial Ratio:</strong>
+                                <span class="text-muted">{{ campaign.dial_ratio }}</span>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="text-center">
-                            <div class="h4 text-success mb-1">{{ campaign.leads_remaining }}</div>
-                            <div class="text-muted">Remaining Leads</div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div class="progress-bar bg-success" style="width: {% if campaign.total_leads > 0 %}{{ campaign.leads_remaining|mul:100|div:campaign.total_leads }}{% else %}100{% endif %}%"></div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Recording & Monitoring</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-microphone me-2 {% if campaign.enable_recording %}text-success{% else %}text-muted{% endif %}"></i>
+                                <span>Call Recording: 
+                                    <strong class="{% if campaign.enable_recording %}text-success{% else %}text-muted{% endif %}">
+                                        {{ campaign.enable_recording|yesno:"Enabled,Disabled" }}
+                                    </strong>
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-eye me-2 {% if campaign.monitor_agents %}text-success{% else %}text-muted{% endif %}"></i>
+                                <span>Agent Monitoring: 
+                                    <strong class="{% if campaign.monitor_agents %}text-success{% else %}text-muted{% endif %}">
+                                        {{ campaign.monitor_agents|yesno:"Enabled,Disabled" }}
+                                    </strong>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Compliance Settings</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-ban me-2 {% if campaign.use_internal_dnc %}text-success{% else %}text-muted{% endif %}"></i>
+                                <span>Internal DNC: 
+                                    <strong class="{% if campaign.use_internal_dnc %}text-success{% else %}text-muted{% endif %}">
+                                        {{ campaign.use_internal_dnc|yesno:"Enabled,Disabled" }}
+                                    </strong>
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-robot me-2 {% if campaign.amd_enabled %}text-success{% else %}text-muted{% endif %}"></i>
+                                <span>AMD Detection: 
+                                    <strong class="{% if campaign.amd_enabled %}text-success{% else %}text-muted{% endif %}">
+                                        {{ campaign.amd_enabled|yesno:"Enabled,Disabled" }}
+                                    </strong>
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Chart Placeholder -->
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-chart-line fa-3x mb-3"></i>
-                    <p>Call volume and performance charts will be displayed here</p>
-                    <small>Charts will be implemented with the telephony integration</small>
-                </div>
             </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">
-                    <i class="fas fa-cog text-primary me-2"></i>Campaign Settings
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Dial Method:</span>
-                            <span class="fw-semibold">{{ campaign.get_dial_method_display }}</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Max Lines:</span>
-                            <span class="fw-semibold">{{ campaign.max_lines }}</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Dial Ratio:</span>
-                            <span class="fw-semibold">{{ campaign.dial_ratio }}:1</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Abandon Rate:</span>
-                            <span class="fw-semibold">{{ campaign.abandon_rate }}%</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Call Timeout:</span>
-                            <span class="fw-semibold">{{ campaign.call_timeout }}s</span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Max Attempts:</span>
-                            <span class="fw-semibold">{{ campaign.max_attempts }}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">Recording:</span>
-                            <span class="badge {% if campaign.enable_recording %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if campaign.enable_recording %}Enabled{% else %}Disabled{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">AMD:</span>
-                            <span class="badge {% if campaign.amd_enabled %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if campaign.amd_enabled %}Enabled{% else %}Disabled{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">DNC Check:</span>
-                            <span class="badge {% if campaign.use_internal_dnc %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if campaign.use_internal_dnc %}Enabled{% else %}Disabled{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Agent Performance -->
-{% if agent_performance %}
-<div class="row g-4 mb-5">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <div class="d-flex justify-content-between align-items-center">
+            <!-- Active Agents -->
+            <div class="info-card">
+                <div class="info-card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-users text-primary me-2"></i>Agent Performance
+                        <i class="fas fa-users me-2"></i>Active Agents ({{ active_agents.count }})
                     </h5>
-                    {% if can_manage_agents %}
-                    <a href="{% url 'campaigns:agents' campaign.pk %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-cog me-1"></i>Manage Agents
+                    <a href="{% url 'campaigns:agents' campaign.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-cog me-1"></i>Manage
                     </a>
+                </div>
+                <div class="info-card-body">
+                    {% if active_agents %}
+                    <div class="row g-3">
+                        {% for agent in active_agents %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <div class="agent-avatar">
+                                    {{ agent.user.first_name.0|default:agent.user.username.0|upper }}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ agent.user.get_full_name|default:agent.user.username }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-phone me-1"></i>{{ agent.calls_made }} calls today
+                                        {% if agent.sales_made %}
+                                        | <i class="fas fa-trophy me-1"></i>{{ agent.sales_made }} sales
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-success">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users text-muted fs-1 mb-3"></i>
+                        <p class="text-muted">No agents assigned to this campaign</p>
+                        <a href="{% url 'campaigns:agents' campaign.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Assign Agents
+                        </a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Agent</th>
-                                <th>Status</th>
-                                <th>Calls Made</th>
-                                <th>Calls Answered</th>
-                                <th>Sales</th>
-                                <th>Performance</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for performance in agent_performance %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="agent-avatar me-3">
-                                            {{ performance.user.first_name.0|default:performance.user.username.0|upper }}
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold">{{ performance.user.get_full_name|default:performance.user.username }}</div>
-                                            <small class="text-muted">{{ performance.user.profile.extension|default:"No ext" }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge {% if performance.user.agent_status.status == 'available' %}bg-success{% elif performance.user.agent_status.status == 'busy' %}bg-warning{% else %}bg-secondary{% endif %}">
-                                        {{ performance.user.agent_status.get_status_display|default:"Offline" }}
-                                    </span>
-                                </td>
-                                <td><span class="fw-bold">{{ performance.calls_made }}</span></td>
-                                <td><span class="fw-bold text-success">{{ performance.calls_answered }}</span></td>
-                                <td><span class="fw-bold text-primary">{{ performance.sales_made }}</span></td>
-                                <td>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-primary" style="width: {% if performance.calls_made > 0 %}{% widthratio performance.calls_answered performance.calls_made 100 %}{% else %}0{% endif %}%"></div>
-                                    </div>
-                                    <small class="text-muted">
-                                        {% if performance.calls_made > 0 %}
-                                            {% widthratio performance.calls_answered performance.calls_made 100 %}% contact rate
-                                        {% else %}
-                                            No calls yet
-                                        {% endif %}
-                                    </small>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        {% if can_manage_agents %}
-                                        <button class="btn btn-outline-warning" title="Edit Assignment">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 
-<!-- Campaign Configuration Tabs -->
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#scripts-tab">
-                            <i class="fas fa-file-alt me-2"></i>Scripts
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dispositions-tab">
-                            <i class="fas fa-tags me-2"></i>Dispositions
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#schedule-tab">
-                            <i class="fas fa-clock me-2"></i>Schedule
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings-tab">
-                            <i class="fas fa-cog me-2"></i>Settings
-                        </button>
-                    </li>
-                </ul>
+            <!-- Performance Chart -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Performance Trends
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="tab-content">
-                    <!-- Scripts Tab -->
-                    <div class="tab-pane fade show active" id="scripts-tab">
-                        {% if campaign.scripts.all %}
-                        <div class="row g-3">
-                            {% for script in campaign.scripts.all %}
-                            <div class="col-lg-6">
-                                <div class="card border">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="card-title mb-1">{{ script.name }}</h6>
-                                            <span class="badge bg-info">{{ script.get_script_type_display }}</span>
-                                        </div>
-                                        <p class="card-text text-muted small">
-                                            {{ script.content|truncatechars:100 }}
-                                        </p>
-                                        {% if can_edit %}
-                                        <button class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-edit me-1"></i>Edit
-                                        </button>
-                                        {% endif %}
-                                    </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Campaign Progress -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-progress me-2"></i>Campaign Progress
+                    </h5>
+                </div>
+                <div class="info-card-body text-center">
+                    <div class="progress-ring">
+                        <svg class="progress-ring">
+                            <circle class="progress-ring-circle"></circle>
+                            <circle class="progress-ring-progress" id="progressCircle"></circle>
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <div class="h4 mb-0" id="progressPercent">{{ campaign.completion_percentage|default:0 }}%</div>
+                            <small class="text-muted">Complete</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Leads Contacted:</span>
+                            <strong>{{ campaign.leads_contacted|default:0 }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Remaining Leads:</span>
+                            <strong>{{ campaign.leads_remaining|default:0 }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Estimated Completion:</span>
+                            <strong>{{ campaign.estimated_completion|default:"N/A" }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Activity
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="timeline">
+                        {% for activity in recent_activities %}
+                        <div class="timeline-item {{ activity.type }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ activity.title }}</strong>
+                                    <p class="mb-1 small text-muted">{{ activity.description }}</p>
+                                    <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
-                        {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-file-alt fa-3x mb-3"></i>
-                            <p>No scripts assigned to this campaign</p>
-                            {% if can_edit %}
-                            <a href="{% url 'campaigns:scripts' campaign.pk %}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Add Scripts
-                            </a>
-                            {% endif %}
+                        {% empty %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-clock text-muted fs-3 mb-2"></i>
+                            <p class="text-muted mb-0">No recent activity</p>
                         </div>
-                        {% endif %}
+                        {% endfor %}
                     </div>
-                    
-                    <!-- Dispositions Tab -->
-                    <div class="tab-pane fade" id="dispositions-tab">
-                        {% if campaign.dispositions.all %}
-                        <div class="row g-3">
-                            {% for camp_disp in campaign.dispositions.all %}
-                            <div class="col-lg-4 col-md-6">
-                                <div class="card border">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: {{ camp_disp.disposition.color }};"></div>
-                                            <h6 class="card-title mb-0">{{ camp_disp.disposition.name }}</h6>
-                                        </div>
-                                        <p class="card-text small text-muted">{{ camp_disp.disposition.description|default:"No description" }}</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="badge bg-secondary">{{ camp_disp.disposition.code }}</span>
-                                            {% if camp_disp.disposition.hotkey %}
-                                            <kbd>{{ camp_disp.disposition.hotkey }}</kbd>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tachometer-alt me-2"></i>Quick Stats
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-primary">{{ campaign.average_call_duration|default:"0:00" }}</div>
+                                <small class="text-muted">Avg Call Duration</small>
                             </div>
-                            {% endfor %}
                         </div>
-                        {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-tags fa-3x mb-3"></i>
-                            <p>No dispositions configured for this campaign</p>
-                            {% if can_edit %}
-                            <a href="{% url 'campaigns:dispositions' campaign.pk %}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Configure Dispositions
-                            </a>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Schedule Tab -->
-                    <div class="tab-pane fade" id="schedule-tab">
-                        {% if campaign.operating_hours.all %}
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Day</th>
-                                        <th>Start Time</th>
-                                        <th>End Time</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for hours in campaign.operating_hours.all %}
-                                    <tr>
-                                        <td>{{ hours.get_day_of_week_display }}</td>
-                                        <td>{{ hours.start_time }}</td>
-                                        <td>{{ hours.end_time }}</td>
-                                        <td>
-                                            <span class="badge {% if hours.is_active %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if hours.is_active %}Active{% else %}Inactive{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-clock fa-3x mb-3"></i>
-                            <p>No operating hours configured</p>
-                            {% if can_edit %}
-                            <button class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Configure Hours
-                            </button>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Settings Tab -->
-                    <div class="tab-pane fade" id="settings-tab">
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <h6>Dialing Settings</h6>
-                                <table class="table table-sm">
-                                    <tr>
-                                        <td>Dial Method:</td>
-                                        <td class="fw-semibold">{{ campaign.get_dial_method_display }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Max Lines:</td>
-                                        <td class="fw-semibold">{{ campaign.max_lines }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Dial Ratio:</td>
-                                        <td class="fw-semibold">{{ campaign.dial_ratio }}:1</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Abandon Rate:</td>
-                                        <td class="fw-semibold">{{ campaign.abandon_rate }}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Call Timeout:</td>
-                                        <td class="fw-semibold">{{ campaign.call_timeout }}s</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Max Attempts:</td>
-                                        <td class="fw-semibold">{{ campaign.max_attempts }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Retry Delay:</td>
-                                        <td class="fw-semibold">{{ campaign.retry_delay }}s</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Lead Order:</td>
-                                        <td class="fw-semibold">{{ campaign.get_lead_order_display }}</td>
-                                    </tr>
-                                </table>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-success">{{ campaign.contact_rate|default:0 }}%</div>
+                                <small class="text-muted">Contact Rate</small>
                             </div>
-                            <div class="col-md-6">
-                                <h6>Compliance & Recording</h6>
-                                <table class="table table-sm">
-                                    <tr>
-                                        <td>AMD Enabled:</td>
-                                        <td>
-                                            <span class="badge {% if campaign.amd_enabled %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if campaign.amd_enabled %}Enabled{% else %}Disabled{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Internal DNC:</td>
-                                        <td>
-                                            <span class="badge {% if campaign.use_internal_dnc %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if campaign.use_internal_dnc %}Enabled{% else %}Disabled{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Campaign DNC:</td>
-                                        <td>
-                                            <span class="badge {% if campaign.use_campaign_dnc %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if campaign.use_campaign_dnc %}Enabled{% else %}Disabled{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Call Recording:</td>
-                                        <td>
-                                            <span class="badge {% if campaign.enable_recording %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if campaign.enable_recording %}Enabled{% else %}Disabled{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Recording Delay:</td>
-                                        <td class="fw-semibold">{{ campaign.recording_delay }}s</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Agent Monitoring:</td>
-                                        <td>
-                                            <span class="badge {% if campaign.monitor_agents %}bg-success{% else %}bg-secondary{% endif %}">
-                                                {% if campaign.monitor_agents %}Enabled{% else %}Disabled{% endif %}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </table>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-warning">{{ campaign.abandon_rate|default:0 }}%</div>
+                                <small class="text-muted">Abandon Rate</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <div class="h5 mb-1 text-info">{{ campaign.callbacks_pending|default:0 }}</div>
+                                <small class="text-muted">Pending Callbacks</small>
                             </div>
                         </div>
                     </div>
@@ -1319,5 +641,266 @@
             </div>
         </div>
     </div>
+
+    <!-- Quick Actions Floating Menu -->
+    <div class="quick-actions">
+        <button class="btn btn-primary quick-action-btn" onclick="refreshStats()" title="Refresh Stats">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        {% if user.is_staff or campaign.created_by == user %}
+        <button class="btn btn-success quick-action-btn" onclick="exportData()" title="Export Data">
+            <i class="fas fa-download"></i>
+        </button>
+        <button class="btn btn-warning quick-action-btn" onclick="generateReport()" title="Generate Report">
+            <i class="fas fa-chart-bar"></i>
+        </button>
+        {% endif %}
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Campaign control functions
+    function controlCampaign(campaignId, action) {
+        const actionMessages = {
+            'start': 'Starting campaign...',
+            'pause': 'Pausing campaign...',
+            'stop': 'Stopping campaign...',
+            'resume': 'Resuming campaign...'
+        };
+
+        if (confirm(`Are you sure you want to ${action} this campaign?`)) {
+            // Show loading state
+            const buttons = document.querySelectorAll('button[onclick*="controlCampaign"]');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + actionMessages[action];
+            });
+
+            fetch(`/campaigns/${campaignId}/control/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ action: action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastr.success(data.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    toastr.error(data.error || 'Operation failed');
+                    // Re-enable buttons
+                    buttons.forEach(btn => {
+                        btn.disabled = false;
+                        btn.innerHTML = btn.getAttribute('data-original-html');
+                    });
+                }
+            })
+            .catch(error => {
+                toastr.error('Network error occurred');
+                console.error('Error:', error);
+            });
+        }
+    }
+
+    function cloneCampaign(campaignId) {
+        if (confirm('This will create a copy of this campaign. Continue?')) {
+            fetch(`/campaigns/${campaignId}/clone/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastr.success('Campaign cloned successfully!');
+                    setTimeout(() => window.location.href = data.redirect_url, 1000);
+                } else {
+                    toastr.error(data.error || 'Failed to clone campaign');
+                }
+            });
+        }
+    }
+
+    function refreshStats() {
+        fetch(`/campaigns/{{ campaign.pk }}/api/stats/`)
+            .then(response => response.json())
+            .then(data => {
+                // Update stat cards
+                document.getElementById('totalLeads').textContent = data.total_leads || 0;
+                document.getElementById('callsMade').textContent = data.calls_made || 0;
+                document.getElementById('callsAnswered').textContent = data.calls_answered || 0;
+                document.getElementById('salesMade').textContent = data.sales_made || 0;
+                
+                // Update progress circle
+                updateProgressCircle(data.completion_percentage || 0);
+                
+                toastr.success('Stats refreshed!');
+            })
+            .catch(error => {
+                toastr.error('Failed to refresh stats');
+                console.error('Error:', error);
+            });
+    }
+
+    function exportData() {
+        window.open(`/campaigns/{{ campaign.pk }}/export/`, '_blank');
+    }
+
+    function generateReport() {
+        window.open(`/campaigns/{{ campaign.pk }}/reports/`, '_blank');
+    }
+
+    function updateProgressCircle(percentage) {
+        const circle = document.getElementById('progressCircle');
+        const circumference = 2 * Math.PI * 52;
+        const offset = circumference - (percentage / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+        
+        document.getElementById('progressPercent').textContent = `${percentage}%`;
+    }
+
+    // Initialize performance chart
+    function initPerformanceChart() {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        
+        // Sample data - replace with actual data from your backend
+        const chartData = {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [
+                {
+                    label: 'Calls Made',
+                    data: [45, 52, 38, 65, 42, 30, 25],
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Calls Answered',
+                    data: [32, 38, 28, 45, 32, 22, 18],
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Sales Made',
+                    data: [8, 12, 7, 15, 10, 6, 4],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4
+                }
+            ]
+        };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Auto-refresh functionality
+    let autoRefreshInterval;
+    
+    function startAutoRefresh() {
+        // Refresh stats every 30 seconds
+        autoRefreshInterval = setInterval(refreshStats, 30000);
+    }
+    
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    }
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Store original button HTML for reset functionality
+        document.querySelectorAll('button[onclick*="controlCampaign"]').forEach(btn => {
+            btn.setAttribute('data-original-html', btn.innerHTML);
+        });
+
+        // Initialize charts
+        initPerformanceChart();
+        
+        // Set initial progress circle
+        updateProgressCircle({{ campaign.completion_percentage|default:0 }});
+        
+        // Start auto-refresh if campaign is active
+        {% if campaign.status == 'active' %}
+        startAutoRefresh();
+        {% endif %}
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopAutoRefresh);
+    });
+
+    // Real-time updates via WebSocket (if available)
+    {% if campaign.status == 'active' %}
+    function initWebSocket() {
+        const wsUrl = `ws://${window.location.host}/ws/campaign/{{ campaign.pk }}/`;
+        const socket = new WebSocket(wsUrl);
+        
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'stats_update') {
+                // Update stats in real-time
+                document.getElementById('totalLeads').textContent = data.stats.total_leads || 0;
+                document.getElementById('callsMade').textContent = data.stats.calls_made || 0;
+                document.getElementById('callsAnswered').textContent = data.stats.calls_answered || 0;
+                document.getElementById('salesMade').textContent = data.stats.sales_made || 0;
+                
+                updateProgressCircle(data.stats.completion_percentage || 0);
+            }
+        };
+        
+        socket.onclose = function(event) {
+            console.log('WebSocket connection closed');
+            // Attempt to reconnect after 5 seconds
+            setTimeout(initWebSocket, 5000);
+        };
+        
+        socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+    
+    // Initialize WebSocket connection
+    initWebSocket();
+    {% endif %}
+</script>
+
+<!-- Add CSRF token for AJAX requests -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 {% endblock %}

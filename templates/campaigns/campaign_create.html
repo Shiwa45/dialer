@@ -1,227 +1,483 @@
-<!-- templates/campaigns/campaign_create.html -->
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Create Campaign - AutoDialer Pro{% endblock %}
+{% block title %}Create New Campaign - {{ block.super }}{% endblock %}
 
-{% block breadcrumb %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'campaigns:list' %}">Campaigns</a></li>
-        <li class="breadcrumb-item active">Create Campaign</li>
-    </ol>
-</nav>
-{% endblock %}
-
-{% block content %}
-<!-- Enhanced Campaign Create CSS -->
+{% block extra_css %}
 <style>
-    .form-wizard {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-    }
-    
-    .wizard-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-    }
-    
     .step-indicator {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
         margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
     }
     
     .step {
-        display: flex;
-        align-items: center;
-        margin: 0 1rem;
-    }
-    
-    .step-number {
+        background: white;
+        border: 3px solid #e9ecef;
+        border-radius: 50%;
         width: 40px;
         height: 40px;
-        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        margin-right: 0.5rem;
-        transition: all 0.3s ease;
+        z-index: 2;
+        position: relative;
     }
     
-    .step.active .step-number {
-        background: #667eea;
+    .step.active {
+        background: #0d6efd;
+        border-color: #0d6efd;
         color: white;
     }
     
-    .step.completed .step-number {
-        background: #10b981;
+    .step.completed {
+        background: #198754;
+        border-color: #198754;
         color: white;
-    }
-    
-    .step:not(.active):not(.completed) .step-number {
-        background: #e5e7eb;
-        color: #6b7280;
     }
     
     .form-section {
-        display: none;
+        background: white;
+        border-radius: 12px;
         padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
     }
     
-    .form-section.active {
-        display: block;
-        animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
+    .section-header {
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
     }
     
     .setting-card {
-        border: 2px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
         cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 0.5rem;
     }
     
     .setting-card:hover {
-        border-color: #667eea;
-        transform: translateY(-2px);
+        border-color: #0d6efd;
+        background: #f8f9ff;
     }
     
     .setting-card.selected {
-        border-color: #667eea;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-color: #0d6efd;
+        background: #f8f9ff;
     }
     
-    .time-input-group {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    .form-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+    
+    .form-grid.cols-2 {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .form-grid.cols-3 {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    .help-box {
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        border-left: 4px solid #0d6efd;
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin-top: 1rem;
+    }
+    
+    .preview-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        position: sticky;
+        top: 2rem;
+    }
+    
+    .form-floating .form-select {
+        padding-top: 1.625rem;
+        padding-bottom: 0.625rem;
+    }
+    
+    .btn-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+        position: sticky;
+        bottom: 0;
+        z-index: 100;
+        margin-top: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+        .form-grid.cols-2,
+        .form-grid.cols-3 {
+            grid-template-columns: 1fr;
+        }
+        
+        .setting-card {
+            margin-bottom: 1rem;
+        }
     }
 </style>
+{% endblock %}
 
-<!-- Page Header -->
-<div class="wizard-header text-center">
-    <h1 class="h2 mb-3">Create New Campaign</h1>
-    <p class="mb-0 opacity-75">Set up your new calling campaign with our guided wizard</p>
-</div>
-
-<!-- Form Wizard -->
-<div class="form-wizard">
-    <!-- Step Indicator -->
-    <div class="step-indicator">
-        <div class="step active" data-step="1">
-            <div class="step-number">1</div>
-            <div class="step-label">Basic Info</div>
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-plus-circle text-primary me-2"></i>Create New Campaign
+            </h1>
+            <p class="text-muted mb-0">Set up a new calling campaign with your preferred settings</p>
         </div>
-        <div class="step" data-step="2">
-            <div class="step-number">2</div>
-            <div class="step-label">Configuration</div>
-        </div>
-        <div class="step" data-step="3">
-            <div class="step-number">3</div>
-            <div class="step-label">Schedule</div>
-        </div>
-        <div class="step" data-step="4">
-            <div class="step-number">4</div>
-            <div class="step-label">Review</div>
-        </div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'campaigns:list' %}">Campaigns</a></li>
+                <li class="breadcrumb-item active">Create Campaign</li>
+            </ol>
+        </nav>
     </div>
-    
-    <form method="post" id="campaignCreateForm">
+
+    <form method="post" id="campaignForm" novalidate>
         {% csrf_token %}
         
-        <!-- Step 1: Basic Information -->
-        <div class="form-section active" data-section="1">
-            <h4 class="mb-4">Campaign Basic Information</h4>
-            
-            <div class="row g-4">
-                <div class="col-lg-8">
-                    <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold required">Campaign Name</label>
-                        {{ form.name }}
-                        {% if form.name.help_text %}
-                        <div class="form-text">{{ form.name.help_text }}</div>
-                        {% endif %}
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <!-- Step 1: Basic Information -->
+                <div class="form-section" id="step1">
+                    <div class="section-header">
+                        <h4 class="mb-2">
+                            <span class="step-number">1</span>
+                            Basic Information
+                        </h4>
+                        <p class="text-muted mb-0">Enter the basic details for your campaign</p>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">Description</label>
-                        {{ form.description }}
-                        {% if form.description.help_text %}
-                        <div class="form-text">{{ form.description.help_text }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="col-lg-4">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Tips</h6>
-                            <ul class="small mb-0">
-                                <li>Choose a descriptive campaign name</li>
-                                <li>Include campaign purpose in description</li>
-                                <li>Use consistent naming conventions</li>
-                            </ul>
+
+                    <div class="form-grid cols-1">
+                        <div class="form-floating">
+                            {{ form.name }}
+                            <label for="{{ form.name.id_for_label }}">
+                                <i class="fas fa-tag me-2"></i>Campaign Name *
+                            </label>
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.description }}
+                            <label for="{{ form.description.id_for_label }}">
+                                <i class="fas fa-align-left me-2"></i>Campaign Description
+                            </label>
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                            {% endif %}
                         </div>
                     </div>
+
+                    <div class="help-box">
+                        <h6><i class="fas fa-lightbulb me-2"></i>Best Practices</h6>
+                        <ul class="mb-0 small">
+                            <li>Choose a descriptive campaign name that reflects its purpose</li>
+                            <li>Include campaign goals and target audience in description</li>
+                            <li>Use consistent naming conventions across campaigns</li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
-            
-            <h5 class="mt-5 mb-4">Campaign Type & Method</h5>
-            
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Campaign Type</label>
-                    <div class="row g-3">
-                        {% for choice in form.campaign_type.field.choices %}
-                        <div class="col-12">
+
+                <!-- Step 2: Campaign Type & Method -->
+                <div class="form-section" id="step2">
+                    <div class="section-header">
+                        <h4 class="mb-2">
+                            <span class="step-number">2</span>
+                            Campaign Type & Dialing Method
+                        </h4>
+                        <p class="text-muted mb-0">Choose how your campaign will operate</p>
+                    </div>
+
+                    <div class="form-grid cols-2">
+                        <div>
+                            <label class="form-label fw-semibold mb-3">
+                                <i class="fas fa-bullhorn me-2"></i>Campaign Type
+                            </label>
+                            {% for choice in form.campaign_type.field.choices %}
                             <div class="setting-card" onclick="selectOption('{{ form.campaign_type.name }}', '{{ choice.0 }}')">
                                 <div class="d-flex align-items-center">
                                     <input type="radio" name="{{ form.campaign_type.name }}" value="{{ choice.0 }}" 
                                            class="form-check-input me-3" id="type_{{ choice.0 }}">
-                                    <div>
+                                    <div class="flex-grow-1">
                                         <h6 class="mb-1">{{ choice.1 }}</h6>
                                         <small class="text-muted">
-                                            {% if choice.0 == 'outbound' %}Make calls to customers from your lead lists
-                                            {% elif choice.0 == 'inbound' %}Handle incoming calls from customers
-                                            {% else %}Combination of outbound and inbound calling{% endif %}
+                                            {% if choice.0 == 'outbound' %}
+                                                Make calls to customers from your lead lists
+                                            {% elif choice.0 == 'inbound' %}
+                                                Handle incoming calls from customers
+                                            {% else %}
+                                                Combination of outbound and inbound calling
+                                            {% endif %}
                                         </small>
                                     </div>
                                 </div>
                             </div>
+                            {% endfor %}
+                            {% if form.campaign_type.errors %}
+                                <div class="invalid-feedback d-block">{{ form.campaign_type.errors.0 }}</div>
+                            {% endif %}
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Dial Method</label>
-                    <div class="row g-3">
-                        {% for choice in form.dial_method.field.choices %}
-                        <div class="col-12">
+
+                        <div>
+                            <label class="form-label fw-semibold mb-3">
+                                <i class="fas fa-phone me-2"></i>Dial Method
+                            </label>
+                            {% for choice in form.dial_method.field.choices %}
                             <div class="setting-card" onclick="selectOption('{{ form.dial_method.name }}', '{{ choice.0 }}')">
                                 <div class="d-flex align-items-center">
                                     <input type="radio" name="{{ form.dial_method.name }}" value="{{ choice.0 }}" 
                                            class="form-check-input me-3" id="method_{{ choice.0 }}">
-                                    <div>
+                                    <div class="flex-grow-1">
                                         <h6 class="mb-1">{{ choice.1 }}</h6>
                                         <small class="text-muted">
-                                            {% if choice.0 == 'manual' %}Agents manually dial each number
-                                            {% elif choice.0 == 'preview' %}System presents lead info before dialing
-                                            {% elif choice.0 == 'progressive' %}System dials when agent becomes available
-                                            {% elif choice.0 == 'predictive' %}System predicts agent availability and dials
-                                            {% else %}Fully automated dialing process{% endif %}
+                                            {% if choice.0 == 'manual' %}
+                                                Agents manually dial each number
+                                            {% elif choice.0 == 'preview' %}
+                                                Show lead info before dialing
+                                            {% elif choice.0 == 'progressive' %}
+                                                Dial when agent becomes available
+                                            {% elif choice.0 == 'predictive' %}
+                                                Predict agent availability and dial multiple numbers
+                                            {% else %}
+                                                Automatically dial leads
+                                            {% endif %}
                                         </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if form.dial_method.errors %}
+                                <div class="invalid-feedback d-block">{{ form.dial_method.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Schedule & Timing -->
+                <div class="form-section" id="step3">
+                    <div class="section-header">
+                        <h4 class="mb-2">
+                            <span class="step-number">3</span>
+                            Schedule & Timing
+                        </h4>
+                        <p class="text-muted mb-0">Set when your campaign should run</p>
+                    </div>
+
+                    <div class="form-grid cols-2">
+                        <div class="form-floating">
+                            {{ form.start_date }}
+                            <label for="{{ form.start_date.id_for_label }}">
+                                <i class="fas fa-calendar-plus me-2"></i>Start Date & Time *
+                            </label>
+                            {% if form.start_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.end_date }}
+                            <label for="{{ form.end_date.id_for_label }}">
+                                <i class="fas fa-calendar-times me-2"></i>End Date & Time
+                            </label>
+                            {% if form.end_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.daily_start_time }}
+                            <label for="{{ form.daily_start_time.id_for_label }}">
+                                <i class="fas fa-clock me-2"></i>Daily Start Time
+                            </label>
+                            {% if form.daily_start_time.errors %}
+                                <div class="invalid-feedback d-block">{{ form.daily_start_time.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.daily_end_time }}
+                            <label for="{{ form.daily_end_time.id_for_label }}">
+                                <i class="fas fa-clock me-2"></i>Daily End Time
+                            </label>
+                            {% if form.daily_end_time.errors %}
+                                <div class="invalid-feedback d-block">{{ form.daily_end_time.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.timezone }}
+                            <label for="{{ form.timezone.id_for_label }}">
+                                <i class="fas fa-globe me-2"></i>Timezone
+                            </label>
+                            {% if form.timezone.errors %}
+                                <div class="invalid-feedback d-block">{{ form.timezone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Call Settings -->
+                <div class="form-section" id="step4">
+                    <div class="section-header">
+                        <h4 class="mb-2">
+                            <span class="step-number">4</span>
+                            Call Settings
+                        </h4>
+                        <p class="text-muted mb-0">Configure how calls should be handled</p>
+                    </div>
+
+                    <div class="form-grid cols-3">
+                        <div class="form-floating">
+                            {{ form.max_attempts }}
+                            <label for="{{ form.max_attempts.id_for_label }}">
+                                <i class="fas fa-redo me-2"></i>Max Attempts
+                            </label>
+                            {% if form.max_attempts.errors %}
+                                <div class="invalid-feedback d-block">{{ form.max_attempts.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.call_timeout }}
+                            <label for="{{ form.call_timeout.id_for_label }}">
+                                <i class="fas fa-hourglass me-2"></i>Call Timeout (seconds)
+                            </label>
+                            {% if form.call_timeout.errors %}
+                                <div class="invalid-feedback d-block">{{ form.call_timeout.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.retry_delay }}
+                            <label for="{{ form.retry_delay.id_for_label }}">
+                                <i class="fas fa-pause me-2"></i>Retry Delay (seconds)
+                            </label>
+                            {% if form.retry_delay.errors %}
+                                <div class="invalid-feedback d-block">{{ form.retry_delay.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.dial_ratio }}
+                            <label for="{{ form.dial_ratio.id_for_label }}">
+                                <i class="fas fa-balance-scale me-2"></i>Dial Ratio
+                            </label>
+                            {% if form.dial_ratio.errors %}
+                                <div class="invalid-feedback d-block">{{ form.dial_ratio.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.max_lines }}
+                            <label for="{{ form.max_lines.id_for_label }}">
+                                <i class="fas fa-phone-volume me-2"></i>Max Lines
+                            </label>
+                            {% if form.max_lines.errors %}
+                                <div class="invalid-feedback d-block">{{ form.max_lines.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                            {{ form.abandon_rate }}
+                            <label for="{{ form.abandon_rate.id_for_label }}">
+                                <i class="fas fa-percentage me-2"></i>Max Abandon Rate (%)
+                            </label>
+                            {% if form.abandon_rate.errors %}
+                                <div class="invalid-feedback d-block">{{ form.abandon_rate.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Additional Settings -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Recording Settings</h6>
+                            <div class="form-check mb-3">
+                                {{ form.enable_recording }}
+                                <label class="form-check-label" for="{{ form.enable_recording.id_for_label }}">
+                                    <i class="fas fa-microphone me-2"></i>Enable Call Recording
+                                </label>
+                            </div>
+                            <div class="form-floating">
+                                {{ form.recording_delay }}
+                                <label for="{{ form.recording_delay.id_for_label }}">Recording Delay (seconds)</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Monitoring & Compliance</h6>
+                            <div class="form-check mb-3">
+                                {{ form.monitor_agents }}
+                                <label class="form-check-label" for="{{ form.monitor_agents.id_for_label }}">
+                                    <i class="fas fa-eye me-2"></i>Enable Agent Monitoring
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                {{ form.use_internal_dnc }}
+                                <label class="form-check-label" for="{{ form.use_internal_dnc.id_for_label }}">
+                                    <i class="fas fa-ban me-2"></i>Use Internal DNC List
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                {{ form.amd_enabled }}
+                                <label class="form-check-label" for="{{ form.amd_enabled.id_for_label }}">
+                                    <i class="fas fa-robot me-2"></i>Enable Answering Machine Detection
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Lead Lists -->
+                {% if form.lead_lists %}
+                <div class="form-section" id="step5">
+                    <div class="section-header">
+                        <h4 class="mb-2">
+                            <span class="step-number">5</span>
+                            Lead Lists
+                        </h4>
+                        <p class="text-muted mb-0">Select lead lists for this campaign</p>
+                    </div>
+
+                    <div class="row">
+                        {% for choice in form.lead_lists %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        {{ choice.tag }}
+                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                            <strong>{{ choice.choice_label }}</strong>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -229,371 +485,182 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% endif %}
             </div>
-        </div>
-        
-        <!-- Step 2: Configuration -->
-        <div class="form-section" data-section="2">
-            <h4 class="mb-4">Campaign Configuration</h4>
-            
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <h6>Dialing Parameters</h6>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="preview-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-eye me-2"></i>Campaign Preview
+                    </h5>
                     
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="{{ form.max_attempts.id_for_label }}" class="form-label fw-semibold">Max Attempts</label>
-                            {{ form.max_attempts }}
-                            <div class="form-text">Maximum call attempts per lead</div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="{{ form.call_timeout.id_for_label }}" class="form-label fw-semibold">Call Timeout</label>
-                            <div class="input-group">
-                                {{ form.call_timeout }}
-                                <span class="input-group-text">seconds</span>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="{{ form.retry_delay.id_for_label }}" class="form-label fw-semibold">Retry Delay</label>
-                            <div class="input-group">
-                                {{ form.retry_delay }}
-                                <span class="input-group-text">seconds</span>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="{{ form.lead_order.id_for_label }}" class="form-label fw-semibold">Lead Order</label>
-                            {{ form.lead_order }}
-                        </div>
+                    <div class="mb-3">
+                        <strong>Name:</strong>
+                        <div id="preview-name" class="text-light">Not set</div>
                     </div>
-                </div>
-                
-                <div class="col-lg-6">
-                    <h6>Advanced Dialing</h6>
                     
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="{{ form.dial_ratio.id_for_label }}" class="form-label fw-semibold">Dial Ratio</label>
-                            <div class="input-group">
-                                {{ form.dial_ratio }}
-                                <span class="input-group-text">:1</span>
-                            </div>
-                            <div class="form-text">Calls per available agent</div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="{{ form.max_lines.id_for_label }}" class="form-label fw-semibold">Max Lines</label>
-                            {{ form.max_lines }}
-                            <div class="form-text">Maximum concurrent calls</div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="{{ form.abandon_rate.id_for_label }}" class="form-label fw-semibold">Abandon Rate</label>
-                            <div class="input-group">
-                                {{ form.abandon_rate }}
-                                <span class="input-group-text">%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="{{ form.timezone.id_for_label }}" class="form-label fw-semibold">Timezone</label>
-                            {{ form.timezone }}
-                        </div>
+                    <div class="mb-3">
+                        <strong>Type:</strong>
+                        <div id="preview-type" class="text-light">Not selected</div>
                     </div>
-                </div>
-            </div>
-            
-            <hr class="my-4">
-            
-            <h6 class="mb-3">Features & Compliance</h6>
-            
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h6><i class="fas fa-record-vinyl text-danger me-2"></i>Recording Settings</h6>
-                            
-                            <div class="form-check mb-3">
-                                {{ form.enable_recording }}
-                                <label class="form-check-label" for="{{ form.enable_recording.id_for_label }}">
-                                    Enable Call Recording
-                                </label>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="{{ form.recording_delay.id_for_label }}" class="form-label">Recording Delay</label>
-                                <div class="input-group">
-                                    {{ form.recording_delay }}
-                                    <span class="input-group-text">seconds</span>
-                                </div>
-                            </div>
-                            
-                            <div class="form-check">
-                                {{ form.monitor_agents }}
-                                <label class="form-check-label" for="{{ form.monitor_agents.id_for_label }}">
-                                    Enable Agent Monitoring
-                                </label>
-                            </div>
-                        </div>
+                    
+                    <div class="mb-3">
+                        <strong>Method:</strong>
+                        <div id="preview-method" class="text-light">Not selected</div>
                     </div>
-                </div>
-                
-                <div class="col-lg-6">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h6><i class="fas fa-shield-alt text-success me-2"></i>Compliance Settings</h6>
-                            
-                            <div class="form-check mb-3">
-                                {{ form.use_internal_dnc }}
-                                <label class="form-check-label" for="{{ form.use_internal_dnc.id_for_label }}">
-                                    Use Internal DNC List
-                                </label>
-                            </div>
-                            
-                            <div class="form-check mb-3">
-                                {{ form.use_campaign_dnc }}
-                                <label class="form-check-label" for="{{ form.use_campaign_dnc.id_for_label }}">
-                                    Use Campaign-Specific DNC
-                                </label>
-                            </div>
-                            
-                            <div class="form-check">
-                                {{ form.amd_enabled }}
-                                <label class="form-check-label" for="{{ form.amd_enabled.id_for_label }}">
-                                    Enable Answering Machine Detection
-                                </label>
-                            </div>
-                        </div>
+                    
+                    <div class="mb-3">
+                        <strong>Start Date:</strong>
+                        <div id="preview-start" class="text-light">Not set</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Daily Hours:</strong>
+                        <div id="preview-hours" class="text-light">Not set</div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-light" onclick="validateForm()">
+                            <i class="fas fa-check me-2"></i>Validate Settings
+                        </button>
+                        <a href="{% url 'campaigns:list' %}" class="btn btn-outline-light">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Step 3: Schedule -->
-        <div class="form-section" data-section="3">
-            <h4 class="mb-4">Campaign Schedule</h4>
-            
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <h6>Campaign Dates</h6>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.start_date.id_for_label }}" class="form-label fw-semibold required">Start Date & Time</label>
-                        {{ form.start_date }}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.end_date.id_for_label }}" class="form-label fw-semibold">End Date & Time</label>
-                        {{ form.end_date }}
-                        <div class="form-text">Leave empty for no end date</div>
-                    </div>
-                </div>
+
+        <!-- Action Buttons -->
+        <div class="btn-section">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Campaigns
+                </a>
                 
-                <div class="col-lg-6">
-                    <h6>Daily Operating Hours</h6>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.daily_start_time.id_for_label }}" class="form-label fw-semibold">Daily Start Time</label>
-                        {{ form.daily_start_time }}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.daily_end_time.id_for_label }}" class="form-label fw-semibold">Daily End Time</label>
-                        {{ form.daily_end_time }}
-                    </div>
-                    
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Note:</strong> You can configure specific hours for each day of the week after creating the campaign.
-                    </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+                        <i class="fas fa-save me-2"></i>Save as Draft
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Campaign
+                    </button>
                 </div>
             </div>
-        </div>
-        
-        <!-- Step 4: Review -->
-        <div class="form-section" data-section="4">
-            <h4 class="mb-4">Review Campaign Settings</h4>
-            
-            <div class="row g-4">
-                <div class="col-lg-8">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h6 class="mb-3">Campaign Summary</h6>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <strong>Name:</strong> <span id="review-name">-</span>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Type:</strong> <span id="review-type">-</span>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Dial Method:</strong> <span id="review-method">-</span>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Max Attempts:</strong> <span id="review-attempts">-</span>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Start Date:</strong> <span id="review-start">-</span>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Daily Hours:</strong> <span id="review-hours">-</span>
-                                </div>
-                            </div>
-                            
-                            <hr>
-                            
-                            <div class="mb-2"><strong>Description:</strong></div>
-                            <div id="review-description" class="text-muted">-</div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="confirmCreate" required>
-                            <label class="form-check-label" for="confirmCreate">
-                                I confirm that all campaign settings are correct and I want to create this campaign.
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-lg-4">
-                    <div class="card border-0 bg-primary text-white">
-                        <div class="card-body">
-                            <h6><i class="fas fa-rocket me-2"></i>What's Next?</h6>
-                            <ul class="small mb-0">
-                                <li>Campaign will be created in inactive status</li>
-                                <li>Assign agents to the campaign</li>
-                                <li>Add call scripts and dispositions</li>
-                                <li>Import or assign lead lists</li>
-                                <li>Test the campaign settings</li>
-                                <li>Start the campaign when ready</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Navigation Buttons -->
-        <div class="d-flex justify-content-between p-4">
-            <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
-                <i class="fas fa-arrow-left me-2"></i>Previous
-            </button>
-            <button type="button" class="btn btn-primary" id="nextBtn">
-                Next<i class="fas fa-arrow-right ms-2"></i>
-            </button>
-            <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
-                <i class="fas fa-check me-2"></i>Create Campaign
-            </button>
         </div>
     </form>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('campaignCreateForm');
-    const sections = form.querySelectorAll('.form-section');
-    const steps = document.querySelectorAll('.step');
-    const nextBtn = document.getElementById('nextBtn');
-    const prevBtn = document.getElementById('prevBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    let currentStep = 1;
+    // Form validation and preview updates
+    function selectOption(fieldName, value) {
+        // Update radio button
+        document.querySelector(`input[name="${fieldName}"][value="${value}"]`).checked = true;
+        
+        // Update selected card styling
+        document.querySelectorAll(`input[name="${fieldName}"]`).forEach(input => {
+            const card = input.closest('.setting-card');
+            if (input.checked) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+        
+        // Update preview
+        updatePreview();
+    }
 
-    function updateWizard() {
-        // Update sections
-        sections.forEach(section => {
-            section.classList.remove('active');
-            if (parseInt(section.dataset.section) === currentStep) {
-                section.classList.add('active');
+    function updatePreview() {
+        // Update campaign name
+        const name = document.querySelector('input[name="name"]').value;
+        document.getElementById('preview-name').textContent = name || 'Not set';
+        
+        // Update campaign type
+        const type = document.querySelector('input[name="campaign_type"]:checked');
+        document.getElementById('preview-type').textContent = type ? type.nextElementSibling.querySelector('h6').textContent : 'Not selected';
+        
+        // Update dial method
+        const method = document.querySelector('input[name="dial_method"]:checked');
+        document.getElementById('preview-method').textContent = method ? method.nextElementSibling.querySelector('h6').textContent : 'Not selected';
+        
+        // Update start date
+        const startDate = document.querySelector('input[name="start_date"]').value;
+        if (startDate) {
+            const date = new Date(startDate);
+            document.getElementById('preview-start').textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        // Update daily hours
+        const startTime = document.querySelector('input[name="daily_start_time"]').value;
+        const endTime = document.querySelector('input[name="daily_end_time"]').value;
+        if (startTime && endTime) {
+            document.getElementById('preview-hours').textContent = `${startTime} - ${endTime}`;
+        }
+    }
+
+    function validateForm() {
+        const form = document.getElementById('campaignForm');
+        const inputs = form.querySelectorAll('input[required], select[required]');
+        let isValid = true;
+        let errors = [];
+
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                isValid = false;
+                errors.push(input.closest('.form-floating')?.querySelector('label')?.textContent?.replace('*', '') || input.name);
             }
         });
 
-        // Update step indicators
-        steps.forEach(step => {
-            const stepNumber = parseInt(step.dataset.step);
-            step.classList.remove('active', 'completed');
-            if (stepNumber < currentStep) {
-                step.classList.add('completed');
-            } else if (stepNumber === currentStep) {
-                step.classList.add('active');
-            }
+        if (isValid) {
+            toastr.success('All required fields are filled!', 'Validation Successful');
+        } else {
+            toastr.error(`Please fill in: ${errors.join(', ')}`, 'Validation Failed');
+        }
+    }
+
+    function saveDraft() {
+        // Add a hidden input to indicate this is a draft
+        const draftInput = document.createElement('input');
+        draftInput.type = 'hidden';
+        draftInput.name = 'save_draft';
+        draftInput.value = 'true';
+        document.getElementById('campaignForm').appendChild(draftInput);
+        
+        // Submit the form
+        document.getElementById('campaignForm').submit();
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update preview on input changes
+        document.querySelectorAll('input, select, textarea').forEach(element => {
+            element.addEventListener('change', updatePreview);
+            element.addEventListener('input', updatePreview);
         });
 
-        // Update buttons
-        prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
-        nextBtn.style.display = currentStep < sections.length ? 'inline-block' : 'none';
-        submitBtn.style.display = currentStep === sections.length ? 'inline-block' : 'none';
-        
-        // If on review step, populate summary
-        if (currentStep === sections.length) {
-            populateReview();
+        // Set default values for datetime-local inputs
+        const now = new Date();
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const startDateInput = document.querySelector('input[name="start_date"]');
+        if (startDateInput && !startDateInput.value) {
+            startDateInput.value = tomorrow.toISOString().slice(0, 16);
         }
-    }
 
-    function populateReview() {
-        document.getElementById('review-name').textContent = form.elements['name'].value || '-';
-        
-        const typeElement = form.querySelector('input[name="campaign_type"]:checked');
-        document.getElementById('review-type').textContent = typeElement ? typeElement.parentElement.querySelector('h6').textContent : '-';
-        
-        const methodElement = form.querySelector('input[name="dial_method"]:checked');
-        document.getElementById('review-method').textContent = methodElement ? methodElement.parentElement.querySelector('h6').textContent : '-';
-        
-        document.getElementById('review-attempts').textContent = form.elements['max_attempts'].value || '-';
-        
-        const startDate = form.elements['start_date'].value;
-        document.getElementById('review-start').textContent = startDate ? new Date(startDate).toLocaleString() : '-';
-        
-        const startTime = form.elements['daily_start_time'].value;
-        const endTime = form.elements['daily_end_time'].value;
-        document.getElementById('review-hours').textContent = (startTime && endTime) ? `${startTime} - ${endTime}` : '-';
-        
-        document.getElementById('review-description').textContent = form.elements['description'].value || '-';
-    }
+        // Initialize preview
+        updatePreview();
 
-    nextBtn.addEventListener('click', () => {
-        if (currentStep < sections.length) {
-            currentStep++;
-            updateWizard();
-        }
+        // Form submission handling
+        document.getElementById('campaignForm').addEventListener('submit', function(e) {
+            const submitBtn = document.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Campaign...';
+            submitBtn.disabled = true;
+        });
     });
-
-    prevBtn.addEventListener('click', () => {
-        if (currentStep > 1) {
-            currentStep--;
-            updateWizard();
-        }
-    });
-
-    // Function to handle selection of custom radio-like cards
-    window.selectOption = function(name, value) {
-        const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
-        if (radio) {
-            radio.checked = true;
-            
-            // Update visual selection
-            const cards = document.querySelectorAll(`input[name="${name}"]`);
-            cards.forEach(cardRadio => {
-                const parentCard = cardRadio.closest('.setting-card');
-                if (cardRadio.value === value) {
-                    parentCard.classList.add('selected');
-                } else {
-                    parentCard.classList.remove('selected');
-                }
-            });
-        }
-    }
-    
-    // Initial setup
-    updateWizard();
-});
 </script>
 {% endblock %}

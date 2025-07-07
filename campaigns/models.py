@@ -46,12 +46,30 @@ class Campaign(TimeStampedModel):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive')
     is_active = models.BooleanField(default=False)
     
+    # Timezone choices
+    TIMEZONE_CHOICES = [
+        ('UTC', 'UTC (Coordinated Universal Time)'),
+        ('America/New_York', 'Eastern Time (ET)'),
+        ('America/Chicago', 'Central Time (CT)'),
+        ('America/Denver', 'Mountain Time (MT)'),
+        ('America/Los_Angeles', 'Pacific Time (PT)'),
+        ('America/Phoenix', 'Arizona Time (MST)'),
+        ('America/Anchorage', 'Alaska Time (AKST)'),
+        ('Pacific/Honolulu', 'Hawaii Time (HST)'),
+        ('Asia/Kolkata', 'India Standard Time (IST)'),
+        ('Europe/London', 'Greenwich Mean Time (GMT)'),
+        ('Europe/Paris', 'Central European Time (CET)'),
+        ('Asia/Tokyo', 'Japan Standard Time (JST)'),
+        ('Asia/Shanghai', 'China Standard Time (CST)'),
+        ('Australia/Sydney', 'Australian Eastern Time (AEST)'),
+    ]
+    
     # Scheduling
     start_date = models.DateTimeField()
     end_date = models.DateTimeField(null=True, blank=True)
     daily_start_time = models.TimeField(default='09:00:00')
     daily_end_time = models.TimeField(default='17:00:00')
-    timezone = models.CharField(max_length=50, default='UTC')
+    timezone = models.CharField(max_length=50, choices=TIMEZONE_CHOICES, default='UTC')
     
     # Call Settings
     max_attempts = models.PositiveIntegerField(default=3)

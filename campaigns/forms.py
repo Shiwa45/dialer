@@ -123,6 +123,9 @@ class CampaignCreateForm(forms.ModelForm):
         # Set default timezone to India Standard Time
         self.fields['timezone'].initial = 'Asia/Kolkata'
 
+        # Set default lead_order to 'down'
+        self.fields['lead_order'].initial = 'down'
+
     def clean(self):
         cleaned_data = super().clean()
         start_date = cleaned_data.get('start_date')

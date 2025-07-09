@@ -7,6 +7,9 @@ from django.utils import timezone
 from core.models import TimeStampedModel
 import uuid
 
+def generate_uuid():
+    return str(uuid.uuid4())
+
 class Campaign(TimeStampedModel):
     """
     Main campaign model for outbound/inbound campaigns
@@ -36,7 +39,7 @@ class Campaign(TimeStampedModel):
     # Basic Information
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    campaign_id = models.CharField(max_length=50, unique=True, default=uuid.uuid4)
+    campaign_id = models.CharField(max_length=50, unique=True, default=generate_uuid, editable=False)
     
     # Campaign Type and Method
     campaign_type = models.CharField(max_length=20, choices=CAMPAIGN_TYPES, default='outbound')

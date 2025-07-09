@@ -239,6 +239,12 @@ class CampaignCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         )
         return response
 
+    def form_invalid(self, form):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"CampaignCreateForm errors: {form.errors.as_json()}")
+        return super().form_invalid(form)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Create New Campaign'

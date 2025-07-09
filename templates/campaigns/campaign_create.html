@@ -415,6 +415,16 @@
                                 <div class="invalid-feedback d-block">{{ form.abandon_rate.errors.0 }}</div>
                             {% endif %}
                         </div>
+
+                        <div class="form-floating">
+                            {{ form.lead_order }}
+                            <label for="{{ form.lead_order.id_for_label }}">
+                                <i class="fas fa-list-ol me-2"></i>Lead Order
+                            </label>
+                            {% if form.lead_order.errors %}
+                                <div class="invalid-feedback d-block">{{ form.lead_order.errors.0 }}</div>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <!-- Additional Settings -->

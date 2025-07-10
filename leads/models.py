@@ -13,20 +13,11 @@ class LeadList(TimeStampedModel):
     """
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    list_id = models.CharField(max_length=50, unique=True, default=uuid.uuid4)
+    is_active = models.BooleanField(default=True)
+    tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
     
     # Assignment and Access
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_lead_lists')
-    is_active = models.BooleanField(default=True)
-    
-    # Import Information
-    source_file = models.CharField(max_length=500, blank=True)
-    import_date = models.DateTimeField(null=True, blank=True)
-    
-    # Statistics
-    total_leads = models.PositiveIntegerField(default=0)
-    active_leads = models.PositiveIntegerField(default=0)
-    called_leads = models.PositiveIntegerField(default=0)
     
     class Meta:
         verbose_name = "Lead List"
@@ -34,7 +25,7 @@ class LeadList(TimeStampedModel):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.name} ({self.total_leads} leads)"
+        return f"{self.name}"
 
 class Lead(TimeStampedModel):
     """
@@ -42,91 +33,71 @@ class Lead(TimeStampedModel):
     """
     STATUS_CHOICES = [
         ('new', 'New'),
-        ('called', 'Called'),
+        ('contacted', 'Contacted'),
         ('callback', 'Callback Scheduled'),
-        ('interested', 'Interested'),
-        ('not_interested', 'Not Interested'),
         ('sale', 'Sale'),
+        ('no_answer', 'No Answer'),
+        ('busy', 'Busy'),
+        ('not_interested', 'Not Interested'),
         ('dnc', 'Do Not Call'),
         ('invalid', 'Invalid'),
     ]
     
-    # Basic Information
-    lead_id = models.CharField(max_length=50, unique=True, default=uuid.uuid4)
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
     
-    # Name Information
+    # Basic Information
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    middle_name = models.CharField(max_length=100, blank=True)
-    title = models.CharField(max_length=50, blank=True)
     
     # Contact Information
     phone_number = models.CharField(
         max_length=20,
         validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number")]
     )
-    alt_phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     
-    # Address Information
-    address1 = models.CharField(max_length=200, blank=True)
-    address2 = models.CharField(max_length=200, blank=True)
+    # Address Information (updated field names to match templates)
+    address = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=50, blank=True)
-    postal_code = models.CharField(max_length=20, blank=True)
-    country = models.CharField(max_length=100, default='US')
+    zip_code = models.CharField(max_length=20, blank=True)
+    company = models.CharField(max_length=200, blank=True)
     
     # Lead Management
-    lead_list = models.ForeignKey(LeadList, on_delete=models.CASCADE, related_name='leads')
+    lead_list = models.ForeignKey(LeadList, on_delete=models.CASCADE, related_name='leads', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
-    priority = models.PositiveIntegerField(default=1)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
     
     # Call Management
     call_count = models.PositiveIntegerField(default=0)
-    last_called = models.DateTimeField(null=True, blank=True)
-    next_call_time = models.DateTimeField(null=True, blank=True)
+    last_contact_date = models.DateTimeField(null=True, blank=True)
     
-    # Assignment
-    assigned_agent = models.ForeignKey(
+    # Assignment (updated field name to match templates)
+    assigned_user = models.ForeignKey(
         User, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
         related_name='assigned_leads'
     )
-    assigned_campaign = models.ForeignKey(
-        'campaigns.Campaign',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='campaign_leads'
-    )
-    
-    # Time Management
-    best_time_to_call = models.CharField(max_length=100, blank=True)
-    timezone = models.CharField(max_length=50, default='UTC')
     
     # Additional Information
     comments = models.TextField(blank=True)
-    source = models.CharField(max_length=200, blank=True)
-    
-    # Custom Fields (JSON for flexibility)
-    custom_fields = models.JSONField(default=dict, blank=True)
-    
-    # Flags
-    is_dnc = models.BooleanField(default=False)
-    is_callback = models.BooleanField(default=False)
-    is_priority = models.BooleanField(default=False)
+    source = models.CharField(max_length=200, blank=True, default='Manual Entry')
     
     class Meta:
         verbose_name = "Lead"
         verbose_name_plural = "Leads"
-        ordering = ['priority', 'last_called']
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['phone_number']),
             models.Index(fields=['status']),
-            models.Index(fields=['last_called']),
-            models.Index(fields=['assigned_agent']),
+            models.Index(fields=['last_contact_date']),
+            models.Index(fields=['assigned_user']),
         ]
     
     def __str__(self):
@@ -138,13 +109,14 @@ class Lead(TimeStampedModel):
     
     def can_be_called(self):
         """Check if lead can be called based on various criteria"""
-        if self.is_dnc:
-            return False
         if self.status in ['sale', 'dnc', 'invalid']:
             return False
-        if self.next_call_time and self.next_call_time > timezone.now():
-            return False
         return True
+    
+    def days_since_created(self):
+        """Calculate days since lead was created"""
+        delta = timezone.now() - self.created_at
+        return delta.days
 
 class LeadNote(TimeStampedModel):
     """
@@ -163,80 +135,19 @@ class LeadNote(TimeStampedModel):
     def __str__(self):
         return f"Note for {self.lead.get_full_name()} by {self.user.username}"
 
-class LeadHistory(TimeStampedModel):
-    """
-    Track lead status changes and activities
-    """
-    ACTION_TYPES = [
-        ('created', 'Lead Created'),
-        ('called', 'Call Made'),
-        ('status_change', 'Status Changed'),
-        ('assigned', 'Agent Assigned'),
-        ('note_added', 'Note Added'),
-        ('imported', 'Lead Imported'),
-        ('callback_scheduled', 'Callback Scheduled'),
-    ]
-    
-    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='history')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
-    description = models.TextField()
-    
-    # Track changes
-    old_value = models.TextField(blank=True)
-    new_value = models.TextField(blank=True)
-    
-    class Meta:
-        verbose_name = "Lead History"
-        verbose_name_plural = "Lead Histories"
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.lead.get_full_name()} - {self.get_action_type_display()}"
-
-class DNCList(TimeStampedModel):
-    """
-    Do Not Call list management
-    """
-    DNC_TYPES = [
-        ('internal', 'Internal DNC'),
-        ('campaign', 'Campaign Specific'),
-        ('federal', 'Federal DNC'),
-        ('state', 'State DNC'),
-        ('custom', 'Custom List'),
-    ]
-    
-    name = models.CharField(max_length=200)
-    dnc_type = models.CharField(max_length=20, choices=DNC_TYPES, default='internal')
-    description = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    
-    # Management
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    
-    class Meta:
-        verbose_name = "DNC List"
-        verbose_name_plural = "DNC Lists"
-        ordering = ['name']
-    
-    def __str__(self):
-        return f"{self.name} ({self.get_dnc_type_display()})"
-
 class DNCEntry(TimeStampedModel):
     """
-    Individual DNC entries
+    Do Not Call entries - simplified single model
     """
-    dnc_list = models.ForeignKey(DNCList, on_delete=models.CASCADE, related_name='entries')
     phone_number = models.CharField(
         max_length=20,
+        unique=True,
         validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number")]
     )
     added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    reason = models.CharField(max_length=200, blank=True)
-    expires_on = models.DateField(null=True, blank=True)
+    reason = models.CharField(max_length=200, blank=True, default="Manual Entry")
     
     class Meta:
-        unique_together = ['dnc_list', 'phone_number']
         verbose_name = "DNC Entry"
         verbose_name_plural = "DNC Entries"
         indexes = [
@@ -244,15 +155,7 @@ class DNCEntry(TimeStampedModel):
         ]
     
     def __str__(self):
-        return f"{self.phone_number} in {self.dnc_list.name}"
-    
-    def is_active(self):
-        """Check if DNC entry is still active"""
-        if not self.dnc_list.is_active:
-            return False
-        if self.expires_on and self.expires_on < timezone.now().date():
-            return False
-        return True
+        return f"{self.phone_number} - DNC"
 
 class LeadImport(TimeStampedModel):
     """
@@ -263,41 +166,30 @@ class LeadImport(TimeStampedModel):
         ('processing', 'Processing'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
-        ('cancelled', 'Cancelled'),
     ]
     
     # Basic Information
     name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    lead_list = models.ForeignKey(LeadList, on_delete=models.CASCADE, related_name='imports')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
     # File Information
-    file_name = models.CharField(max_length=500)
-    file_path = models.CharField(max_length=1000)
-    file_size = models.PositiveIntegerField(default=0)
+    file = models.FileField(upload_to='lead_imports/', null=True, blank=True)
     
     # Import Configuration
-    lead_list = models.ForeignKey(LeadList, on_delete=models.CASCADE, related_name='imports')
     skip_duplicates = models.BooleanField(default=True)
-    update_existing = models.BooleanField(default=False)
-    
-    # Field Mapping (JSON)
-    field_mapping = models.JSONField(default=dict)
+    check_dnc = models.BooleanField(default=True)
     
     # Statistics
     total_rows = models.PositiveIntegerField(default=0)
     processed_rows = models.PositiveIntegerField(default=0)
-    imported_leads = models.PositiveIntegerField(default=0)
-    skipped_leads = models.PositiveIntegerField(default=0)
-    error_count = models.PositiveIntegerField(default=0)
-    
-    # Management
-    started_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    started_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    successful_imports = models.PositiveIntegerField(default=0)
+    failed_imports = models.PositiveIntegerField(default=0)
+    duplicate_count = models.PositiveIntegerField(default=0)
     
     # Error Handling
-    error_log = models.TextField(blank=True)
+    error_message = models.TextField(blank=True)
     
     class Meta:
         verbose_name = "Lead Import"
@@ -353,13 +245,58 @@ class CallbackSchedule(TimeStampedModel):
         """Check if callback is overdue"""
         return not self.is_completed and self.scheduled_time < timezone.now()
 
-# leads/apps.py
+class LeadRecyclingRule(TimeStampedModel):
+    """
+    Rules for automatically recycling leads
+    """
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    
+    # Rule Criteria
+    source_status = models.CharField(max_length=20, choices=Lead.STATUS_CHOICES)
+    target_status = models.CharField(max_length=20, choices=Lead.STATUS_CHOICES)
+    days_since_contact = models.PositiveIntegerField(default=7)
+    max_attempts = models.PositiveIntegerField(default=3)
+    
+    # Settings
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Lead Recycling Rule"
+        verbose_name_plural = "Lead Recycling Rules"
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name}"
+
+class LeadFilter(TimeStampedModel):
+    """
+    Saved lead filters for users
+    """
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    filter_criteria = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Lead Filter"
+        verbose_name_plural = "Lead Filters"
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name}"
+
+# apps.py
 from django.apps import AppConfig
 
 class LeadsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'leads'
     verbose_name = 'Lead Management'
+    
+    def ready(self):
+        import leads.signals  # noqa
 
-# leads/__init__.py
+# __init__.py
 default_app_config = 'leads.apps.LeadsConfig'

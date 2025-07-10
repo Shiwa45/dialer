@@ -1,0 +1,738 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ lead.get_full_name }} - Lead Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lead-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .lead-status-badge {
+        font-size: 1rem;
+        padding: 8px 16px;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .info-card-header {
+        padding: 20px 20px 0 20px;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 20px;
+    }
+    
+    .info-card-body {
+        padding: 0 20px 20px 20px;
+    }
+    
+    .activity-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -25px;
+        top: 5px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #007bff;
+    }
+    
+    .timeline-item.success::before {
+        background: #28a745;
+        box-shadow: 0 0 0 2px #28a745;
+    }
+    
+    .timeline-item.warning::before {
+        background: #ffc107;
+        box-shadow: 0 0 0 2px #ffc107;
+    }
+    
+    .timeline-item.danger::before {
+        background: #dc3545;
+        box-shadow: 0 0 0 2px #dc3545;
+    }
+    
+    .quick-actions {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .contact-info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .contact-info-item i {
+        width: 20px;
+        margin-right: 15px;
+        color: #6c757d;
+    }
+    
+    .notes-section {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .note-item {
+        border-left: 4px solid #007bff;
+        background: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .note-item.important {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Lead Header -->
+    <div class="lead-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <h1 class="h2 mb-0 me-3">{{ lead.get_full_name }}</h1>
+                    {% if lead.status == 'new' %}
+                        <span class="badge bg-success lead-status-badge">{{ lead.get_status_display }}</span>
+                    {% elif lead.status == 'contacted' %}
+                        <span class="badge bg-primary lead-status-badge">{{ lead.get_status_display }}</span>
+                    {% elif lead.status == 'callback' %}
+                        <span class="badge bg-warning lead-status-badge">{{ lead.get_status_display }}</span>
+                    {% elif lead.status == 'sale' %}
+                        <span class="badge bg-success lead-status-badge">{{ lead.get_status_display }}</span>
+                    {% elif lead.status == 'dnc' %}
+                        <span class="badge bg-danger lead-status-badge">{{ lead.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary lead-status-badge">{{ lead.get_status_display }}</span>
+                    {% endif %}
+                    
+                    {% if lead.priority == 'high' %}
+                        <span class="badge bg-danger ms-2">High Priority</span>
+                    {% elif lead.priority == 'medium' %}
+                        <span class="badge bg-warning ms-2">Medium Priority</span>
+                    {% endif %}
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><i class="fas fa-phone me-2"></i>{{ lead.phone_number }}</p>
+                        {% if lead.email %}
+                        <p class="mb-1"><i class="fas fa-envelope me-2"></i>{{ lead.email }}</p>
+                        {% endif %}
+                        {% if lead.company %}
+                        <p class="mb-1"><i class="fas fa-building me-2"></i>{{ lead.company }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if lead.city and lead.state %}
+                        <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i>{{ lead.city }}, {{ lead.state }}</p>
+                        {% endif %}
+                        {% if lead.lead_list %}
+                        <p class="mb-1"><i class="fas fa-list me-2"></i>{{ lead.lead_list.name }}</p>
+                        {% endif %}
+                        {% if lead.assigned_user %}
+                        <p class="mb-1"><i class="fas fa-user me-2"></i>{{ lead.assigned_user.get_full_name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-end">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'leads:update' lead.id %}" class="btn btn-light">
+                        <i class="fas fa-edit me-2"></i>Edit Lead
+                    </a>
+                    <button type="button" class="btn btn-success" onclick="initiateCall()">
+                        <i class="fas fa-phone me-2"></i>Call Now
+                    </button>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="scheduleCallback()">
+                                <i class="fas fa-calendar me-2"></i>Schedule Callback
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="markAsDNC()">
+                                <i class="fas fa-ban me-2"></i>Mark as DNC
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'leads:delete' lead.id %}">
+                                <i class="fas fa-trash me-2"></i>Delete Lead
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Lead Information -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>Lead Information
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="contact-info-item">
+                                <i class="fas fa-user"></i>
+                                <div>
+                                    <strong>Full Name</strong><br>
+                                    {{ lead.get_full_name }}
+                                </div>
+                            </div>
+                            
+                            <div class="contact-info-item">
+                                <i class="fas fa-phone"></i>
+                                <div>
+                                    <strong>Phone Number</strong><br>
+                                    <a href="tel:{{ lead.phone_number }}">{{ lead.phone_number }}</a>
+                                </div>
+                            </div>
+                            
+                            {% if lead.email %}
+                            <div class="contact-info-item">
+                                <i class="fas fa-envelope"></i>
+                                <div>
+                                    <strong>Email</strong><br>
+                                    <a href="mailto:{{ lead.email }}">{{ lead.email }}</a>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if lead.company %}
+                            <div class="contact-info-item">
+                                <i class="fas fa-building"></i>
+                                <div>
+                                    <strong>Company</strong><br>
+                                    {{ lead.company }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            {% if lead.address %}
+                            <div class="contact-info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <div>
+                                    <strong>Address</strong><br>
+                                    {{ lead.address }}
+                                    {% if lead.city or lead.state or lead.zip_code %}
+                                    <br>{{ lead.city }}{% if lead.city and lead.state %}, {% endif %}{{ lead.state }} {{ lead.zip_code }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="contact-info-item">
+                                <i class="fas fa-tag"></i>
+                                <div>
+                                    <strong>Source</strong><br>
+                                    {{ lead.source|default:"Unknown" }}
+                                </div>
+                            </div>
+                            
+                            <div class="contact-info-item">
+                                <i class="fas fa-calendar"></i>
+                                <div>
+                                    <strong>Created</strong><br>
+                                    {{ lead.created_at|date:"M d, Y H:i" }}
+                                </div>
+                            </div>
+                            
+                            {% if lead.last_contact_date %}
+                            <div class="contact-info-item">
+                                <i class="fas fa-phone-alt"></i>
+                                <div>
+                                    <strong>Last Contact</strong><br>
+                                    {{ lead.last_contact_date|date:"M d, Y H:i" }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if lead.comments %}
+                    <div class="mt-3">
+                        <strong>Comments:</strong>
+                        <div class="bg-light p-3 rounded mt-2">
+                            {{ lead.comments|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Call History -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Call History
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    {% if call_history %}
+                    <div class="activity-timeline">
+                        {% for call in call_history %}
+                        <div class="timeline-item {% if call.disposition == 'sale' %}success{% elif call.disposition == 'callback' %}warning{% elif call.disposition == 'dnc' %}danger{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ call.get_disposition_display|default:"Call Made" }}</strong>
+                                    <p class="mb-1 text-muted">
+                                        Duration: {{ call.duration|default:"0" }} seconds
+                                        {% if call.user %}
+                                        | Agent: {{ call.user.get_full_name }}
+                                        {% endif %}
+                                    </p>
+                                    {% if call.notes %}
+                                    <p class="mb-1">{{ call.notes }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">{{ call.created_at|date:"M d, Y H:i" }}</small>
+                                </div>
+                                {% if call.recording_url %}
+                                <button class="btn btn-sm btn-outline-primary" onclick="playRecording('{{ call.recording_url }}')">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-phone fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No call history</h6>
+                        <p class="text-muted">This lead hasn't been contacted yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>Notes
+                        </h5>
+                        <button class="btn btn-sm btn-primary" onclick="addNote()">
+                            <i class="fas fa-plus me-2"></i>Add Note
+                        </button>
+                    </div>
+                </div>
+                <div class="info-card-body">
+                    <div class="notes-section">
+                        {% if notes %}
+                        {% for note in notes %}
+                        <div class="note-item {% if note.is_important %}important{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>{{ note.user.get_full_name }}</strong>
+                                <div>
+                                    {% if note.is_important %}
+                                    <span class="badge bg-danger me-2">Important</span>
+                                    {% endif %}
+                                    <small class="text-muted">{{ note.created_at|date:"M d, Y H:i" }}</small>
+                                </div>
+                            </div>
+                            <p class="mb-0">{{ note.note|linebreaks }}</p>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-sticky-note fa-3x text-muted mb-3"></i>
+                            <h6 class="text-muted">No notes</h6>
+                            <p class="text-muted">Add notes to track important information about this lead.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="info-card quick-actions">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="initiateCall()">
+                            <i class="fas fa-phone me-2"></i>Call Lead
+                        </button>
+                        <button class="btn btn-primary" onclick="sendEmail()">
+                            <i class="fas fa-envelope me-2"></i>Send Email
+                        </button>
+                        <button class="btn btn-warning" onclick="scheduleCallback()">
+                            <i class="fas fa-calendar me-2"></i>Schedule Callback
+                        </button>
+                        <button class="btn btn-info" onclick="updateStatus()">
+                            <i class="fas fa-edit me-2"></i>Update Status
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Callbacks -->
+            {% if callbacks %}
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Upcoming Callbacks
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    {% for callback in callbacks %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                        <div>
+                            <strong>{{ callback.scheduled_time|date:"M d, Y" }}</strong><br>
+                            <small class="text-muted">{{ callback.scheduled_time|time:"H:i" }} - {{ callback.agent.get_full_name }}</small>
+                            {% if callback.notes %}
+                            <p class="mb-0 mt-1"><small>{{ callback.notes|truncatewords:10 }}</small></p>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-sm btn-outline-success" onclick="completeCallback({{ callback.id }})">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Related Leads -->
+            {% if related_leads %}
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Related Leads
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    {% for related in related_leads %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <a href="{% url 'leads:detail' related.id %}" class="text-decoration-none">
+                                <strong>{{ related.get_full_name }}</strong>
+                            </a><br>
+                            <small class="text-muted">{{ related.phone_number }}</small>
+                        </div>
+                        <span class="badge bg-secondary">{{ related.get_status_display }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lead Statistics -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Lead Stats
+                    </h5>
+                </div>
+                <div class="info-card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <h4 class="text-primary mb-0">{{ lead.call_count|default:0 }}</h4>
+                                <small class="text-muted">Calls Made</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ lead.days_since_created }}</h4>
+                                <small class="text-muted">Days Old</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Schedule Callback Modal -->
+<div class="modal fade" id="callbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Schedule Callback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="callbackForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Date & Time</label>
+                        <input type="datetime-local" class="form-control" name="scheduled_time" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal fade" id="noteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="noteForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Note</label>
+                        <textarea class="form-control" name="note" rows="4" required></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_important" id="importantNote">
+                        <label class="form-check-label" for="importantNote">
+                            Mark as important
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Note</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Status Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Lead Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="statusForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">New Status</label>
+                        <select class="form-select" name="status" required>
+                            <option value="">Select status...</option>
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="callback">Callback</option>
+                            <option value="sale">Sale</option>
+                            <option value="no_answer">No Answer</option>
+                            <option value="busy">Busy</option>
+                            <option value="not_interested">Not Interested</option>
+                            <option value="dnc">Do Not Call</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function initiateCall() {
+        // This will integrate with the telephony system
+        toastr.info('Initiating call to {{ lead.phone_number }}...');
+        // Call the telephony API here
+    }
+
+    function scheduleCallback() {
+        const modal = new bootstrap.Modal(document.getElementById('callbackModal'));
+        modal.show();
+    }
+
+    function addNote() {
+        const modal = new bootstrap.Modal(document.getElementById('noteModal'));
+        modal.show();
+    }
+
+    function updateStatus() {
+        const modal = new bootstrap.Modal(document.getElementById('statusModal'));
+        modal.show();
+    }
+
+    function markAsDNC() {
+        if (confirm('Mark this lead as Do Not Call? This action cannot be undone.')) {
+            fetch(`/leads/{{ lead.id }}/update/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: 'status=dnc'
+            })
+            .then(response => {
+                if (response.ok) {
+                    toastr.success('Lead marked as DNC');
+                    location.reload();
+                } else {
+                    toastr.error('Failed to update lead');
+                }
+            });
+        }
+    }
+
+    function sendEmail() {
+        {% if lead.email %}
+        window.location.href = 'mailto:{{ lead.email }}';
+        {% else %}
+        toastr.warning('No email address for this lead');
+        {% endif %}
+    }
+
+    function completeCallback(callbackId) {
+        fetch(`/leads/callbacks/${callbackId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                toastr.success('Callback completed');
+                location.reload();
+            } else {
+                toastr.error('Failed to complete callback');
+            }
+        });
+    }
+
+    function playRecording(url) {
+        window.open(url, '_blank');
+    }
+
+    // Handle form submissions
+    document.getElementById('callbackForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('lead', '{{ lead.id }}');
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "leads:create_callback" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                toastr.success('Callback scheduled successfully');
+                bootstrap.Modal.getInstance(document.getElementById('callbackModal')).hide();
+                location.reload();
+            } else {
+                toastr.error('Failed to schedule callback');
+            }
+        });
+    });
+
+    document.getElementById('noteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('lead', '{{ lead.id }}');
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('/leads/{{ lead.id }}/notes/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                toastr.success('Note added successfully');
+                bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
+                location.reload();
+            } else {
+                toastr.error('Failed to add note');
+            }
+        });
+    });
+
+    document.getElementById('statusForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('/leads/{{ lead.id }}/update-status/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                toastr.success('Status updated successfully');
+                bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
+                location.reload();
+            } else {
+                toastr.error('Failed to update status');
+            }
+        });
+    });
+</script>
+{% endblock %}

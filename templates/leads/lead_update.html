@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Lead - {{ lead.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .section-header h5 {
+        color: #495057;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .section-header i {
+        margin-right: 10px;
+        color: #007bff;
+    }
+    
+    .btn-group-actions {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Edit Lead</h1>
+            <p class="text-muted">Update information for {{ lead.get_full_name }}</p>
+        </div>
+        <div>
+            <a href="{% url 'leads:detail' lead.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Lead
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="leadForm" novalidate>
+        {% csrf_token %}
+        
+        <!-- Personal Information -->
+        <div class="form-section">
+            <div class="section-header">
+                <h5><i class="fas fa-user"></i>Personal Information</h5>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        {{ form.first_name }}
+                        <label for="{{ form.first_name.id_for_label }}">First Name *</label>
+                        {% if form.first_name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.first_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        {{ form.last_name }}
+                        <label for="{{ form.last_name.id_for_label }}">Last Name *</label>
+                        {% if form.last_name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.last_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        {{ form.phone_number }}
+                        <label for="{{ form.phone_number.id_for_label }}">Phone Number *</label>
+                        {% if form.phone_number.errors %}
+                            <div class="invalid-feedback d-block">{{ form.phone_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        {{ form.email }}
+                        <label for="{{ form.email.id_for_label }}">Email Address</label>
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.company }}
+                        <label for="{{ form.company.id_for_label }}">Company</label>
+                        {% if form.company.errors %}
+                            <div class="invalid-feedback d-block">{{ form.company.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="form-section">
+            <div class="section-header">
+                <h5><i class="fas fa-map-marker-alt"></i>Address Information</h5>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.address }}
+                        <label for="{{ form.address.id_for_label }}">Street Address</label>
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback d-block">{{ form.address.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        {{ form.city }}
+                        <label for="{{ form.city.id_for_label }}">City</label>
+                        {% if form.city.errors %}
+                            <div class="invalid-feedback d-block">{{ form.city.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        {{ form.state }}
+                        <label for="{{ form.state.id_for_label }}">State</label>
+                        {% if form.state.errors %}
+                            <div class="invalid-feedback d-block">{{ form.state.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        {{ form.zip_code }}
+                        <label for="{{ form.zip_code.id_for_label }}">ZIP Code</label>
+                        {% if form.zip_code.errors %}
+                            <div class="invalid-feedback d-block">{{ form.zip_code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lead Management -->
+        <div class="form-section">
+            <div class="section-header">
+                <h5><i class="fas fa-cogs"></i>Lead Management</h5>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        {{ form.lead_list }}
+                        <label for="{{ form.lead_list.id_for_label }}">Lead List *</label>
+                        {% if form.lead_list.errors %}
+                            <div class="invalid-feedback d-block">{{ form.lead_list.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        {{ form.status }}
+                        <label for="{{ form.status.id_for_label }}">Status</label>
+                        {% if form.status.errors %}
+                            <div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        {{ form.priority }}
+                        <label for="{{ form.priority.id_for_label }}">Priority</label>
+                        {% if form.priority.errors %}
+                            <div class="invalid-feedback d-block">{{ form.priority.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        {{ form.assigned_user }}
+                        <label for="{{ form.assigned_user.id_for_label }}">Assigned Agent</label>
+                        {% if form.assigned_user.errors %}
+                            <div class="invalid-feedback d-block">{{ form.assigned_user.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        {{ form.call_count }}
+                        <label for="{{ form.call_count.id_for_label }}">Call Count</label>
+                        {% if form.call_count.errors %}
+                            <div class="invalid-feedback d-block">{{ form.call_count.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        {{ form.last_contact_date }}
+                        <label for="{{ form.last_contact_date.id_for_label }}">Last Contact</label>
+                        {% if form.last_contact_date.errors %}
+                            <div class="invalid-feedback d-block">{{ form.last_contact_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.source }}
+                        <label for="{{ form.source.id_for_label }}">Source</label>
+                        {% if form.source.errors %}
+                            <div class="invalid-feedback d-block">{{ form.source.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="form-section">
+            <div class="section-header">
+                <h5><i class="fas fa-sticky-note"></i>Additional Information</h5>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.comments }}
+                        <label for="{{ form.comments.id_for_label }}">Comments</label>
+                        {% if form.comments.errors %}
+                            <div class="invalid-feedback d-block">{{ form.comments.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="btn-group-actions">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">* Required fields</small>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'leads:detail' lead.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save me-2"></i>Update Lead
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Handle form submission
+    document.getElementById('leadForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+    });
+</script>
+{% endblock %}

@@ -8018,3 +8018,782 @@ ERROR 2025-07-09 14:44:10,424 views 16304 9256 CampaignCreateForm errors: {"lead
 INFO 2025-07-09 14:44:10,548 basehttp 16304 9256 "POST /campaigns/create/ HTTP/1.1" 200 53131
 INFO 2025-07-09 14:48:16,910 autoreload 16304 30800 C:\Users\shiwansh\autodialer_project\campaigns\forms.py changed, reloading.
 INFO 2025-07-09 14:48:18,019 autoreload 6672 6064 Watching for file changes with StatReloader
+INFO 2025-07-09 14:48:28,141 basehttp 6672 32168 "POST /campaigns/create/ HTTP/1.1" 302 0
+INFO 2025-07-09 14:48:28,229 basehttp 6672 32168 "GET /campaigns/ HTTP/1.1" 200 78259
+INFO 2025-07-09 16:39:01,532 basehttp 6672 14496 "GET /campaigns/ HTTP/1.1" 200 77713
+INFO 2025-07-09 16:46:03,041 basehttp 6672 3456 "GET /campaigns/6/ HTTP/1.1" 200 50038
+INFO 2025-07-09 16:46:08,265 basehttp 6672 15780 "GET /users/ HTTP/1.1" 200 42983
+INFO 2025-07-09 16:46:08,306 basehttp 6672 15780 "GET /users/ajax/status/ HTTP/1.1" 200 1369
+INFO 2025-07-09 16:46:11,103 basehttp 6672 15780 "GET /users/2/ HTTP/1.1" 200 29432
+INFO 2025-07-10 12:21:39,880 autoreload 31328 37096 Watching for file changes with StatReloader
+INFO 2025-07-10 12:21:43,631 basehttp 31328 34628 "GET / HTTP/1.1" 302 0
+INFO 2025-07-10 12:21:43,642 basehttp 31328 34628 "GET /dashboard/ HTTP/1.1" 302 0
+INFO 2025-07-10 12:21:43,682 basehttp 31328 34628 "GET /users/login/?next=/dashboard/ HTTP/1.1" 200 5364
+INFO 2025-07-10 12:21:43,710 basehttp 31328 34628 "GET /static/css/style.css HTTP/1.1" 304 0
+INFO 2025-07-10 12:21:46,312 basehttp 31328 34628 "POST /users/login/?next=/dashboard/ HTTP/1.1" 302 0
+ERROR 2025-07-10 12:21:46,791 log 31328 34628 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-10 12:21:46,802 basehttp 31328 34628 "GET /dashboard/ HTTP/1.1" 500 200070
+ERROR 2025-07-10 12:21:54,302 log 31328 34628 Internal Server Error: /leads/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\base.py", line 143, in dispatch
+    return handler(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\list.py", line 154, in get
+    self.object_list = self.get_queryset()
+                       ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\leads\views.py", line 46, in get_queryset
+    queryset = Lead.objects.select_related('lead_list', 'assigned_user').annotate(
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        last_call_date=F('call_logs__created_at')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).order_by('-created_at')
+    ^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\query.py", line 1630, in annotate
+    return self._annotate(args, kwargs, select=True)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\query.py", line 1680, in _annotate
+    clone.query.add_annotation(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        annotation,
+        ^^^^^^^^^^^
+        alias,
+        ^^^^^^
+        select=select,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\sql\query.py", line 1198, in add_annotation
+    annotation = annotation.resolve_expression(self, allow_joins=True, reuse=None)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\expressions.py", line 854, in resolve_expression
+    return query.resolve_ref(self.name, allow_joins, reuse, summarize)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\sql\query.py", line 2014, in resolve_ref
+    join_info = self.setup_joins(
+        field_list, self.get_meta(), self.get_initial_alias(), can_reuse=reuse
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\sql\query.py", line 1867, in setup_joins
+    path, final_field, targets, rest = self.names_to_path(
+                                       ~~~~~~~~~~~~~~~~~~^
+        names[:pivot],
+        ^^^^^^^^^^^^^^
+    ...<2 lines>...
+        fail_on_missing=True,
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\db\models\sql\query.py", line 1772, in names_to_path
+    raise FieldError(
+    ...<2 lines>...
+    )
+django.core.exceptions.FieldError: Cannot resolve keyword 'call_logs' into field. Choices are: address, assigned_user, assigned_user_id, call_count, callbacks, city, comments, company, created_at, email, first_name, id, last_contact_date, last_name, lead_calls, lead_list, lead_list_id, notes, phone_number, priority, source, state, status, updated_at, zip_code
+ERROR 2025-07-10 12:21:54,311 basehttp 31328 34628 "GET /leads/ HTTP/1.1" 500 126120
+INFO 2025-07-10 12:29:22,047 autoreload 31328 37096 C:\Users\shiwansh\autodialer_project\leads\views.py changed, reloading.
+INFO 2025-07-10 12:29:22,749 autoreload 11712 37312 Watching for file changes with StatReloader
+INFO 2025-07-10 12:29:27,314 autoreload 11712 37312 C:\Users\shiwansh\autodialer_project\leads\views.py changed, reloading.
+INFO 2025-07-10 12:29:27,892 autoreload 14920 14552 Watching for file changes with StatReloader
+INFO 2025-07-10 12:29:57,477 autoreload 14920 14552 C:\Users\shiwansh\autodialer_project\leads\forms.py changed, reloading.
+INFO 2025-07-10 12:29:58,221 autoreload 4216 29824 Watching for file changes with StatReloader
+INFO 2025-07-10 12:30:14,157 autoreload 4216 29824 C:\Users\shiwansh\autodialer_project\leads\forms.py changed, reloading.
+INFO 2025-07-10 12:30:14,747 autoreload 37908 25996 Watching for file changes with StatReloader
+INFO 2025-07-10 12:30:16,908 autoreload 37908 25996 C:\Users\shiwansh\autodialer_project\leads\forms.py changed, reloading.
+INFO 2025-07-10 12:30:17,661 autoreload 36632 35348 Watching for file changes with StatReloader
+INFO 2025-07-10 12:31:25,242 autoreload 36632 35348 C:\Users\shiwansh\autodialer_project\leads\forms.py changed, reloading.
+INFO 2025-07-10 12:31:25,872 autoreload 22700 29348 Watching for file changes with StatReloader
+INFO 2025-07-10 12:32:22,109 autoreload 22700 29348 C:\Users\shiwansh\autodialer_project\leads\forms.py changed, reloading.
+INFO 2025-07-10 12:32:22,701 autoreload 30000 1904 Watching for file changes with StatReloader
+INFO 2025-07-10 12:33:37,565 autoreload 30000 1904 C:\Users\shiwansh\autodialer_project\leads\forms.py changed, reloading.
+INFO 2025-07-10 12:33:38,192 autoreload 4760 36952 Watching for file changes with StatReloader
+INFO 2025-07-10 12:34:24,228 autoreload 4760 36952 C:\Users\shiwansh\autodialer_project\leads\views.py changed, reloading.
+INFO 2025-07-10 12:34:24,848 autoreload 36636 38272 Watching for file changes with StatReloader
+INFO 2025-07-10 12:34:59,698 autoreload 36636 38272 C:\Users\shiwansh\autodialer_project\leads\urls.py changed, reloading.
+INFO 2025-07-10 12:35:00,361 autoreload 16488 38320 Watching for file changes with StatReloader
+INFO 2025-07-10 12:35:05,636 basehttp 16488 27328 "GET /leads/ HTTP/1.1" 200 40687
+ERROR 2025-07-10 12:35:30,831 log 16488 27328 Internal Server Error: /leads/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 47, in select_template
+    raise TemplateDoesNotExist(", ".join(template_name_list), chain=chain)
+django.template.exceptions.TemplateDoesNotExist: leads/lead_create.html
+ERROR 2025-07-10 12:35:30,834 basehttp 16488 27328 "GET /leads/create/ HTTP/1.1" 500 85900
+INFO 2025-07-10 12:36:00,869 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:36:03,377 basehttp 16488 27328 "GET /leads/import/ HTTP/1.1" 200 51139
+INFO 2025-07-10 12:36:26,145 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:36:35,726 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:36:47,423 basehttp 16488 27328 "GET /leads/?search=&status=&lead_list=&campaign= HTTP/1.1" 200 40687
+INFO 2025-07-10 12:37:17,473 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:37:48,002 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:38:17,997 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:38:47,491 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:39:17,478 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:39:47,479 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:40:17,482 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:40:47,491 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:41:17,477 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:41:47,484 basehttp 16488 27328 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:43:37,190 basehttp 16488 35996 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:43:48,000 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+WARNING 2025-07-10 12:44:01,728 log 16488 20320 Not Found: /lists/
+WARNING 2025-07-10 12:44:01,729 basehttp 16488 20320 "GET /lists/ HTTP/1.1" 404 3046
+INFO 2025-07-10 12:48:08,950 basehttp 16488 20320 "GET /leads/ HTTP/1.1" 200 40687
+INFO 2025-07-10 12:48:40,004 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:49:10,006 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:49:39,996 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:50:10,011 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:50:40,007 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:51:10,004 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:51:40,010 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:52:36,997 basehttp 16488 20320 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:54:39,667 basehttp 16488 34484 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:55:10,015 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:55:40,016 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:56:37,017 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:57:37,014 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:58:37,017 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 12:59:37,006 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:00:37,021 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:01:37,010 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:02:37,000 basehttp 16488 17480 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:03:37,011 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:04:37,005 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:05:37,012 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:06:37,004 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:07:37,006 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:08:37,001 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:09:37,001 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:10:37,009 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:11:37,012 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:12:37,017 basehttp 16488 34872 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:14:46,525 basehttp 16488 32048 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:15:17,756 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:15:40,014 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:16:10,009 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:17:11,004 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:18:12,003 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:19:13,008 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:20:14,004 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:21:15,007 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:22:16,005 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:23:17,012 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:24:17,985 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:25:19,005 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:26:19,998 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:27:21,005 basehttp 16488 33952 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:28:22,001 basehttp 16488 36708 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:29:23,000 basehttp 16488 36708 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:30:23,999 basehttp 16488 36708 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:31:25,004 basehttp 16488 31756 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:32:25,999 basehttp 16488 31756 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:33:27,009 basehttp 16488 32800 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:34:28,000 basehttp 16488 10476 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:35:29,008 basehttp 16488 10476 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:36:29,989 basehttp 16488 38768 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:37:31,002 basehttp 16488 38768 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:38:32,000 basehttp 16488 38768 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:39:32,988 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:40:34,008 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:41:35,002 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:42:36,010 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:43:37,006 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:43:48,082 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:44:10,012 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:44:39,987 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:45:37,004 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:46:37,006 basehttp 16488 3212 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:48:16,585 basehttp 16488 13272 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:49:15,998 basehttp 16488 36408 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:50:17,009 basehttp 16488 36408 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:51:18,004 basehttp 16488 36408 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:52:18,999 basehttp 16488 36408 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:53:20,012 basehttp 16488 8096 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:54:21,004 basehttp 16488 8096 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:55:22,000 basehttp 16488 8096 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:56:23,000 basehttp 16488 8096 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:57:24,006 basehttp 16488 8096 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 13:58:25,014 basehttp 16488 8096 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:37:44,421 basehttp 16488 30856 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:51:06,777 basehttp 16488 31624 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:51:37,014 basehttp 16488 33120 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:52:37,014 basehttp 16488 33120 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:52:57,014 basehttp 16488 19232 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:53:09,105 basehttp 16488 19232 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 14:53:39,399 autoreload 16488 38320 C:\Users\shiwansh\autodialer_project\leads\urls.py changed, reloading.
+INFO 2025-07-10 14:53:40,729 autoreload 33044 34452 Watching for file changes with StatReloader
+INFO 2025-07-10 14:53:41,318 basehttp 33044 3916 "GET /leads/api/stats/ HTTP/1.1" 200 166
+WARNING 2025-07-10 14:53:48,386 log 33044 3916 Not Found: /lists/
+WARNING 2025-07-10 14:53:48,387 basehttp 33044 3916 "GET /lists/ HTTP/1.1" 404 3046
+INFO 2025-07-10 14:53:53,329 autoreload 33044 34452 C:\Users\shiwansh\autodialer_project\leads\urls.py changed, reloading.
+INFO 2025-07-10 14:53:54,379 autoreload 13904 35336 Watching for file changes with StatReloader
+WARNING 2025-07-10 14:53:57,592 log 13904 23968 Not Found: /lists/
+WARNING 2025-07-10 14:53:57,593 basehttp 13904 23968 "GET /lists/ HTTP/1.1" 404 3046
+ERROR 2025-07-10 14:54:10,021 log 13904 23968 Internal Server Error: /leads/lists/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 42, in select_template
+    return engine.get_template(template_name)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 177, in get_template
+    template, origin = self.find_template(template_name)
+                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 159, in find_template
+    template = loader.get_template(name, skip=skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\base.py", line 28, in get_template
+    return Template(
+        contents,
+    ...<2 lines>...
+        self.engine,
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 961, in do_if
+    nodelist = parser.parse(("elif", "else", "endif"))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 861, in do_for
+    nodelist_loop = parser.parse(
+        (
+    ...<2 lines>...
+        )
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 961, in do_if
+    nodelist = parser.parse(("elif", "else", "endif"))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 860, in do_for
+    sequence = parser.compile_filter(bits[in_index + 1])
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'split'
+ERROR 2025-07-10 14:54:10,034 basehttp 13904 23968 "GET /leads/lists/ HTTP/1.1" 500 376574
+ERROR 2025-07-10 14:58:52,128 log 13904 33952 Internal Server Error: /leads/lists/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 42, in select_template
+    return engine.get_template(template_name)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 177, in get_template
+    template, origin = self.find_template(template_name)
+                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 159, in find_template
+    template = loader.get_template(name, skip=skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\base.py", line 28, in get_template
+    return Template(
+        contents,
+    ...<2 lines>...
+        self.engine,
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 961, in do_if
+    nodelist = parser.parse(("elif", "else", "endif"))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 861, in do_for
+    nodelist_loop = parser.parse(
+        (
+    ...<2 lines>...
+        )
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 961, in do_if
+    nodelist = parser.parse(("elif", "else", "endif"))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 861, in do_for
+    nodelist_loop = parser.parse(
+        (
+    ...<2 lines>...
+        )
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 481, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 479, in parse
+    filter_expression = self.compile_filter(token.contents)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'trim'
+ERROR 2025-07-10 14:58:52,137 basehttp 13904 33952 "GET /leads/lists/ HTTP/1.1" 500 395093
+INFO 2025-07-10 14:59:29,092 autoreload 13904 35336 C:\Users\shiwansh\autodialer_project\leads\templatetags\lead_tags.py changed, reloading.
+INFO 2025-07-10 14:59:30,266 autoreload 24352 38348 Watching for file changes with StatReloader
+INFO 2025-07-10 14:59:43,129 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+ERROR 2025-07-10 15:00:06,016 log 24352 33908 Internal Server Error: /leads/lists/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 47, in select_template
+    raise TemplateDoesNotExist(", ".join(template_name_list), chain=chain)
+django.template.exceptions.TemplateDoesNotExist: leads/lead_list_create.html
+ERROR 2025-07-10 15:00:06,020 basehttp 24352 33908 "GET /leads/lists/create/ HTTP/1.1" 500 86044
+INFO 2025-07-10 15:00:13,279 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:00:43,272 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:01:13,263 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:01:43,265 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:02:13,267 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:02:43,263 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:03:13,260 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:03:43,260 basehttp 24352 33908 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:07:40,464 basehttp 24352 20264 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:07:44,158 basehttp 24352 37108 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:08:13,261 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:08:43,263 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:09:13,283 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:09:43,255 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:10:13,280 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:10:43,263 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:11:13,268 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:11:43,268 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:12:13,264 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:12:43,264 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:13:13,270 basehttp 24352 22760 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:13:29,401 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:13:59,527 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:14:29,531 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:14:59,526 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:15:29,530 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:15:59,529 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:16:29,533 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:16:59,538 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:17:29,526 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:17:59,528 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:18:29,521 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:18:59,512 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:19:29,507 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:19:59,510 basehttp 24352 22760 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:20:04,625 autoreload 24352 38348 C:\Users\shiwansh\autodialer_project\leads\templatetags\lead_tags.py changed, reloading.
+INFO 2025-07-10 15:20:05,320 autoreload 18456 12364 Watching for file changes with StatReloader
+INFO 2025-07-10 15:20:30,048 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:21:00,002 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:21:37,003 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:22:37,004 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:23:36,997 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:24:37,002 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:25:37,004 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:26:36,994 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:27:36,998 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:28:36,992 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:29:36,991 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:30:36,995 basehttp 18456 28372 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:32:33,235 basehttp 18456 35988 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:32:49,428 basehttp 18456 28376 "GET /users/2/ HTTP/1.1" 200 29432
+INFO 2025-07-10 15:32:59,988 basehttp 18456 28376 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:33:02,915 basehttp 18456 28376 "GET /leads/lists/ HTTP/1.1" 200 33955
+ERROR 2025-07-10 15:33:05,281 log 18456 28376 Internal Server Error: /leads/lists/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 47, in select_template
+    raise TemplateDoesNotExist(", ".join(template_name_list), chain=chain)
+django.template.exceptions.TemplateDoesNotExist: leads/lead_list_create.html
+ERROR 2025-07-10 15:33:05,285 basehttp 18456 28376 "GET /leads/lists/create/ HTTP/1.1" 500 86044
+INFO 2025-07-10 15:33:29,997 basehttp 18456 32852 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:34:30,997 basehttp 18456 32852 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:35:12,265 basehttp 18456 32852 "GET /leads/lists/create/ HTTP/1.1" 200 26203
+INFO 2025-07-10 15:35:26,325 basehttp 18456 32852 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:35:32,000 basehttp 18456 32852 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:35:33,008 basehttp 18456 32852 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:36:02,998 basehttp 18456 32852 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:36:37,647 autoreload 24376 36176 Watching for file changes with StatReloader
+INFO 2025-07-10 15:36:41,207 basehttp 24376 13644 "GET /leads/lists/ HTTP/1.1" 200 33955
+INFO 2025-07-10 15:36:45,610 basehttp 24376 13644 "GET /leads/ HTTP/1.1" 200 40687
+INFO 2025-07-10 15:36:50,185 basehttp 24376 13644 "GET /leads/ HTTP/1.1" 200 40687
+ERROR 2025-07-10 15:36:55,225 log 24376 13644 Internal Server Error: /admin/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 259, in wrapper
+    return self.admin_view(view, cacheable)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 553, in index
+    app_list = self.get_app_list(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 537, in get_app_list
+    app_dict = self._build_app_dict(request, app_label)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 521, in _build_app_dict
+    "app_url": reverse(
+               ~~~~~~~^
+        "admin:app_list",
+        ^^^^^^^^^^^^^^^^^
+        kwargs={"app_label": app_label},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        current_app=self.name,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ),
+    ^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'app_list' with keyword arguments '{'app_label': 'users'}' not found. 1 pattern(s) tried: ['admin/(?P<app_label>auth|core|leads|reports)/$']
+ERROR 2025-07-10 15:36:55,231 basehttp 24376 13644 "GET /admin/ HTTP/1.1" 500 128005
+ERROR 2025-07-10 15:36:58,247 log 24376 13644 Internal Server Error: /admin/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 259, in wrapper
+    return self.admin_view(view, cacheable)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 553, in index
+    app_list = self.get_app_list(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 537, in get_app_list
+    app_dict = self._build_app_dict(request, app_label)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\admin\sites.py", line 521, in _build_app_dict
+    "app_url": reverse(
+               ~~~~~~~^
+        "admin:app_list",
+        ^^^^^^^^^^^^^^^^^
+        kwargs={"app_label": app_label},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        current_app=self.name,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ),
+    ^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'app_list' with keyword arguments '{'app_label': 'users'}' not found. 1 pattern(s) tried: ['admin/(?P<app_label>auth|core|leads|reports)/$']
+ERROR 2025-07-10 15:36:58,251 basehttp 24376 13644 "GET /admin/ HTTP/1.1" 500 127731
+INFO 2025-07-10 15:37:20,977 basehttp 24376 13644 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:37:33,989 basehttp 24376 13644 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:37:50,979 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:38:20,983 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:38:34,998 basehttp 24376 12248 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:38:50,981 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:39:20,981 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:39:35,988 basehttp 24376 12248 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:39:50,987 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:40:20,985 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:40:36,987 basehttp 24376 12248 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:41:21,985 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:41:36,986 basehttp 24376 12248 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:42:22,976 basehttp 24376 12248 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:42:37,007 basehttp 24376 12248 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:56:00,027 basehttp 24376 37684 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:56:00,034 basehttp 24376 21892 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:56:36,987 basehttp 24376 38804 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:56:37,005 basehttp 24376 33268 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:57:17,773 basehttp 24376 33268 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:57:20,977 basehttp 24376 33268 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:57:36,996 basehttp 24376 33268 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:57:50,226 basehttp 24376 33268 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:58:20,987 basehttp 24376 37156 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:58:37,003 basehttp 24376 35312 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 15:58:50,981 basehttp 24376 35312 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:59:36,999 basehttp 24376 35312 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 15:59:37,027 basehttp 24376 32168 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:00:37,035 basehttp 24376 35312 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:00:37,038 basehttp 24376 32168 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:01:37,004 basehttp 24376 35312 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:01:37,028 basehttp 24376 32168 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:02:36,997 basehttp 24376 32168 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:02:37,035 basehttp 24376 35312 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:03:36,988 basehttp 24376 35312 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:03:37,001 basehttp 24376 32168 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:04:36,989 basehttp 24376 35312 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:04:37,007 basehttp 24376 32168 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:05:36,981 basehttp 24376 32168 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:05:37,002 basehttp 24376 35312 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:06:37,002 basehttp 24376 35312 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:06:37,022 basehttp 24376 32168 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:07:37,006 basehttp 24376 32168 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:07:37,027 basehttp 24376 35312 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:08:37,011 basehttp 24376 37712 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:08:37,022 basehttp 24376 27424 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:09:37,013 basehttp 24376 27424 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:09:37,034 basehttp 24376 37712 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:10:36,991 basehttp 24376 27424 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:10:37,002 basehttp 24376 37712 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:11:36,987 basehttp 24376 27424 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:11:37,009 basehttp 24376 37712 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:12:37,004 basehttp 24376 37712 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:12:37,026 basehttp 24376 27424 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:13:36,996 basehttp 24376 37712 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:13:37,018 basehttp 24376 27424 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:14:36,993 basehttp 24376 27424 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:14:37,004 basehttp 24376 37712 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:15:36,989 basehttp 24376 37712 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:15:37,002 basehttp 24376 27424 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:16:37,008 basehttp 24376 27424 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:16:37,032 basehttp 24376 37712 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:18:37,710 basehttp 24376 34112 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:18:37,741 basehttp 24376 18824 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:19:35,999 basehttp 24376 33560 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:19:36,019 basehttp 24376 14932 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:20:36,982 basehttp 24376 14932 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:20:37,004 basehttp 24376 33560 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:21:36,990 basehttp 24376 28652 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:21:37,001 basehttp 24376 32928 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:22:37,034 basehttp 24376 26276 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:22:37,034 basehttp 24376 8764 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:23:36,990 basehttp 24376 8692 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:23:37,012 basehttp 24376 28804 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:24:36,988 basehttp 24376 36416 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:24:37,014 basehttp 24376 36148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:25:36,994 basehttp 24376 6444 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:25:37,019 basehttp 24376 33912 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:26:37,016 basehttp 24376 37160 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:26:37,016 basehttp 24376 18928 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:27:37,016 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:27:37,044 basehttp 24376 34288 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:28:37,004 basehttp 24376 29108 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:28:37,028 basehttp 24376 34288 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:29:36,985 basehttp 24376 34288 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:29:37,009 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:30:37,026 basehttp 24376 34288 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:30:37,026 basehttp 24376 29108 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:30:59,998 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:31:29,980 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:31:36,980 basehttp 24376 29108 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:32:00,037 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:32:36,990 basehttp 24376 34288 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:32:36,996 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:33:36,996 basehttp 24376 34288 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:33:37,028 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:34:37,002 basehttp 24376 34288 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:34:37,026 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:35:28,895 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:35:36,984 basehttp 24376 29108 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:35:59,505 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:36:29,506 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:36:36,995 basehttp 24376 29108 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:36:59,506 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:37:29,506 basehttp 24376 29108 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:37:36,978 basehttp 24376 29108 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:37:59,503 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:38:29,501 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:38:36,985 basehttp 24376 29148 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:38:59,501 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:39:29,991 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:39:36,990 basehttp 24376 29148 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:39:59,997 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:40:37,013 basehttp 24376 29148 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:40:37,039 basehttp 24376 16168 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:41:37,031 basehttp 24376 16168 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:41:37,032 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:41:59,995 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:42:29,998 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:42:36,992 basehttp 24376 29148 "GET /leads/api/stats/ HTTP/1.1" 200 166
+INFO 2025-07-10 16:43:30,822 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:43:32,845 basehttp 24376 29148 "GET /leads/lists/?search=&status= HTTP/1.1" 200 33955
+INFO 2025-07-10 16:43:36,993 basehttp 24376 29148 "GET /leads/api/stats/ HTTP/1.1" 200 166

@@ -10,7 +10,8 @@ urlpatterns = [
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
     path('users/', include('users.urls')),
     path('campaigns/', include('campaigns.urls')),
-#    path('leads/', include('leads.urls')),
+    path('leads/', include('leads.urls')),
+
 #    path('telephony/', include('telephony.urls')),
 #    path('agents/', include('agents.urls')),
 #    path('calls/', include('calls.urls')),

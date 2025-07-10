@@ -1,0 +1,788 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Import Leads{% endblock %}
+
+{% block extra_css %}
+<style>
+    .import-wizard {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .wizard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+    }
+    
+    .wizard-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        position: relative;
+    }
+    
+    .wizard-steps::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: rgba(255,255,255,0.3);
+        z-index: 1;
+    }
+    
+    .wizard-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        min-width: 120px;
+    }
+    
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    
+    .step-number.active {
+        background: white;
+        color: #667eea;
+    }
+    
+    .step-number.completed {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step-title {
+        font-size: 0.9rem;
+        text-align: center;
+        opacity: 0.8;
+    }
+    
+    .step-title.active {
+        opacity: 1;
+        font-weight: 600;
+    }
+    
+    .wizard-content {
+        padding: 30px;
+    }
+    
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .upload-area.dragover {
+        border-color: #007bff;
+        background-color: #e3f2fd;
+    }
+    
+    .file-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .progress-section {
+        margin-top: 20px;
+    }
+    
+    .mapping-table {
+        margin-top: 20px;
+    }
+    
+    .mapping-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .sample-data {
+        font-family: monospace;
+        font-size: 0.9rem;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .import-options {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .nav-buttons {
+        border-top: 1px solid #dee2e6;
+        padding: 20px 30px;
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Import Leads</h1>
+            <p class="text-muted">Upload and import leads from CSV or Excel files</p>
+        </div>
+        <div>
+            <a href="{% url 'leads:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Leads
+            </a>
+        </div>
+    </div>
+
+    <!-- Import Wizard -->
+    <div class="import-wizard">
+        <div class="wizard-header">
+            <h4 class="mb-0">Lead Import Wizard</h4>
+            <div class="wizard-steps">
+                <div class="wizard-step">
+                    <div class="step-number active" id="step1">1</div>
+                    <div class="step-title active">Upload File</div>
+                </div>
+                <div class="wizard-step">
+                    <div class="step-number" id="step2">2</div>
+                    <div class="step-title">Map Fields</div>
+                </div>
+                <div class="wizard-step">
+                    <div class="step-number" id="step3">3</div>
+                    <div class="step-title">Configure Options</div>
+                </div>
+                <div class="wizard-step">
+                    <div class="step-number" id="step4">4</div>
+                    <div class="step-title">Import</div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="importForm">
+            {% csrf_token %}
+            
+            <div class="wizard-content">
+                <!-- Step 1: Upload File -->
+                <div class="step-content" id="stepContent1">
+                    <h5 class="mb-4">Step 1: Upload File</h5>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ form.name }}
+                                <label for="{{ form.name.id_for_label }}">Import Name *</label>
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ form.lead_list }}
+                                <label for="{{ form.lead_list.id_for_label }}">Lead List *</label>
+                                {% if form.lead_list.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.lead_list.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('{{ form.file.id_for_label }}').click()">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Drop your file here or click to browse</h5>
+                        <p class="text-muted">Supported formats: CSV, Excel (.xlsx, .xls)</p>
+                        <p class="text-muted">Maximum file size: 10MB</p>
+                        {{ form.file }}
+                    </div>
+                    
+                    {% if form.file.errors %}
+                        <div class="alert alert-danger mt-3">{{ form.file.errors.0 }}</div>
+                    {% endif %}
+
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <i class="fas fa-file-alt text-primary me-2"></i>
+                                <span id="fileName"></span>
+                                <small class="text-muted ms-2" id="fileSize"></small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Map Fields -->
+                <div class="step-content" id="stepContent2" style="display: none;">
+                    <h5 class="mb-4">Step 2: Map Fields</h5>
+                    <p class="text-muted">Map your file columns to lead fields</p>
+
+                    <div class="table-responsive mapping-table">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>File Column</th>
+                                    <th>Sample Data</th>
+                                    <th>Map To</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mappingTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Step 3: Configure Options -->
+                <div class="step-content" id="stepContent3" style="display: none;">
+                    <h5 class="mb-4">Step 3: Configure Import Options</h5>
+
+                    <div class="import-options">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.skip_duplicates }}
+                                    <label class="form-check-label" for="{{ form.skip_duplicates.id_for_label }}">
+                                        <strong>Skip Duplicates</strong><br>
+                                        <small class="text-muted">Skip leads with duplicate phone numbers</small>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.check_dnc }}
+                                    <label class="form-check-label" for="{{ form.check_dnc.id_for_label }}">
+                                        <strong>Check DNC List</strong><br>
+                                        <small class="text-muted">Skip phone numbers in Do Not Call list</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>Import Summary</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-primary mb-1" id="totalRows">0</h4>
+                                    <small class="text-muted">Total Rows</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-success mb-1" id="validRows">0</h4>
+                                    <small class="text-muted">Valid Rows</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-warning mb-1" id="duplicateRows">0</h4>
+                                    <small class="text-muted">Duplicates</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-danger mb-1" id="errorRows">0</h4>
+                                    <small class="text-muted">Errors</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Import Progress -->
+                <div class="step-content" id="stepContent4" style="display: none;">
+                    <h5 class="mb-4">Step 4: Import Progress</h5>
+
+                    <div class="progress-section">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Import Progress</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress mb-3" style="height: 8px;">
+                            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-primary mb-1" id="processedCount">0</h4>
+                                    <small class="text-muted">Processed</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-success mb-1" id="successCount">0</h4>
+                                    <small class="text-muted">Successful</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-warning mb-1" id="duplicateCount">0</h4>
+                                    <small class="text-muted">Duplicates</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-danger mb-1" id="failedCount">0</h4>
+                                    <small class="text-muted">Failed</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3" id="importStatus">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span>Preparing import...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-buttons">
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
+                        <i class="fas fa-arrow-left me-2"></i>Previous
+                    </button>
+                    <div class="ms-auto">
+                        <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+                            Next<i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                        <button type="submit" class="btn btn-success" id="importBtn" style="display: none;">
+                            <i class="fas fa-upload me-2"></i>Start Import
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sample File Download -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-download me-2"></i>Sample Files
+                    </h6>
+                    <p class="card-text">Download sample files to see the correct format</p>
+                    <div class="btn-group" role="group">
+                        <a href="/static/samples/sample_leads.csv" class="btn btn-outline-primary btn-sm" download>
+                            <i class="fas fa-file-csv me-2"></i>CSV Sample
+                        </a>
+                        <a href="/static/samples/sample_leads.xlsx" class="btn btn-outline-primary btn-sm" download>
+                            <i class="fas fa-file-excel me-2"></i>Excel Sample
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>Import Tips
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-check text-success me-2"></i>Ensure phone numbers are in valid format</li>
+                        <li><i class="fas fa-check text-success me-2"></i>First and last names are required</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Remove any header rows from your file</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Check for duplicate entries before importing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = 1;
+    let fileData = null;
+    let importId = null;
+    let progressInterval = null;
+
+    // File upload handling
+    document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            const file = e.target.files[0];
+            showFileInfo(file);
+            parseFileHeaders(file);
+        }
+    });
+
+    // Drag and drop handling
+    const uploadArea = document.getElementById('uploadArea');
+    
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            document.getElementById('{{ form.file.id_for_label }}').files = files;
+            showFileInfo(files[0]);
+            parseFileHeaders(files[0]);
+        }
+    });
+
+    function showFileInfo(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('fileInfo').style.display = 'block';
+    }
+
+    function removeFile() {
+        document.getElementById('{{ form.file.id_for_label }}').value = '';
+        document.getElementById('fileInfo').style.display = 'none';
+        fileData = null;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function parseFileHeaders(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = e.target.result;
+            
+            if (file.name.endsWith('.csv')) {
+                parseCSVHeaders(data);
+            } else {
+                // For Excel files, you'd need a library like xlsx
+                toastr.info('Excel file uploaded. Headers will be parsed on server.');
+                fileData = { headers: [], sampleData: [] };
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function parseCSVHeaders(csvData) {
+        const lines = csvData.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const sampleData = lines.slice(1, 4).map(line => 
+            line.split(',').map(cell => cell.trim().replace(/"/g, ''))
+        );
+        
+        fileData = { headers, sampleData };
+        buildMappingTable();
+    }
+
+    function buildMappingTable() {
+        if (!fileData) return;
+        
+        const tbody = document.getElementById('mappingTableBody');
+        tbody.innerHTML = '';
+        
+        const fieldOptions = [
+            { value: 'first_name', label: 'First Name', required: true },
+            { value: 'last_name', label: 'Last Name', required: true },
+            { value: 'phone_number', label: 'Phone Number', required: true },
+            { value: 'email', label: 'Email', required: false },
+            { value: 'company', label: 'Company', required: false },
+            { value: 'address', label: 'Address', required: false },
+            { value: 'city', label: 'City', required: false },
+            { value: 'state', label: 'State', required: false },
+            { value: 'zip_code', label: 'ZIP Code', required: false },
+            { value: 'source', label: 'Source', required: false },
+            { value: 'comments', label: 'Comments', required: false },
+            { value: 'skip', label: 'Skip Column', required: false }
+        ];
+        
+        fileData.headers.forEach((header, index) => {
+            const row = document.createElement('tr');
+            
+            // Guess the mapping based on header name
+            const guessedField = guessFieldMapping(header);
+            
+            row.innerHTML = `
+                <td><strong>${header}</strong></td>
+                <td class="sample-data">${fileData.sampleData.map(row => row[index] || '').join(', ')}</td>
+                <td>
+                    <select class="form-select mapping-select" data-column="${index}">
+                        ${fieldOptions.map(option => 
+                            `<option value="${option.value}" ${option.value === guessedField ? 'selected' : ''}>
+                                ${option.label}
+                            </option>`
+                        ).join('')}
+                    </select>
+                </td>
+                <td>
+                    ${fieldOptions.find(f => f.value === guessedField)?.required ? 
+                        '<span class="badge bg-danger">Required</span>' : 
+                        '<span class="badge bg-secondary">Optional</span>'
+                    }
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+
+    function guessFieldMapping(header) {
+        const headerLower = header.toLowerCase();
+        
+        if (headerLower.includes('first') && headerLower.includes('name')) return 'first_name';
+        if (headerLower.includes('last') && headerLower.includes('name')) return 'last_name';
+        if (headerLower.includes('phone')) return 'phone_number';
+        if (headerLower.includes('email')) return 'email';
+        if (headerLower.includes('company')) return 'company';
+        if (headerLower.includes('address')) return 'address';
+        if (headerLower.includes('city')) return 'city';
+        if (headerLower.includes('state')) return 'state';
+        if (headerLower.includes('zip')) return 'zip_code';
+        if (headerLower.includes('source')) return 'source';
+        if (headerLower.includes('comment') || headerLower.includes('note')) return 'comments';
+        
+        return 'skip';
+    }
+
+    function nextStep() {
+        if (currentStep === 1) {
+            if (!validateStep1()) return;
+            currentStep = 2;
+            showStep(2);
+        } else if (currentStep === 2) {
+            if (!validateStep2()) return;
+            currentStep = 3;
+            showStep(3);
+            validateData();
+        } else if (currentStep === 3) {
+            currentStep = 4;
+            showStep(4);
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('importBtn').style.display = 'inline-block';
+        }
+    }
+
+    function previousStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            showStep(currentStep);
+            
+            if (currentStep === 3) {
+                document.getElementById('nextBtn').style.display = 'inline-block';
+                document.getElementById('importBtn').style.display = 'none';
+            }
+        }
+    }
+
+    function showStep(step) {
+        // Hide all steps
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`stepContent${i}`).style.display = 'none';
+            document.getElementById(`step${i}`).classList.remove('active', 'completed');
+            document.querySelector(`.wizard-step:nth-child(${i}) .step-title`).classList.remove('active');
+        }
+        
+        // Show current step
+        document.getElementById(`stepContent${step}`).style.display = 'block';
+        document.getElementById(`step${step}`).classList.add('active');
+        document.querySelector(`.wizard-step:nth-child(${step}) .step-title`).classList.add('active');
+        
+        // Mark completed steps
+        for (let i = 1; i < step; i++) {
+            document.getElementById(`step${i}`).classList.add('completed');
+        }
+        
+        // Show/hide navigation buttons
+        document.getElementById('prevBtn').style.display = step > 1 ? 'inline-block' : 'none';
+    }
+
+    function validateStep1() {
+        const name = document.getElementById('{{ form.name.id_for_label }}').value;
+        const leadList = document.getElementById('{{ form.lead_list.id_for_label }}').value;
+        const file = document.getElementById('{{ form.file.id_for_label }}').files[0];
+        
+        if (!name) {
+            toastr.error('Please enter an import name');
+            return false;
+        }
+        
+        if (!leadList) {
+            toastr.error('Please select a lead list');
+            return false;
+        }
+        
+        if (!file) {
+            toastr.error('Please select a file to import');
+            return false;
+        }
+        
+        return true;
+    }
+
+    function validateStep2() {
+        const mappings = document.querySelectorAll('.mapping-select');
+        const requiredFields = ['first_name', 'last_name', 'phone_number'];
+        const mappedFields = [];
+        
+        mappings.forEach(select => {
+            if (select.value !== 'skip') {
+                mappedFields.push(select.value);
+            }
+        });
+        
+        for (const field of requiredFields) {
+            if (!mappedFields.includes(field)) {
+                toastr.error(`Required field "${field.replace('_', ' ')}" must be mapped`);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    function validateData() {
+        // Simulate data validation
+        setTimeout(() => {
+            document.getElementById('totalRows').textContent = '1250';
+            document.getElementById('validRows').textContent = '1180';
+            document.getElementById('duplicateRows').textContent = '45';
+            document.getElementById('errorRows').textContent = '25';
+        }, 500);
+    }
+
+    // Handle form submission
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        startImport();
+    });
+
+    function startImport() {
+        const formData = new FormData(document.getElementById('importForm'));
+        
+        // Add field mappings
+        const mappings = {};
+        document.querySelectorAll('.mapping-select').forEach((select, index) => {
+            mappings[index] = select.value;
+        });
+        formData.append('field_mappings', JSON.stringify(mappings));
+        
+        fetch('{% url "leads:import" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                importId = data.import_id;
+                startProgressTracking();
+            } else {
+                toastr.error(data.message || 'Import failed');
+            }
+        })
+        .catch(error => {
+            toastr.error('An error occurred during import');
+            console.error('Import error:', error);
+        });
+    }
+
+    function startProgressTracking() {
+        document.getElementById('importStatus').innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span>Import in progress...</span>
+            </div>
+        `;
+        
+        progressInterval = setInterval(updateProgress, 2000);
+    }
+
+    function updateProgress() {
+        if (!importId) return;
+        
+        fetch(`{% url "leads:import_progress_api" 0 %}`.replace('0', importId))
+            .then(response => response.json())
+            .then(data => {
+                const percent = data.progress || 0;
+                document.getElementById('progressBar').style.width = percent + '%';
+                document.getElementById('progressPercent').textContent = percent + '%';
+                
+                document.getElementById('processedCount').textContent = data.processed_rows || 0;
+                document.getElementById('successCount').textContent = data.successful_imports || 0;
+                document.getElementById('duplicateCount').textContent = data.duplicate_count || 0;
+                document.getElementById('failedCount').textContent = data.failed_imports || 0;
+                
+                if (data.status === 'completed') {
+                    clearInterval(progressInterval);
+                    document.getElementById('importStatus').innerHTML = `
+                        <div class="d-flex align-items-center text-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span>Import completed successfully!</span>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.href = '{% url "leads:list" %}';
+                    }, 3000);
+                    
+                } else if (data.status === 'failed') {
+                    clearInterval(progressInterval);
+                    document.getElementById('importStatus').innerHTML = `
+                        <div class="d-flex align-items-center text-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <span>Import failed: ${data.error_message || 'Unknown error'}</span>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Progress update error:', error);
+            });
+    }
+</script>
+{% endblock %}

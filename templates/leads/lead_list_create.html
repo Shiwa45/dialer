@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Lead List{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .section-header h5 {
+        color: #495057;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .section-header i {
+        margin-right: 10px;
+        color: #007bff;
+    }
+    
+    .btn-group-actions {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Create Lead List</h1>
+            <p class="text-muted">Create a new list to organize your leads</p>
+        </div>
+        <div>
+            <a href="{% url 'leads:lead_lists' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Lead Lists
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="leadListForm" novalidate>
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="form-section">
+            <div class="section-header">
+                <h5><i class="fas fa-list"></i>Basic Information</h5>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="form-floating">
+                        {{ form.name }}
+                        <label for="{{ form.name.id_for_label }}">List Name *</label>
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-check mt-3">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            <i class="fas fa-toggle-on me-2"></i>Active List
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.description }}
+                        <label for="{{ form.description.id_for_label }}">Description</label>
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.tags }}
+                        <label for="{{ form.tags.id_for_label }}">Tags</label>
+                        <div class="form-text">Enter tags separated by commas (e.g., "high-value, referrals, hot-leads")</div>
+                        {% if form.tags.errors %}
+                            <div class="invalid-feedback d-block">{{ form.tags.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="btn-group-actions">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">* Required fields</small>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'leads:lead_lists' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save me-2"></i>Create Lead List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    function validateForm() {
+        const form = document.getElementById('leadListForm');
+        const inputs = form.querySelectorAll('input[required], textarea[required]');
+        let isValid = true;
+        let firstInvalid = null;
+
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                input.classList.add('is-invalid');
+                if (!firstInvalid) firstInvalid = input;
+                isValid = false;
+            } else {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+            }
+        });
+
+        if (!isValid) {
+            toastr.error('Please fill in all required fields');
+            firstInvalid.focus();
+        }
+
+        return isValid;
+    }
+
+    // Handle form submission
+    document.getElementById('leadListForm').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+            return false;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+    });
+
+    // Real-time validation
+    document.getElementById('{{ form.name.id_for_label }}').addEventListener('input', function() {
+        if (this.value.trim()) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    });
+</script>
+{% endblock %}

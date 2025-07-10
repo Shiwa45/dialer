@@ -1,0 +1,11 @@
+first_name,last_name,phone_number,email,company,address,city,state,zip_code,source,comments
+John,Doe,(555) 123-4567,john.doe@example.com,Acme Corp,123 Main St,Anytown,CA,12345,Website,Interested in our services
+Jane,Smith,(555) 234-5678,jane.smith@company.com,Tech Solutions,456 Oak Ave,Business City,NY,67890,Referral,Referred by existing client
+Michael,Johnson,(555) 345-6789,mike.j@email.com,StartupXYZ,789 Pine Rd,Innovation Hub,TX,54321,Advertisement,Responded to Google Ad
+Sarah,Williams,(555) 456-7890,sarah.w@corp.com,Big Enterprise,321 Cedar Ln,Corporate Plaza,FL,98765,Cold Call,Decision maker for IT
+David,Brown,(555) 567-8901,david.brown@business.org,Local Business,654 Elm St,Small Town,OH,13579,Trade Show,Met at industry event
+Lisa,Garcia,(555) 678-9012,lisa.garcia@startup.io,InnovateCo,987 Maple Dr,Tech Valley,WA,24680,LinkedIn,Connected on social media
+Robert,Martinez,(555) 789-0123,robert.m@solutions.net,ProServices,147 Birch Blvd,Service Center,IL,86420,Website,Downloaded whitepaper
+Amanda,Taylor,(555) 890-1234,amanda.taylor@enterprise.com,MegaCorp,258 Spruce Way,Corporate City,GA,97531,Referral,Colleague recommendation
+Christopher,Anderson,(555) 901-2345,chris.anderson@tech.com,TechFlow,369 Willow St,Digital District,CO,64208,Conference,Speaker at event
+Jennifer,Thomas,(555) 012-3456,jennifer.t@consulting.biz,ConsultPro,741 Aspen Ave,Business Park,AZ,75319,Email Campaign,Opened marketing email

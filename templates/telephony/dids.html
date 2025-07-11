@@ -1,0 +1,427 @@
+<!-- templates/telephony/dids.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}DID Numbers - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-phone text-primary"></i>
+                DID Numbers
+            </h1>
+            <p class="mb-0 text-muted">Manage your Direct Inward Dialing numbers</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:create_did' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add DID
+            </a>
+            <a href="{% url 'telephony:bulk_import_dids' %}" class="btn btn-info">
+                <i class="fas fa-upload"></i> Bulk Import
+            </a>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total DIDs</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_dids }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-phone fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_dids }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Assigned</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ assigned_dids }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-link fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Available</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_dids|add:0|sub:assigned_dids }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row">
+                <div class="col-md-2">
+                    <select name="type" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="inbound" {% if request.GET.type == 'inbound' %}selected{% endif %}>Inbound Only</option>
+                        <option value="outbound" {% if request.GET.type == 'outbound' %}selected{% endif %}>Outbound Only</option>
+                        <option value="bidirectional" {% if request.GET.type == 'bidirectional' %}selected{% endif %}>Bidirectional</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="carrier" class="form-control">
+                        <option value="">All Carriers</option>
+                        {% for carrier in carriers %}
+                        <option value="{{ carrier.pk }}" {% if request.GET.carrier == carrier.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ carrier.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="server" class="form-control">
+                        <option value="">All Servers</option>
+                        {% for server in servers %}
+                        <option value="{{ server.pk }}" {% if request.GET.server == server.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ server.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="assigned" {% if request.GET.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="Search DIDs..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-outline-primary">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DIDs Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-phone"></i>
+                DID Numbers
+                <span class="badge badge-secondary ml-2">{{ dids|length }}</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if dids %}
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Phone Number</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Carrier</th>
+                            <th>Server</th>
+                            <th>Campaign</th>
+                            <th>Context</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for did in dids %}
+                        <tr>
+                            <td>
+                                <div class="font-weight-bold">
+                                    <code>{{ did.phone_number }}</code>
+                                </div>
+                                {% if did.extension %}
+                                <small class="text-muted">Ext: {{ did.extension }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="font-weight-bold">{{ did.name }}</div>
+                                {% if did.description %}
+                                <small class="text-muted">{{ did.description|truncatechars:30 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{% if did.did_type == 'inbound' %}info{% elif did.did_type == 'outbound' %}warning{% else %}success{% endif %}">
+                                    {{ did.get_did_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if did.carrier %}
+                                    <a href="{% url 'telephony:carrier_detail' did.carrier.pk %}">
+                                        {{ did.carrier.name }}
+                                    </a>
+                                    <br><small class="text-muted">{{ did.carrier.protocol|upper }}</small>
+                                {% else %}
+                                    <span class="text-muted">No Carrier</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:asterisk_server_detail' did.asterisk_server.pk %}">
+                                    {{ did.asterisk_server.name }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if did.assigned_campaign %}
+                                    <a href="{% url 'campaigns:detail' did.assigned_campaign.pk %}" class="badge badge-primary">
+                                        {{ did.assigned_campaign.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="badge badge-light">Available</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code>{{ did.context }}</code>
+                            </td>
+                            <td>
+                                {% if did.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:did_detail' did.pk %}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   data-toggle="tooltip" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'telephony:update_did' did.pk %}" 
+                                   class="btn btn-sm btn-outline-warning" 
+                                   data-toggle="tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if did.assigned_campaign %}
+                                <button class="btn btn-sm btn-outline-info" 
+                                        data-toggle="tooltip" title="Unassign from Campaign"
+                                        onclick="unassignDID({{ did.pk }}, '{{ did.phone_number }}')">
+                                    <i class="fas fa-unlink"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        data-toggle="tooltip" title="Delete"
+                                        onclick="confirmDelete('{{ did.phone_number }}', '{% url 'telephony:delete_did' did.pk %}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="DID pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            <!-- Bulk Actions -->
+            <div class="mt-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check-inline">
+                            <input type="checkbox" id="select-all" class="form-check-input">
+                            <label for="select-all" class="form-check-label">Select All</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <button class="btn btn-sm btn-outline-warning" onclick="bulkAction('activate')">
+                            <i class="fas fa-toggle-on"></i> Activate Selected
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="bulkAction('deactivate')">
+                            <i class="fas fa-toggle-off"></i> Deactivate Selected
+                        </button>
+                        <button class="btn btn-sm btn-outline-info" onclick="bulkAction('export')">
+                            <i class="fas fa-download"></i> Export Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-phone fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No DID Numbers Found</h5>
+                <p class="text-muted">Get started by adding your first DID number or import from CSV.</p>
+                <a href="{% url 'telephony:create_did' %}" class="btn btn-primary mr-2">
+                    <i class="fas fa-plus"></i> Add Your First DID
+                </a>
+                <a href="{% url 'telephony:bulk_import_dids' %}" class="btn btn-info">
+                    <i class="fas fa-upload"></i> Import from CSV
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(phoneNumber, deleteUrl) {
+    if (confirm(`Are you sure you want to delete DID "${phoneNumber}"? This action cannot be undone.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+function unassignDID(didId, phoneNumber) {
+    if (confirm(`Unassign DID "${phoneNumber}" from its current campaign?`)) {
+        // AJAX call to unassign DID
+        $.ajax({
+            url: `/telephony/dids/${didId}/unassign/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function() {
+                alert('Failed to unassign DID. Please try again.');
+            }
+        });
+    }
+}
+
+function bulkAction(action) {
+    const selectedDIDs = [];
+    $('input[name="did_select"]:checked').each(function() {
+        selectedDIDs.push($(this).val());
+    });
+    
+    if (selectedDIDs.length === 0) {
+        alert('Please select at least one DID.');
+        return;
+    }
+    
+    const actionText = {
+        'activate': 'activate',
+        'deactivate': 'deactivate',
+        'export': 'export'
+    }[action];
+    
+    if (confirm(`${actionText} ${selectedDIDs.length} selected DID(s)?`)) {
+        // AJAX call for bulk action
+        $.ajax({
+            url: '/telephony/dids/bulk-action/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: {
+                'action': action,
+                'dids': selectedDIDs
+            },
+            success: function(response) {
+                if (action === 'export') {
+                    // Handle file download
+                    window.location.href = response.download_url;
+                } else {
+                    location.reload();
+                }
+            },
+            error: function() {
+                alert(`Failed to ${actionText} DIDs. Please try again.`);
+            }
+        });
+    }
+}
+
+// Select all functionality
+$('#select-all').on('change', function() {
+    $('input[name="did_select"]').prop('checked', $(this).is(':checked'));
+});
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Add checkboxes to table rows
+    $('table tbody tr').each(function() {
+        const didId = $(this).find('a[href*="/did/"]').attr('href').match(/\d+/)[0];
+        $(this).prepend(`<td><input type="checkbox" name="did_select" value="${didId}" class="form-check-input"></td>`);
+    });
+    
+    // Add checkbox header
+    $('table thead tr').prepend('<th><input type="checkbox" id="select-all-header" class="form-check-input"></th>');
+    $('#select-all-header').on('change', function() {
+        $('input[name="did_select"]').prop('checked', $(this).is(':checked'));
+    });
+});
+</script>
+{% endblock %}

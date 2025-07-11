@@ -1,0 +1,264 @@
+<!-- templates/telephony/asterisk_server_confirm_delete.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Server - {{ object.name }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-exclamation-triangle text-danger"></i>
+                Delete Server
+            </h1>
+            <p class="mb-0 text-muted">Confirm deletion of Asterisk server</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Warning: This action cannot be undone!
+                        </h5>
+                        <p class="mb-0">
+                            You are about to permanently delete the Asterisk server "<strong>{{ object.name }}</strong>". 
+                            This will also affect all related components.
+                        </p>
+                    </div>
+
+                    <!-- Server Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Server to be deleted:</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="font-weight-bold">Name:</td>
+                                            <td>{{ object.name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-weight-bold">IP Address:</td>
+                                            <td><code>{{ object.server_ip }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-weight-bold">Type:</td>
+                                            <td>
+                                                <span class="badge badge-{% if object.server_type == 'master' %}primary{% elif object.server_type == 'slave' %}secondary{% else %}info{% endif %}">
+                                                    {{ object.get_server_type_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="font-weight-bold">Status:</td>
+                                            <td>
+                                                <span class="badge badge-{% if object.connection_status == 'connected' %}success{% elif object.connection_status == 'error' %}warning{% else %}secondary{% endif %}">
+                                                    {{ object.get_connection_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-weight-bold">Recording Server:</td>
+                                            <td>
+                                                {% if object.is_recording_server %}
+                                                    <span class="badge badge-warning">Yes</span>
+                                                {% else %}
+                                                    <span class="badge badge-light">No</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-weight-bold">Created:</td>
+                                            <td>{{ object.created_at|date:"M d, Y" }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Impact Warning -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Related Components That Will Be Affected:
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h4 text-primary">{{ object.carriers.count }}</div>
+                                        <small class="text-muted">Carriers</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h4 text-success">{{ object.dids.count }}</div>
+                                        <small class="text-muted">DIDs</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h4 text-info">{{ object.phones.count }}</div>
+                                        <small class="text-muted">Extensions</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <div class="h4 text-warning">{{ object.queues.count }}</div>
+                                        <small class="text-muted">Queues</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if object.carriers.count > 0 or object.dids.count > 0 or object.phones.count > 0 or object.queues.count > 0 %}
+                            <hr>
+                            <div class="alert alert-warning mb-0">
+                                <small>
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Note:</strong> All related components (carriers, DIDs, extensions, queues, IVRs, and recordings) 
+                                    associated with this server will also be deleted permanently.
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="confirm_name" class="form-label">
+                                <strong>Type the server name to confirm deletion:</strong>
+                            </label>
+                            <input type="text" 
+                                   id="confirm_name" 
+                                   name="confirm_name" 
+                                   class="form-control" 
+                                   placeholder="Enter: {{ object.name }}"
+                                   required>
+                            <small class="form-text text-muted">
+                                You must type "<strong>{{ object.name }}</strong>" exactly to enable the delete button.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" 
+                                       class="form-check-input" 
+                                       id="understand_deletion" 
+                                       name="understand_deletion" 
+                                       required>
+                                <label class="form-check-label" for="understand_deletion">
+                                    I understand that this action cannot be undone and all related data will be permanently deleted.
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{% url 'telephony:asterisk_server_detail' object.pk %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Cancel
+                                </a>
+                                <a href="{% url 'telephony:asterisk_servers' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-list"></i> Back to List
+                                </a>
+                            </div>
+                            <div>
+                                <button type="submit" 
+                                        id="delete_button" 
+                                        class="btn btn-danger" 
+                                        disabled>
+                                    <i class="fas fa-trash"></i> 
+                                    Permanently Delete Server
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const confirmNameInput = $('#confirm_name');
+    const understandCheckbox = $('#understand_deletion');
+    const deleteButton = $('#delete_button');
+    const expectedName = '{{ object.name }}';
+
+    function checkFormValidity() {
+        const nameMatches = confirmNameInput.val().trim() === expectedName;
+        const checkboxChecked = understandCheckbox.is(':checked');
+        
+        if (nameMatches && checkboxChecked) {
+            deleteButton.prop('disabled', false);
+            deleteButton.removeClass('btn-danger').addClass('btn-danger');
+        } else {
+            deleteButton.prop('disabled', true);
+        }
+    }
+
+    // Check form validity on input changes
+    confirmNameInput.on('input', checkFormValidity);
+    understandCheckbox.on('change', checkFormValidity);
+
+    // Form submission confirmation
+    $('form').on('submit', function(e) {
+        const confirmDelete = confirm(
+            `Are you absolutely sure you want to delete "${expectedName}"?\n\n` +
+            `This will permanently delete:\n` +
+            `• The server configuration\n` +
+            `• {{ object.carriers.count }} carrier(s)\n` +
+            `• {{ object.dids.count }} DID number(s)\n` +
+            `• {{ object.phones.count }} extension(s)\n` +
+            `• {{ object.queues.count }} queue(s)\n` +
+            `• All associated recordings and logs\n\n` +
+            `This action cannot be undone!`
+        );
+        
+        if (!confirmDelete) {
+            e.preventDefault();
+        }
+    });
+
+    // Visual feedback for name input
+    confirmNameInput.on('input', function() {
+        const input = $(this);
+        const currentValue = input.val().trim();
+        
+        if (currentValue === expectedName) {
+            input.removeClass('is-invalid').addClass('is-valid');
+        } else if (currentValue.length > 0) {
+            input.removeClass('is-valid').addClass('is-invalid');
+        } else {
+            input.removeClass('is-valid is-invalid');
+        }
+    });
+});
+</script>
+{% endblock %}

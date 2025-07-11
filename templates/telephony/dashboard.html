@@ -1,0 +1,679 @@
+<!-- templates/telephony/dashboard.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Telephony Management - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 25px;
+        color: white;
+        text-align: center;
+        transition: transform 0.3s ease;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    }
+    
+    .stat-card.servers { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .stat-card.carriers { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .stat-card.dids { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .stat-card.phones { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .stat-icon {
+        font-size: 3rem;
+        opacity: 0.3;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+    
+    .quick-action-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        margin: 5px;
+    }
+    
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+    
+    .status-connected { background-color: #28a745; }
+    .status-disconnected { background-color: #dc3545; }
+    .status-error { background-color: #ffc107; }
+    
+    .server-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        border-left: 5px solid #667eea;
+    }
+    
+    .call-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .table-responsive {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    
+    .btn-outline-primary:hover {
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-phone-alt text-primary"></i>
+                Telephony Management
+            </h1>
+            <p class="mb-0 text-muted">Monitor and manage your telephony infrastructure</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-primary" onclick="refreshStats()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card servers position-relative">
+                <i class="fas fa-server stat-icon"></i>
+                <div class="stat-number">{{ total_servers }}</div>
+                <div class="stat-label">Total Servers</div>
+                <div class="mt-2">
+                    <small>{{ connected_servers }}/{{ active_servers }} Connected</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card carriers position-relative">
+                <i class="fas fa-network-wired stat-icon"></i>
+                <div class="stat-number">{{ total_carriers }}</div>
+                <div class="stat-label">Active Carriers</div>
+                <div class="mt-2">
+                    <small>{{ active_carriers }} Configured</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card dids position-relative">
+                <i class="fas fa-phone stat-icon"></i>
+                <div class="stat-number">{{ total_dids }}</div>
+                <div class="stat-label">DID Numbers</div>
+                <div class="mt-2">
+                    <small>{{ assigned_dids }} Assigned</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card phones position-relative">
+                <i class="fas fa-headset stat-icon"></i>
+                <div class="stat-number">{{ total_phones }}</div>
+                <div class="stat-label">Extensions</div>
+                <div class="mt-2">
+                    <small>{{ webrtc_phones }} WebRTC Enabled</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt text-warning"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <a href="{% url 'telephony:create_asterisk_server' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i> Add Server
+                    </a>
+                    <a href="{% url 'telephony:create_carrier' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i> Add Carrier
+                    </a>
+                    <a href="{% url 'telephony:create_did' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i> Add DID
+                    </a>
+                    <a href="{% url 'telephony:create_phone' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i> Add Extension
+                    </a>
+                    <a href="{% url 'telephony:create_ivr' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i> Create IVR
+                    </a>
+                    <a href="{% url 'telephony:create_queue' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i> Add Queue
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Server Status -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-server"></i> Server Status
+                    </h6>
+                    <a href="{% url 'telephony:asterisk_servers' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% for server in recent_servers %}
+                    <div class="server-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <span class="status-indicator status-{{ server.connection_status }}"></span>
+                                    {{ server.name }}
+                                </h6>
+                                <small class="text-muted">{{ server.server_ip }} - {{ server.get_server_type_display }}</small>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-muted small">
+                                    {% if server.last_connected %}
+                                        Last: {{ server.last_connected|timesince }} ago
+                                    {% else %}
+                                        Never connected
+                                    {% endif %}
+                                </div>
+                                <a href="{% url 'telephony:test_asterisk_connection' server.pk %}" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-plug"></i> Test
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-server fa-3x mb-3"></i>
+                        <p>No servers configured yet</p>
+                        <a href="{% url 'telephony:create_asterisk_server' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Your First Server
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Call Activity -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-phone-alt"></i> Recent Call Activity
+                    </h6>
+                    <a href="{% url 'leads:list' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% for call in recent_calls %}
+                    <div class="call-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="font-weight-bold">
+                                    {{ call.caller_id|default:"Unknown" }} → {{ call.called_number|default:"Unknown" }}
+                                </div>
+                                <small class="text-muted">
+                                    {% if call.campaign %}
+                                        Campaign: {{ call.campaign.name }}
+                                    {% endif %}
+                                    • {{ call.get_call_direction_display }}
+                                    • {{ call.created_at|timesince }} ago
+                                </small>
+                            </div>
+                            <div class="text-right">
+                                <span class="badge badge-{% if call.call_status == 'answered' %}success{% elif call.call_status == 'completed' %}primary{% else %}secondary{% endif %}">
+                                    {{ call.get_call_status_display }}
+                                </span>
+                                {% if call.talk_duration %}
+                                <div class="small text-muted">{{ call.talk_duration }}s</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-phone fa-3x mb-3"></i>
+                        <p>No recent call activity</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Recordings -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-microphone"></i> Recent Recordings
+                    </h6>
+                    <a href="{% url 'telephony:recordings' %}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% for recording in recent_recordings %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <div class="font-weight-bold">{{ recording.filename }}</div>
+                            <small class="text-muted">
+                                {{ recording.recording_start|date:"M d, Y H:i" }}
+                                {% if recording.file_size %}
+                                    • {{ recording.file_size|filesizeformat }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div>
+                            {% if recording.is_available %}
+                                <a href="{% url 'telephony:play_recording' recording.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-play"></i>
+                                </a>
+                                <a href="{% url 'telephony:download_recording' recording.pk %}" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            {% else %}
+                                <span class="badge badge-warning">Processing</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-microphone fa-3x mb-3"></i>
+                        <p>No recordings available</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-heartbeat"></i> System Health
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-success">
+                                    {{ connected_servers }}/{{ total_servers }}
+                                </div>
+                                <div class="small text-muted">Servers Online</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-info">
+                                    {{ assigned_phones }}/{{ total_phones }}
+                                </div>
+                                <div class="small text-muted">Extensions Assigned</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-warning">
+                                    {{ webrtc_phones }}
+                                </div>
+                                <div class="small text-muted">WebRTC Phones</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 font-weight-bold text-primary">
+                                    {{ assigned_dids }}
+                                </div>
+                                <div class="small text-muted">Active DIDs</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <a href="{% url 'telephony:diagnostics' %}" class="btn btn-outline-primary btn-block">
+                            <i class="fas fa-stethoscope"></i> Run Diagnostics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Links -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cogs"></i> Management
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:asterisk_servers' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-primary">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-server fa-2x text-primary mb-2"></i>
+                                        <h6>Asterisk Servers</h6>
+                                        <p class="text-muted small">Manage telephony servers</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:carriers' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-success">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-network-wired fa-2x text-success mb-2"></i>
+                                        <h6>Carriers</h6>
+                                        <p class="text-muted small">Configure SIP carriers</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:dids' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-info">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-phone fa-2x text-info mb-2"></i>
+                                        <h6>DID Numbers</h6>
+                                        <p class="text-muted small">Manage phone numbers</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:phones' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-warning">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-headset fa-2x text-warning mb-2"></i>
+                                        <h6>Extensions</h6>
+                                        <p class="text-muted small">Configure agent phones</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:ivrs' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-secondary">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-sitemap fa-2x text-secondary mb-2"></i>
+                                        <h6>IVR Menus</h6>
+                                        <p class="text-muted small">Interactive voice response</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:queues' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-dark">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-users fa-2x text-dark mb-2"></i>
+                                        <h6>Call Queues</h6>
+                                        <p class="text-muted small">Manage call queues</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:recordings' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-danger">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-microphone fa-2x text-danger mb-2"></i>
+                                        <h6>Recordings</h6>
+                                        <p class="text-muted small">Call recordings</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{% url 'telephony:dialplan_contexts' %}" class="text-decoration-none">
+                                <div class="card h-100 border-left-primary">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-code-branch fa-2x text-primary mb-2"></i>
+                                        <h6>Dialplan</h6>
+                                        <p class="text-muted small">Call routing rules</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh stats every 30 seconds
+let statsRefreshInterval;
+
+function refreshStats() {
+    $.ajax({
+        url: '{% url "telephony:stats_api" %}',
+        method: 'GET',
+        success: function(data) {
+            // Update stat cards
+            updateStatCards(data);
+            
+            // Show success message
+            showNotification('Statistics updated successfully', 'success');
+        },
+        error: function() {
+            showNotification('Failed to refresh statistics', 'error');
+        }
+    });
+}
+
+function updateStatCards(data) {
+    // Update server stats
+    if (data.servers) {
+        $('.stat-card.servers .stat-number').text(data.servers.total);
+        $('.stat-card.servers small').text(data.servers.connected + '/' + data.servers.active + ' Connected');
+    }
+    
+    // Update carrier stats
+    if (data.carriers) {
+        $('.stat-card.carriers .stat-number').text(data.carriers.total);
+        $('.stat-card.carriers small').text(data.carriers.active + ' Configured');
+    }
+    
+    // Update DID stats
+    if (data.dids) {
+        $('.stat-card.dids .stat-number').text(data.dids.total);
+        $('.stat-card.dids small').text(data.dids.assigned + ' Assigned');
+    }
+    
+    // Update phone stats
+    if (data.phones) {
+        $('.stat-card.phones .stat-number').text(data.phones.total);
+        $('.stat-card.phones small').text(data.phones.webrtc + ' WebRTC Enabled');
+    }
+}
+
+function showNotification(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle';
+    
+    const notification = `
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            <i class="${icon}"></i> ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        </div>
+    `;
+    
+    $('body').append(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut(function() {
+            $(this).remove();
+        });
+    }, 3000);
+}
+
+// Start auto-refresh when page loads
+$(document).ready(function() {
+    // Refresh stats every 30 seconds
+    statsRefreshInterval = setInterval(refreshStats, 30000);
+    
+    // Add smooth scrolling to anchor links
+    $('a[href^="#"]').on('click', function(event) {
+        var target = $(this.getAttribute('href'));
+        if (target.length) {
+            event.preventDefault();
+            $('html, body').stop().animate({
+                scrollTop: target.offset().top - 80
+            }, 1000);
+        }
+    });
+});
+
+// Clean up interval when page unloads
+$(window).on('beforeunload', function() {
+    if (statsRefreshInterval) {
+        clearInterval(statsRefreshInterval);
+    }
+});
+
+// Test server connection
+function testServerConnection(serverId) {
+    $.ajax({
+        url: `/telephony/api/servers/${serverId}/status/`,
+        method: 'GET',
+        success: function(data) {
+            if (data.status === 'connected') {
+                showNotification('Server connection successful', 'success');
+                // Update status indicator
+                $(`.server-card[data-server-id="${serverId}"] .status-indicator`)
+                    .removeClass('status-disconnected status-error')
+                    .addClass('status-connected');
+            } else {
+                showNotification('Server connection failed: ' + data.message, 'error');
+            }
+        },
+        error: function() {
+            showNotification('Failed to test server connection', 'error');
+        }
+    });
+}
+
+// WebRTC functionality
+function initializeWebRTC() {
+    // This would initialize WebRTC client
+    console.log('Initializing WebRTC...');
+}
+
+// Call control functions
+function makeCall(phoneNumber) {
+    $.ajax({
+        url: '{% url "telephony:originate_call" %}',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: JSON.stringify({
+            phone_number: phoneNumber
+        }),
+        contentType: 'application/json',
+        success: function(data) {
+            if (data.success) {
+                showNotification('Call initiated successfully', 'success');
+            } else {
+                showNotification('Failed to make call: ' + data.error, 'error');
+            }
+        },
+        error: function() {
+            showNotification('Failed to initiate call', 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,691 @@
+<!-- templates/telephony/did_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ did.phone_number }} - DID Details - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-phone text-primary"></i>
+                {{ did.phone_number }}
+            </h1>
+            <p class="mb-0 text-muted">DID number details and call routing</p>
+        </div>
+        <div>
+            <button class="btn btn-success" onclick="testDIDCall()">
+                <i class="fas fa-phone"></i> Test Call
+            </button>
+            <a href="{% url 'telephony:update_did' did.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit DID
+            </a>
+            <button class="btn btn-danger" onclick="confirmDelete('{{ did.phone_number }}', '{% url 'telephony:delete_did' did.pk %}')">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+            <a href="{% url 'telephony:dids' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- DID Information -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i> DID Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="font-weight-bold">Phone Number:</td>
+                                    <td><code class="h5">{{ did.phone_number }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Name:</td>
+                                    <td>{{ did.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Type:</td>
+                                    <td>
+                                        <span class="badge badge-{% if did.did_type == 'inbound' %}info{% elif did.did_type == 'outbound' %}warning{% else %}success{% endif %} badge-lg">
+                                            {{ did.get_did_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Status:</td>
+                                    <td>
+                                        {% if did.is_active %}
+                                            <span class="badge badge-success badge-lg">Active</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary badge-lg">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Created:</td>
+                                    <td>{{ did.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Updated:</td>
+                                    <td>{{ did.updated_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="font-weight-bold">Server:</td>
+                                    <td>
+                                        <a href="{% url 'telephony:asterisk_server_detail' did.asterisk_server.pk %}">
+                                            {{ did.asterisk_server.name }}
+                                        </a>
+                                        <br><small class="text-muted">{{ did.asterisk_server.server_ip }}</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Carrier:</td>
+                                    <td>
+                                        {% if did.carrier %}
+                                            <a href="{% url 'telephony:carrier_detail' did.carrier.pk %}">
+                                                {{ did.carrier.name }}
+                                            </a>
+                                            <br><small class="text-muted">{{ did.carrier.protocol|upper }}</small>
+                                        {% else %}
+                                            <span class="text-muted">No Carrier Assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Context:</td>
+                                    <td><code>{{ did.context }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Extension:</td>
+                                    <td>
+                                        {% if did.extension %}
+                                            <code>{{ did.extension }}</code>
+                                        {% else %}
+                                            <span class="text-muted">Not Set</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">Campaign:</td>
+                                    <td>
+                                        {% if did.assigned_campaign %}
+                                            <a href="{% url 'campaigns:detail' did.assigned_campaign.pk %}" class="badge badge-primary badge-lg">
+                                                {{ did.assigned_campaign.name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="badge badge-light badge-lg">Available</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if did.description %}
+                    <div class="mt-3">
+                        <strong>Description:</strong>
+                        <p class="mt-2">{{ did.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Call Routing Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-route"></i> Call Routing
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-success">Inbound Routing</h6>
+                            {% if did.did_type == 'inbound' or did.did_type == 'bidirectional' %}
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Entry Point:</td>
+                                    <td><code>{{ did.phone_number }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Context:</td>
+                                    <td><code>{{ did.context }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Target:</td>
+                                    <td>
+                                        {% if did.extension %}
+                                            Extension <code>{{ did.extension }}</code>
+                                        {% elif did.assigned_campaign %}
+                                            Campaign: {{ did.assigned_campaign.name }}
+                                        {% else %}
+                                            <span class="text-warning">Not Configured</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Server:</td>
+                                    <td>{{ did.asterisk_server.name }}</td>
+                                </tr>
+                            </table>
+                            {% else %}
+                            <p class="text-muted">This DID is not configured for inbound calls.</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-warning">Outbound Usage</h6>
+                            {% if did.did_type == 'outbound' or did.did_type == 'bidirectional' %}
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Caller ID:</td>
+                                    <td><code>{{ did.phone_number }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Carrier:</td>
+                                    <td>
+                                        {% if did.carrier %}
+                                            {{ did.carrier.name }}
+                                        {% else %}
+                                            <span class="text-warning">No Carrier</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Campaign:</td>
+                                    <td>
+                                        {% if did.assigned_campaign %}
+                                            {{ did.assigned_campaign.name }}
+                                        {% else %}
+                                            <span class="text-muted">Available</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Protocol:</td>
+                                    <td>
+                                        {% if did.carrier %}
+                                            {{ did.carrier.protocol|upper }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                            {% else %}
+                            <p class="text-muted">This DID is not configured for outbound calls.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Call Activity -->
+            {% if recent_calls %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-history"></i> Recent Call Activity
+                        <span class="badge badge-secondary ml-2">{{ recent_calls|length }}</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Direction</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                    <th>Campaign</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for call in recent_calls %}
+                                <tr>
+                                    <td>{{ call.created_at|date:"M d H:i" }}</td>
+                                    <td>
+                                        <span class="badge badge-{% if call.call_direction == 'inbound' %}info{% else %}warning{% endif %}">
+                                            <i class="fas fa-arrow-{% if call.call_direction == 'inbound' %}down{% else %}up{% endif %}"></i>
+                                            {{ call.get_call_direction_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ call.caller_id|default:"Unknown" }}</td>
+                                    <td>{{ call.called_number|default:"Unknown" }}</td>
+                                    <td>
+                                        {% if call.talk_duration %}
+                                            {{ call.talk_duration }}s
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{% if call.call_status == 'answered' %}success{% elif call.call_status == 'completed' %}primary{% else %}secondary{% endif %}">
+                                            {{ call.get_call_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if call.campaign %}
+                                            <a href="{% url 'campaigns:detail' call.campaign.pk %}">{{ call.campaign.name }}</a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{% url 'calls:list' %}?did={{ did.pk }}" class="btn btn-sm btn-outline-primary">
+                            View All Calls
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Call Flow Diagram -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-secondary">
+                        <i class="fas fa-sitemap"></i> Call Flow
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        {% if did.did_type == 'inbound' or did.did_type == 'bidirectional' %}
+                        <!-- Inbound Flow -->
+                        <div class="col-md-6">
+                            <h6 class="text-info">Inbound Call Flow</h6>
+                            <div class="flow-diagram">
+                                <div class="flow-step">
+                                    <div class="badge badge-info p-2 mb-2">
+                                        <i class="fas fa-phone"></i> {{ did.phone_number }}
+                                    </div>
+                                    <div class="flow-arrow">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="badge badge-success p-2 mb-2">
+                                        <i class="fas fa-server"></i> {{ did.asterisk_server.name }}
+                                    </div>
+                                    <div class="flow-arrow">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="badge badge-warning p-2 mb-2">
+                                        <i class="fas fa-code-branch"></i> {{ did.context }}
+                                    </div>
+                                    <div class="flow-arrow">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="badge badge-primary p-2">
+                                        {% if did.extension %}
+                                            <i class="fas fa-hashtag"></i> {{ did.extension }}
+                                        {% elif did.assigned_campaign %}
+                                            <i class="fas fa-bullhorn"></i> {{ did.assigned_campaign.name }}
+                                        {% else %}
+                                            <i class="fas fa-question"></i> Not Set
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if did.did_type == 'outbound' or did.did_type == 'bidirectional' %}
+                        <!-- Outbound Flow -->
+                        <div class="col-md-6">
+                            <h6 class="text-warning">Outbound Call Flow</h6>
+                            <div class="flow-diagram">
+                                <div class="flow-step">
+                                    <div class="badge badge-primary p-2 mb-2">
+                                        {% if did.assigned_campaign %}
+                                            <i class="fas fa-bullhorn"></i> {{ did.assigned_campaign.name }}
+                                        {% else %}
+                                            <i class="fas fa-user"></i> Agent
+                                        {% endif %}
+                                    </div>
+                                    <div class="flow-arrow">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="badge badge-success p-2 mb-2">
+                                        <i class="fas fa-server"></i> {{ did.asterisk_server.name }}
+                                    </div>
+                                    <div class="flow-arrow">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="badge badge-info p-2 mb-2">
+                                        {% if did.carrier %}
+                                            <i class="fas fa-network-wired"></i> {{ did.carrier.name }}
+                                        {% else %}
+                                            <i class="fas fa-question"></i> No Carrier
+                                        {% endif %}
+                                    </div>
+                                    <div class="flow-arrow">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="badge badge-warning p-2">
+                                        <i class="fas fa-id-card"></i> {{ did.phone_number }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-sm" onclick="testDIDCall()">
+                            <i class="fas fa-phone"></i> Test Call
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="viewCallHistory()">
+                            <i class="fas fa-history"></i> Call History
+                        </button>
+                        {% if did.assigned_campaign %}
+                        <a href="{% url 'campaigns:detail' did.assigned_campaign.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-bullhorn"></i> View Campaign
+                        </a>
+                        <button class="btn btn-outline-warning btn-sm" onclick="unassignFromCampaign()">
+                            <i class="fas fa-unlink"></i> Unassign Campaign
+                        </button>
+                        {% else %}
+                        <button class="btn btn-primary btn-sm" onclick="assignToCampaign()">
+                            <i class="fas fa-link"></i> Assign to Campaign
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'telephony:asterisk_server_detail' did.asterisk_server.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-server"></i> View Server
+                        </a>
+                        {% if did.carrier %}
+                        <a href="{% url 'telephony:carrier_detail' did.carrier.pk %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-network-wired"></i> View Carrier
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- DID Statistics -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-chart-bar"></i> Statistics
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-success">{{ recent_calls|length }}</div>
+                            <small class="text-muted">Recent Calls</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-info">
+                                {% if did.assigned_campaign %}1{% else %}0{% endif %}
+                            </div>
+                            <small class="text-muted">Campaign</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-warning">
+                                {% if did.carrier %}1{% else %}0{% endif %}
+                            </div>
+                            <small class="text-muted">Carrier</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-primary">1</div>
+                            <small class="text-muted">Server</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Status -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-cog"></i> Configuration Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="configuration-check">
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span>DID Active</span>
+                            {% if did.is_active %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger"></i>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span>Server Assigned</span>
+                            <i class="fas fa-check-circle text-success"></i>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span>Carrier Assigned</span>
+                            {% if did.carrier %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-exclamation-circle text-warning"></i>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span>Context Set</span>
+                            {% if did.context %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger"></i>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span>Routing Configured</span>
+                            {% if did.extension or did.assigned_campaign %}
+                                <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                                <i class="fas fa-exclamation-circle text-warning"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        {% if did.is_active and did.context and did.carrier %}
+                            <span class="badge badge-success p-2">
+                                <i class="fas fa-check"></i> Fully Configured
+                            </span>
+                        {% else %}
+                            <span class="badge badge-warning p-2">
+                                <i class="fas fa-exclamation-triangle"></i> Needs Configuration
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Number Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-secondary">
+                        <i class="fas fa-info"></i> Number Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="d-flex justify-content-between">
+                            <span>Number:</span>
+                            <span><code>{{ did.phone_number }}</code></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Format:</span>
+                            <span>
+                                {% if did.phone_number|length == 12 and did.phone_number|slice:":2" == "+1" %}
+                                    US/Canada
+                                {% elif did.phone_number|slice:":1" == "+" %}
+                                    International
+                                {% else %}
+                                    Local
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Type:</span>
+                            <span>{{ did.get_did_type_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Length:</span>
+                            <span>{{ did.phone_number|length }} digits</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.flow-diagram {
+    padding: 20px 0;
+}
+
+.flow-step {
+    margin: 10px 0;
+}
+
+.flow-arrow {
+    margin: 5px 0;
+}
+
+.badge-lg {
+    font-size: 0.9em;
+    padding: 8px 12px;
+}
+
+.configuration-check {
+    border-left: 3px solid #f8f9fa;
+    padding-left: 15px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(phoneNumber, deleteUrl) {
+    if (confirm(`Are you sure you want to delete DID "${phoneNumber}"? This will affect call routing and any assigned campaigns.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+function testDIDCall() {
+    const phoneNumber = '{{ did.phone_number }}';
+    alert(`Testing DID ${phoneNumber}...\n\nThis will:\n• Verify inbound routing\n• Test carrier connectivity\n• Check dialplan execution\n• Validate context configuration`);
+}
+
+function viewCallHistory() {
+    window.location.href = '{% url "calls:list" %}?did={{ did.pk }}';
+}
+
+function unassignFromCampaign() {
+    if (confirm('Unassign this DID from its current campaign? The DID will become available for other campaigns.')) {
+        $.ajax({
+            url: '{% url "telephony:did_detail" did.pk %}unassign/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function() {
+                alert('Failed to unassign DID. Please try again.');
+            }
+        });
+    }
+}
+
+function assignToCampaign() {
+    // This could open a modal with campaign selection
+    const campaigns = [
+        {% for campaign in available_campaigns %}
+        { id: {{ campaign.pk }}, name: '{{ campaign.name }}' },
+        {% endfor %}
+    ];
+    
+    if (campaigns.length === 0) {
+        alert('No campaigns available for assignment. Please create a campaign first.');
+        return;
+    }
+    
+    // Simple prompt (in real app, this would be a modal)
+    const campaignNames = campaigns.map(c => `${c.id}: ${c.name}`).join('\n');
+    const selectedId = prompt(`Select campaign ID:\n\n${campaignNames}`);
+    
+    if (selectedId) {
+        $.ajax({
+            url: '{% url "telephony:did_detail" did.pk %}assign/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: {
+                campaign_id: selectedId
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function() {
+                alert('Failed to assign DID to campaign. Please try again.');
+            }
+        });
+    }
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

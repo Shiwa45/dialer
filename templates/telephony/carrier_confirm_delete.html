@@ -1,0 +1,479 @@
+<!-- templates/telephony/bulk_did_import.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk DID Import - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-upload text-primary"></i>
+                Bulk DID Import
+            </h1>
+            <p class="mb-0 text-muted">Import multiple DID numbers from CSV file</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:dids' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to DIDs
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Import Form -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-file-csv"></i> Upload CSV File
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="import-form">
+                        {% csrf_token %}
+                        
+                        <!-- File Upload -->
+                        <div class="form-group">
+                            <label for="{{ form.csv_file.id_for_label }}" class="form-label">
+                                <i class="fas fa-file-csv"></i> CSV File *
+                            </label>
+                            {{ form.csv_file }}
+                            {% if form.csv_file.help_text %}
+                                <small class="form-text text-muted">{{ form.csv_file.help_text }}</small>
+                            {% endif %}
+                            {% if form.csv_file.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.csv_file.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Default Server -->
+                        <div class="form-group">
+                            <label for="{{ form.asterisk_server.id_for_label }}" class="form-label">
+                                <i class="fas fa-server"></i> Default Asterisk Server *
+                            </label>
+                            {{ form.asterisk_server }}
+                            <small class="form-text text-muted">This server will be used for DIDs that don't specify a server in the CSV</small>
+                            {% if form.asterisk_server.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.asterisk_server.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Import Options -->
+                        <div class="form-group">
+                            <div class="form-check">
+                                {{ form.overwrite_existing }}
+                                <label class="form-check-label" for="{{ form.overwrite_existing.id_for_label }}">
+                                    <i class="fas fa-sync-alt"></i> Overwrite existing DIDs
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">If checked, existing DIDs with the same phone number will be updated</small>
+                            {% if form.overwrite_existing.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.overwrite_existing.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Validation Options -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">Import Options</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="validate_numbers" name="validate_numbers" checked>
+                                    <label class="form-check-label" for="validate_numbers">
+                                        Validate phone number format
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="skip_duplicates" name="skip_duplicates" checked>
+                                    <label class="form-check-label" for="skip_duplicates">
+                                        Skip duplicate phone numbers
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="auto_activate" name="auto_activate" checked>
+                                    <label class="form-check-label" for="auto_activate">
+                                        Automatically activate imported DIDs
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="send_notification" name="send_notification">
+                                    <label class="form-check-label" for="send_notification">
+                                        Send email notification when complete
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-upload"></i> Import DIDs
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Import Progress (hidden initially) -->
+            <div class="card shadow mb-4" id="progress-card" style="display: none;">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-spinner fa-spin"></i> Import Progress
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="progress-details">
+                        <p>Processing your CSV file...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Results (hidden initially) -->
+            <div class="card shadow mb-4" id="results-card" style="display: none;">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-check-circle"></i> Import Results
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="results-content">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with help and sample -->
+        <div class="col-lg-4">
+            <!-- CSV Format Help -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i> CSV Format Requirements
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>Required Columns:</h6>
+                    <ul class="small">
+                        <li><strong>phone_number</strong> - The DID number</li>
+                        <li><strong>name</strong> - Display name for the DID</li>
+                        <li><strong>did_type</strong> - inbound, outbound, or bidirectional</li>
+                    </ul>
+                    
+                    <h6>Optional Columns:</h6>
+                    <ul class="small">
+                        <li><strong>description</strong> - DID description</li>
+                        <li><strong>carrier_id</strong> - ID of existing carrier</li>
+                        <li><strong>context</strong> - Dialplan context</li>
+                        <li><strong>extension</strong> - Target extension</li>
+                        <li><strong>campaign_id</strong> - ID of existing campaign</li>
+                        <li><strong>is_active</strong> - true/false</li>
+                    </ul>
+                    
+                    <h6>Phone Number Format:</h6>
+                    <ul class="small">
+                        <li>US: +1234567890 or 1234567890</li>
+                        <li>International: +countrycode + number</li>
+                        <li>No spaces or special characters</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Sample CSV -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-download"></i> Sample CSV
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Download a sample CSV file to see the expected format:</p>
+                    
+                    <button class="btn btn-outline-success btn-sm btn-block" onclick="downloadSample()">
+                        <i class="fas fa-download"></i> Download Sample CSV
+                    </button>
+                    
+                    <hr>
+                    
+                    <h6>Sample Content:</h6>
+                    <pre class="small bg-light p-2 rounded"><code>phone_number,name,did_type,description
++15551234567,Main Line,bidirectional,Primary business line
++15551234568,Support Line,inbound,Customer support
++15551234569,Sales Outbound,outbound,Sales caller ID</code></pre>
+                </div>
+            </div>
+
+            <!-- Import Tips -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-lightbulb"></i> Import Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li>Ensure your CSV uses UTF-8 encoding</li>
+                        <li>First row should contain column headers</li>
+                        <li>Remove any empty rows from your CSV</li>
+                        <li>Phone numbers should be unique</li>
+                        <li>Test with a small file first</li>
+                        <li>Maximum file size: 5MB</li>
+                        <li>Large imports are processed in background</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Current Statistics -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-chart-bar"></i> Current Statistics
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-primary">{{ current_dids.total }}</div>
+                            <small class="text-muted">Total DIDs</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-success">{{ current_dids.active }}</div>
+                            <small class="text-muted">Active</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-warning">{{ current_dids.assigned }}</div>
+                            <small class="text-muted">Assigned</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-info">{{ current_dids.available }}</div>
+                            <small class="text-muted">Available</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Sample CSV content
+const sampleCSV = `phone_number,name,did_type,description,context,is_active
++15551234567,Main Business Line,bidirectional,Primary customer contact number,from-trunk,true
++15551234568,Customer Support,inbound,Technical support hotline,ivr-support,true
++15551234569,Sales Outbound,outbound,Sales team caller ID,,true
++15551234570,Marketing Line,bidirectional,Marketing campaign number,from-trunk,true
++15551234571,Emergency Line,inbound,Emergency contact number,emergency-context,true`;
+
+function downloadSample() {
+    const blob = new Blob([sampleCSV], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'sample_did_import.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// Form submission and progress handling
+$('#import-form').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    // Show progress card
+    $('#progress-card').show();
+    $('#results-card').hide();
+    
+    // Simulate file upload progress
+    let progress = 0;
+    const progressInterval = setInterval(function() {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        
+        $('.progress-bar').css('width', progress + '%').text(Math.round(progress) + '%');
+        
+        if (progress > 30 && progress < 60) {
+            $('#progress-details').html('<p>Validating phone numbers...</p>');
+        } else if (progress > 60) {
+            $('#progress-details').html('<p>Creating DID records...</p>');
+        }
+    }, 500);
+    
+    // Actual AJAX submission
+    $.ajax({
+        url: '',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            clearInterval(progressInterval);
+            $('.progress-bar').css('width', '100%').text('100%');
+            
+            setTimeout(function() {
+                $('#progress-card').hide();
+                showResults(response);
+            }, 1000);
+        },
+        error: function(xhr) {
+            clearInterval(progressInterval);
+            $('#progress-card').hide();
+            
+            let errorMessage = 'An error occurred during import.';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            
+            showError(errorMessage);
+        }
+    });
+});
+
+function showResults(response) {
+    const resultsHtml = `
+        <div class="alert alert-success">
+            <h5><i class="fas fa-check-circle"></i> Import Completed Successfully!</h5>
+        </div>
+        
+        <div class="row text-center mb-4">
+            <div class="col-md-3">
+                <div class="h3 text-success">${response.created || 0}</div>
+                <small class="text-muted">Created</small>
+            </div>
+            <div class="col-md-3">
+                <div class="h3 text-warning">${response.updated || 0}</div>
+                <small class="text-muted">Updated</small>
+            </div>
+            <div class="col-md-3">
+                <div class="h3 text-info">${response.skipped || 0}</div>
+                <small class="text-muted">Skipped</small>
+            </div>
+            <div class="col-md-3">
+                <div class="h3 text-danger">${response.errors || 0}</div>
+                <small class="text-muted">Errors</small>
+            </div>
+        </div>
+        
+        ${response.error_details && response.error_details.length > 0 ? `
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0 text-danger">Import Errors</h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    ${response.error_details.map(error => `<li class="small text-danger">${error}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+        ` : ''}
+        
+        <div class="text-center mt-3">
+            <a href="/telephony/dids/" class="btn btn-primary">
+                <i class="fas fa-list"></i> View All DIDs
+            </a>
+            <button class="btn btn-outline-secondary" onclick="resetForm()">
+                <i class="fas fa-plus"></i> Import More
+            </button>
+        </div>
+    `;
+    
+    $('#results-content').html(resultsHtml);
+    $('#results-card').show();
+}
+
+function showError(message) {
+    const errorHtml = `
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-triangle"></i> Import Failed</h5>
+            <p class="mb-0">${message}</p>
+        </div>
+        
+        <div class="text-center">
+            <button class="btn btn-primary" onclick="resetForm()">
+                <i class="fas fa-redo"></i> Try Again
+            </button>
+        </div>
+    `;
+    
+    $('#results-content').html(errorHtml);
+    $('#results-card').show();
+}
+
+function resetForm() {
+    $('#import-form')[0].reset();
+    $('#progress-card').hide();
+    $('#results-card').hide();
+    $('.progress-bar').css('width', '0%').text('');
+}
+
+// File input validation
+$('#id_csv_file').on('change', function() {
+    const file = this.files[0];
+    if (file) {
+        // Check file type
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Please select a CSV file.');
+            $(this).val('');
+            return;
+        }
+        
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB.');
+            $(this).val('');
+            return;
+        }
+        
+        // Preview first few lines
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            const lines = text.split('\n').slice(0, 5);
+            console.log('CSV Preview:', lines.join('\n'));
+        };
+        reader.readAsText(file.slice(0, 1024)); // Read first 1KB
+    }
+});
+
+// Form validation
+$(document).ready(function() {
+    $('#import-form').on('submit', function(e) {
+        const fileInput = $('#id_csv_file')[0];
+        const serverSelect = $('#id_asterisk_server');
+        
+        if (!fileInput.files || fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select a CSV file to import.');
+            return false;
+        }
+        
+        if (!serverSelect.val()) {
+            e.preventDefault();
+            alert('Please select a default Asterisk server.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ form.instance.pk|yesno:"Edit DID,Create New DID" }}</h2>
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post" class="form">
+        {% csrf_token %}
+        <div class="row">
+            <!-- Phone Number -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                {{ form.phone_number }}
+                {% if form.phone_number.errors %}
+                    <div class="text-danger">{{ form.phone_number.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Name -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-danger">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- DID Type -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.did_type.id_for_label }}" class="form-label">DID Type</label>
+                {{ form.did_type }}
+                {% if form.did_type.errors %}
+                    <div class="text-danger">{{ form.did_type.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Asterisk Server -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.asterisk_server.id_for_label }}" class="form-label">Asterisk Server</label>
+                {{ form.asterisk_server }}
+                {% if form.asterisk_server.errors %}
+                    <div class="text-danger">{{ form.asterisk_server.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Carrier -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.carrier.id_for_label }}" class="form-label">Carrier (Optional)</label>
+                {{ form.carrier }}
+                {% if form.carrier.errors %}
+                    <div class="text-danger">{{ form.carrier.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Assigned Campaign -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.assigned_campaign.id_for_label }}" class="form-label">Assigned Campaign (Optional)</label>
+                {{ form.assigned_campaign }}
+                {% if form.assigned_campaign.errors %}
+                    <div class="text-danger">{{ form.assigned_campaign.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Context -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.context.id_for_label }}" class="form-label">Context</label>
+                {{ form.context }}
+                {% if form.context.errors %}
+                    <div class="text-danger">{{ form.context.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Extension -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.extension.id_for_label }}" class="form-label">Extension</label>
+                {{ form.extension }}
+                {% if form.extension.errors %}
+                    <div class="text-danger">{{ form.extension.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Is Active -->
+            <div class="col-md-6 mb-3 form-check">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}" class="form-check-label">Is Active</label>
+                {% if form.is_active.errors %}
+                    <div class="text-danger">{{ form.is_active.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            <div class="col-md-12 mb-3">
+                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="text-danger">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'telephony:dids' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client-side validation for phone_number
+        const phoneInput = document.querySelector('#{{ form.phone_number.id_for_label }}');
+        phoneInput.addEventListener('input', function() {
+            const value = this.value.replace(/[^\d+]/g, ''); // Remove non-digit characters except +
+            if (!/^\+?1?\d{9,15}$/.test(value) && value !== '') {
+                this.setCustomValidity('Enter a valid phone number (e.g., +1234567890, 9-15 digits)');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

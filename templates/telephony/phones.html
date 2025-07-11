@@ -1,0 +1,513 @@
+<!-- templates/telephony/phones.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Extensions - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-headset text-primary"></i>
+                Phone Extensions
+            </h1>
+            <p class="mb-0 text-muted">Manage phone extensions and agent assignments</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:create_phone' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Extension
+            </a>
+            <a href="{% url 'telephony:bulk_create_phones' %}" class="btn btn-info">
+                <i class="fas fa-plus-square"></i> Bulk Create
+            </a>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Extensions</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_phones }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-headset fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_phones }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-power-off fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Assigned</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ assigned_phones }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">WebRTC</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ webrtc_phones }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-globe fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row">
+                <div class="col-md-2">
+                    <select name="type" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="sip" {% if request.GET.type == 'sip' %}selected{% endif %}>SIP</option>
+                        <option value="iax2" {% if request.GET.type == 'iax2' %}selected{% endif %}>IAX2</option>
+                        <option value="webrtc" {% if request.GET.type == 'webrtc' %}selected{% endif %}>WebRTC</option>
+                        <option value="dahdi" {% if request.GET.type == 'dahdi' %}selected{% endif %}>DAHDI</option>
+                        <option value="virtual" {% if request.GET.type == 'virtual' %}selected{% endif %}>Virtual</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="assigned" {% if request.GET.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                        <option value="available" {% if request.GET.status == 'available' %}selected{% endif %}>Available</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                        <option value="webrtc" {% if request.GET.status == 'webrtc' %}selected{% endif %}>WebRTC Enabled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="server" class="form-control">
+                        <option value="">All Servers</option>
+                        {% for server in servers %}
+                        <option value="{{ server.pk }}" {% if request.GET.server == server.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ server.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Search extensions, names, users..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary btn-block">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Extensions Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-headset"></i>
+                Phone Extensions
+                <span class="badge badge-secondary ml-2">{{ phones|length }}</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if phones %}
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all"></th>
+                            <th>Extension</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>User</th>
+                            <th>Server</th>
+                            <th>Features</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for phone in phones %}
+                        <tr>
+                            <td><input type="checkbox" name="phone_select" value="{{ phone.pk }}"></td>
+                            <td>
+                                <div class="font-weight-bold">
+                                    <code>{{ phone.extension }}</code>
+                                </div>
+                                <small class="text-muted">{{ phone.context }}</small>
+                            </td>
+                            <td>
+                                <div class="font-weight-bold">{{ phone.name }}</div>
+                                {% if phone.host != 'dynamic' %}
+                                <small class="text-muted">{{ phone.host }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{% if phone.phone_type == 'sip' %}primary{% elif phone.phone_type == 'webrtc' %}success{% elif phone.phone_type == 'iax2' %}info{% else %}secondary{% endif %}">
+                                    {{ phone.get_phone_type_display }}
+                                </span>
+                                {% if phone.webrtc_enabled %}
+                                <br><small class="badge badge-success mt-1">WebRTC</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if phone.user %}
+                                    <a href="{% url 'users:detail' phone.user.pk %}" class="font-weight-bold">
+                                        {{ phone.user.get_full_name|default:phone.user.username }}
+                                    </a>
+                                    <br><small class="text-muted">{{ phone.user.email }}</small>
+                                {% else %}
+                                    <span class="badge badge-light">Available</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:asterisk_server_detail' phone.asterisk_server.pk %}">
+                                    {{ phone.asterisk_server.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="feature-badges">
+                                    {% if phone.call_waiting %}
+                                    <span class="badge badge-light" title="Call Waiting">CW</span>
+                                    {% endif %}
+                                    {% if phone.call_transfer %}
+                                    <span class="badge badge-light" title="Call Transfer">CT</span>
+                                    {% endif %}
+                                    {% if phone.three_way_calling %}
+                                    <span class="badge badge-light" title="Three-Way Calling">3W</span>
+                                    {% endif %}
+                                    {% if phone.voicemail %}
+                                    <span class="badge badge-info" title="Voicemail">VM</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if phone.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:phone_detail' phone.pk %}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   data-toggle="tooltip" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'telephony:update_phone' phone.pk %}" 
+                                   class="btn btn-sm btn-outline-warning" 
+                                   data-toggle="tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if phone.user %}
+                                <button class="btn btn-sm btn-outline-info" 
+                                        data-toggle="tooltip" title="Unassign User"
+                                        onclick="unassignUser({{ phone.pk }}, '{{ phone.extension }}')">
+                                    <i class="fas fa-user-minus"></i>
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-success" 
+                                        data-toggle="tooltip" title="Assign User"
+                                        onclick="assignUser({{ phone.pk }}, '{{ phone.extension }}')">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                                {% endif %}
+                                {% if phone.webrtc_enabled %}
+                                <button class="btn btn-sm btn-outline-secondary" 
+                                        data-toggle="tooltip" title="WebRTC Config"
+                                        onclick="showWebRTCConfig({{ phone.pk }})">
+                                    <i class="fas fa-globe"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        data-toggle="tooltip" title="Delete"
+                                        onclick="confirmDelete('{{ phone.extension }}', '{% url 'telephony:delete_phone' phone.pk %}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Extension pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            <!-- Bulk Actions -->
+            <div class="mt-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <span id="selected-count">0</span> extensions selected
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <button class="btn btn-sm btn-outline-success" onclick="bulkAction('activate')">
+                            <i class="fas fa-toggle-on"></i> Activate
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="bulkAction('deactivate')">
+                            <i class="fas fa-toggle-off"></i> Deactivate
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="bulkAction('enable_webrtc')">
+                            <i class="fas fa-globe"></i> Enable WebRTC
+                        </button>
+                        <button class="btn btn-sm btn-outline-info" onclick="bulkAction('export')">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="bulkAction('delete')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-headset fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Extensions Found</h5>
+                <p class="text-muted">Get started by adding phone extensions for your agents.</p>
+                <a href="{% url 'telephony:create_phone' %}" class="btn btn-primary mr-2">
+                    <i class="fas fa-plus"></i> Add Extension
+                </a>
+                <a href="{% url 'telephony:bulk_create_phones' %}" class="btn btn-info">
+                    <i class="fas fa-plus-square"></i> Bulk Create
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- User Assignment Modal -->
+<div class="modal fade" id="userAssignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign User to Extension</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="assign-user-form">
+                    <div class="form-group">
+                        <label>Extension:</label>
+                        <span id="modal-extension" class="font-weight-bold"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-select">Select User:</label>
+                        <select id="user-select" class="form-control">
+                            <option value="">Select a user...</option>
+                            {% for user in available_users %}
+                            <option value="{{ user.pk }}">{{ user.get_full_name|default:user.username }} ({{ user.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmUserAssignment()">Assign User</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPhoneId = null;
+
+function confirmDelete(extension, deleteUrl) {
+    if (confirm(`Are you sure you want to delete extension "${extension}"? This action cannot be undone.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+function unassignUser(phoneId, extension) {
+    if (confirm(`Unassign user from extension "${extension}"?`)) {
+        $.ajax({
+            url: `/telephony/phones/${phoneId}/unassign/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function() {
+                alert('Failed to unassign user. Please try again.');
+            }
+        });
+    }
+}
+
+function assignUser(phoneId, extension) {
+    currentPhoneId = phoneId;
+    $('#modal-extension').text(extension);
+    $('#userAssignModal').modal('show');
+}
+
+function confirmUserAssignment() {
+    const userId = $('#user-select').val();
+    if (!userId) {
+        alert('Please select a user.');
+        return;
+    }
+    
+    $.ajax({
+        url: `/telephony/phones/${currentPhoneId}/assign/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            user_id: userId
+        },
+        success: function(response) {
+            $('#userAssignModal').modal('hide');
+            location.reload();
+        },
+        error: function() {
+            alert('Failed to assign user. Please try again.');
+        }
+    });
+}
+
+function showWebRTCConfig(phoneId) {
+    window.open(`/telephony/phones/${phoneId}/webrtc-config/`, '_blank', 'width=800,height=600');
+}
+
+function bulkAction(action) {
+    const selectedPhones = [];
+    $('input[name="phone_select"]:checked').each(function() {
+        selectedPhones.push($(this).val());
+    });
+    
+    if (selectedPhones.length === 0) {
+        alert('Please select at least one extension.');
+        return;
+    }
+    
+    const actionText = {
+        'activate': 'activate',
+        'deactivate': 'deactivate',
+        'enable_webrtc': 'enable WebRTC for',
+        'export': 'export',
+        'delete': 'delete'
+    }[action];
+    
+    if (confirm(`${actionText} ${selectedPhones.length} selected extension(s)?`)) {
+        $.ajax({
+            url: '/telephony/phones/bulk-action/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: {
+                'action': action,
+                'phones': selectedPhones
+            },
+            success: function(response) {
+                if (action === 'export') {
+                    window.location.href = response.download_url;
+                } else {
+                    location.reload();
+                }
+            },
+            error: function() {
+                alert(`Failed to ${actionText} extensions. Please try again.`);
+            }
+        });
+    }
+}
+
+// Select all functionality
+$('#select-all').on('change', function() {
+    $('input[name="phone_select"]').prop('checked', $(this).is(':checked'));
+    updateSelectedCount();
+});
+
+$('input[name="phone_select"]').on('change', function() {
+    updateSelectedCount();
+});
+
+function updateSelectedCount() {
+    const count = $('input[name="phone_select"]:checked').length;
+    $('#selected-count').text(count);
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+    updateSelectedCount();
+});
+</script>
+{% endblock %}

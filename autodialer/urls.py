@@ -12,7 +12,7 @@ urlpatterns = [
     path('campaigns/', include('campaigns.urls')),
     path('leads/', include('leads.urls')),
 
-#    path('telephony/', include('telephony.urls')),
+    path('telephony/', include('telephony.urls')),
 #    path('agents/', include('agents.urls')),
 #    path('calls/', include('calls.urls')),
 #    path('reports/', include('reports.urls')),

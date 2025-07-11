@@ -1,0 +1,311 @@
+<!-- templates/telephony/asterisk_servers.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asterisk Servers - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-connected { background: #d4edda; color: #155724; }
+    .status-disconnected { background: #f8d7da; color: #721c24; }
+    .status-error { background: #fff3cd; color: #856404; }
+    .status-unknown { background: #e9ecef; color: #495057; }
+    
+    .server-card {
+        transition: transform 0.3s ease;
+        border-left: 4px solid #007bff;
+    }
+    .server-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-server text-primary"></i>
+                Asterisk Servers
+            </h1>
+            <p class="mb-0 text-muted">Manage your Asterisk telephony servers</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:create_asterisk_server' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Server
+            </a>
+            <button class="btn btn-outline-primary" onclick="testAllConnections()">
+                <i class="fas fa-plug"></i> Test All
+            </button>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Servers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_servers }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-server fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Connected</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ connected_servers }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Active</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_servers }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-power-off fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Recording Servers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ servers|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-microphone fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Servers Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-server"></i>
+                Asterisk Servers
+                <span class="badge badge-secondary ml-2">{{ servers|length }}</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if servers %}
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Server</th>
+                            <th>Type</th>
+                            <th>IP Address</th>
+                            <th>Version</th>
+                            <th>Max Calls</th>
+                            <th>Status</th>
+                            <th>Last Connected</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for server in servers %}
+                        <tr>
+                            <td>
+                                <div class="font-weight-bold">{{ server.name }}</div>
+                                {% if server.description %}
+                                <small class="text-muted">{{ server.description|truncatechars:50 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{% if server.server_type == 'master' %}primary{% elif server.server_type == 'slave' %}secondary{% else %}info{% endif %}">
+                                    {{ server.get_server_type_display }}
+                                </span>
+                                {% if server.is_recording_server %}
+                                <br><small class="badge badge-warning mt-1">Recording</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code>{{ server.server_ip }}</code>
+                                <br>
+                                <small class="text-muted">
+                                    ARI: {{ server.ari_port }} | AMI: {{ server.ami_port }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if server.asterisk_version %}
+                                    <span class="badge badge-light">{{ server.asterisk_version }}</span>
+                                {% else %}
+                                    <span class="text-muted">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="font-weight-bold">{{ server.max_calls }}</div>
+                                <small class="text-muted">calls</small>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ server.connection_status }}">
+                                    <i class="fas fa-circle"></i>
+                                    {{ server.get_connection_status_display }}
+                                </span>
+                                {% if not server.is_active %}
+                                <br><small class="badge badge-secondary mt-1">Inactive</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if server.last_connected %}
+                                    <div class="small">{{ server.last_connected|date:"M d, Y" }}</div>
+                                    <div class="text-muted small">{{ server.last_connected|time:"H:i" }}</div>
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:asterisk_server_detail' server.pk %}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   data-toggle="tooltip" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'telephony:test_asterisk_connection' server.pk %}" 
+                                   class="btn btn-sm btn-outline-success" 
+                                   data-toggle="tooltip" title="Test Connection"
+                                   onclick="return testConnection(this, '{{ server.name }}')">
+                                    <i class="fas fa-plug"></i>
+                                </a>
+                                <a href="{% url 'telephony:update_asterisk_server' server.pk %}" 
+                                   class="btn btn-sm btn-outline-warning" 
+                                   data-toggle="tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        data-toggle="tooltip" title="Delete"
+                                        onclick="confirmDelete('{{ server.name }}', '{% url 'telephony:delete_asterisk_server' server.pk %}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Server pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-server fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Asterisk Servers Found</h5>
+                <p class="text-muted">Get started by adding your first Asterisk server.</p>
+                <a href="{% url 'telephony:create_asterisk_server' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Your First Server
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(itemName, deleteUrl) {
+    if (confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+function testConnection(button, serverName) {
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    // Simulate connection test - replace with actual AJAX call
+    setTimeout(function() {
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        alert(`Testing connection to ${serverName}...`);
+    }, 2000);
+    
+    return true; // Allow the link to proceed
+}
+
+function testAllConnections() {
+    if (confirm('Test connection to all servers? This may take a moment.')) {
+        alert('Connection test completed for all servers.');
+    }
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

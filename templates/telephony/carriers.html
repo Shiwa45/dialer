@@ -1,0 +1,293 @@
+<!-- templates/telephony/carriers.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Carriers - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-network-wired text-primary"></i>
+                SIP/IAX Carriers
+            </h1>
+            <p class="mb-0 text-muted">Manage your telephony carriers and trunks</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:create_carrier' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Carrier
+            </a>
+            <button class="btn btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Carriers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ carriers|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-network-wired fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ carriers|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Channels</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% for carrier in carriers %}{{ carrier.max_channels|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0{% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-phone fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Protocols</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% regroup carriers by protocol as protocol_list %}{{ protocol_list|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-cogs fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row">
+                <div class="col-md-3">
+                    <select name="protocol" class="form-control">
+                        <option value="">All Protocols</option>
+                        <option value="sip" {% if request.GET.protocol == 'sip' %}selected{% endif %}>SIP</option>
+                        <option value="iax2" {% if request.GET.protocol == 'iax2' %}selected{% endif %}>IAX2</option>
+                        <option value="pjsip" {% if request.GET.protocol == 'pjsip' %}selected{% endif %}>PJSIP</option>
+                        <option value="dahdi" {% if request.GET.protocol == 'dahdi' %}selected{% endif %}>DAHDI</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="server" class="form-control">
+                        <option value="">All Servers</option>
+                        {% for server in carriers.0.asterisk_server.all %}
+                        <option value="{{ server.pk }}" {% if request.GET.server == server.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ server.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Search carriers..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Carriers Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-network-wired"></i>
+                Carriers
+                <span class="badge badge-secondary ml-2">{{ carriers|length }}</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if carriers %}
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Carrier</th>
+                            <th>Protocol</th>
+                            <th>Server</th>
+                            <th>Channels</th>
+                            <th>Cost/Min</th>
+                            <th>Priority</th>
+                            <th>Server</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for carrier in carriers %}
+                        <tr>
+                            <td>
+                                <div class="font-weight-bold">{{ carrier.name }}</div>
+                                {% if carrier.description %}
+                                <small class="text-muted">{{ carrier.description|truncatechars:40 }}</small>
+                                {% endif %}
+                                <br><small class="text-muted">{{ carrier.username }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-{% if carrier.protocol == 'sip' %}primary{% elif carrier.protocol == 'iax2' %}success{% elif carrier.protocol == 'pjsip' %}info{% else %}secondary{% endif %}">
+                                    {{ carrier.protocol|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                <code>{{ carrier.server_ip }}:{{ carrier.port }}</code>
+                                {% if carrier.auth_username %}
+                                <br><small class="text-muted">Auth: {{ carrier.auth_username }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="font-weight-bold">{{ carrier.max_channels }}</div>
+                                <small class="text-muted">channels</small>
+                            </td>
+                            <td>
+                                {% if carrier.cost_per_minute > 0 %}
+                                    <div class="font-weight-bold">${{ carrier.cost_per_minute }}</div>
+                                    <small class="text-muted">per minute</small>
+                                {% else %}
+                                    <span class="text-muted">Free</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{% if carrier.priority == 1 %}success{% elif carrier.priority <= 3 %}warning{% else %}secondary{% endif %}">
+                                    {{ carrier.priority }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:asterisk_server_detail' carrier.asterisk_server.pk %}">
+                                    {{ carrier.asterisk_server.name }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if carrier.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'telephony:carrier_detail' carrier.pk %}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   data-toggle="tooltip" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'telephony:update_carrier' carrier.pk %}" 
+                                   class="btn btn-sm btn-outline-warning" 
+                                   data-toggle="tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        data-toggle="tooltip" title="Delete"
+                                        onclick="confirmDelete('{{ carrier.name }}', '{% url 'telephony:delete_carrier' carrier.pk %}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Carrier pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-network-wired fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Carriers Found</h5>
+                <p class="text-muted">Get started by adding your first carrier configuration.</p>
+                <a href="{% url 'telephony:create_carrier' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Your First Carrier
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(itemName, deleteUrl) {
+    if (confirm(`Are you sure you want to delete carrier "${itemName}"? This action cannot be undone.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

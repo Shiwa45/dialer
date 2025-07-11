@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Lead - Autodialer{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'leads:list' %}">Leads</a></li>
+    <li class="breadcrumb-item active">Create Lead</li>
+{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-user-plus me-2"></i>Create New Lead
+        </h1>
+        <p class="text-muted mb-0">Add a new lead to the system</p>
+    </div>
+    <div>
+        <a href="{% url 'leads:list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Leads
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Lead Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="leadCreateForm">
+                    {% csrf_token %}
+                    
+                    <!-- Personal Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                First Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.first_name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                Last Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.last_name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                                Phone Number <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.phone_number }}
+                                <button type="button" class="btn btn-outline-secondary" id="validatePhoneBtn">
+                                    <i class="fas fa-check"></i> Validate
+                                </button>
+                            </div>
+                            {% if form.phone_number.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.phone_number.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div id="phoneValidation" class="mt-1"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.email.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Company Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.company.id_for_label }}" class="form-label">Company</label>
+                            {{ form.company }}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.source.id_for_label }}" class="form-label">Source</label>
+                            {{ form.source }}
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label for="{{ form.address.id_for_label }}" class="form-label">Address</label>
+                            {{ form.address }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
+                            {{ form.city }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.state.id_for_label }}" class="form-label">State</label>
+                            {{ form.state }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.zip_code.id_for_label }}" class="form-label">Zip Code</label>
+                            {{ form.zip_code }}
+                        </div>
+                    </div>
+
+                    <!-- Lead Management -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="{{ form.lead_list.id_for_label }}" class="form-label">
+                                Lead List <span class="text-danger">*</span>
+                            </label>
+                            {{ form.lead_list }}
+                            {% if form.lead_list.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.lead_list.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.priority.id_for_label }}" class="form-label">Priority</label>
+                            {{ form.priority }}
+                        </div>
+                    </div>
+
+                    <!-- Comments -->
+                    <div class="mb-4">
+                        <label for="{{ form.comments.id_for_label }}" class="form-label">Comments</label>
+                        {{ form.comments }}
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'leads:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Lead
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-rocket me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'leads:import' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Import Leads
+                    </a>
+                    <a href="{% url 'leads:lead_lists' %}" class="btn btn-outline-info">
+                        <i class="fas fa-list me-2"></i>Manage Lead Lists
+                    </a>
+                    <a href="{% url 'leads:dnc_list' %}" class="btn btn-outline-warning">
+                        <i class="fas fa-ban me-2"></i>DNC Management
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Use proper phone number format
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Fill in as much information as possible
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Check for duplicates before creating
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Assign to appropriate lead list
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Phone number validation
+    $('#validatePhoneBtn').click(function() {
+        var phoneNumber = $('#{{ form.phone_number.id_for_label }}').val();
+        if (!phoneNumber) {
+            $('#phoneValidation').html('<div class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Please enter a phone number</div>');
+            return;
+        }
+
+        $.ajax({
+            url: '{% url "leads:validate_phone" %}',
+            method: 'POST',
+            data: {
+                'phone_number': phoneNumber,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.valid) {
+                    $('#phoneValidation').html('<div class="text-success"><i class="fas fa-check me-1"></i>Valid phone number</div>');
+                } else {
+                    $('#phoneValidation').html('<div class="text-danger"><i class="fas fa-times me-1"></i>' + response.message + '</div>');
+                }
+            }
+        });
+    });
+
+    // Duplicate check on phone number change
+    $('#{{ form.phone_number.id_for_label }}').on('blur', function() {
+        var phoneNumber = $(this).val();
+        if (phoneNumber.length >= 10) {
+            $.ajax({
+                url: '{% url "leads:duplicate_check" %}',
+                method: 'POST',
+                data: {
+                    'phone_number': phoneNumber,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.duplicate) {
+                        $('#phoneValidation').html('<div class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>A lead with this phone number already exists</div>');
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

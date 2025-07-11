@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ form.instance.pk|yesno:"Edit Carrier,Create New Carrier" }}</h2>
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post" class="form">
+        {% csrf_token %}
+        <div class="row">
+            <!-- Name -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-danger">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Protocol -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.protocol.id_for_label }}" class="form-label">Protocol</label>
+                {{ form.protocol }}
+                {% if form.protocol.errors %}
+                    <div class="text-danger">{{ form.protocol.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Server IP -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.server_ip.id_for_label }}" class="form-label">Server IP</label>
+                {{ form.server_ip }}
+                {% if form.server_ip.errors %}
+                    <div class="text-danger">{{ form.server_ip.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Port -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.port.id_for_label }}" class="form-label">Port</label>
+                {{ form.port }}
+                {% if form.port.errors %}
+                    <div class="text-danger">{{ form.port.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Username -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="text-danger">{{ form.username.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Password -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="text-danger">{{ form.password.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Auth Username -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.auth_username.id_for_label }}" class="form-label">Auth Username (Optional)</label>
+                {{ form.auth_username }}
+                {% if form.auth_username.errors %}
+                    <div class="text-danger">{{ form.auth_username.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Codec -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.codec.id_for_label }}" class="form-label">Codec</label>
+                {{ form.codec }}
+                {% if form.codec.errors %}
+                    <div class="text-danger">{{ form.codec.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- DTMF Mode -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.dtmf_mode.id_for_label }}" class="form-label">DTMF Mode</label>
+                {{ form.dtmf_mode }}
+                {% if form.dtmf_mode.errors %}
+                    <div class="text-danger">{{ form.dtmf_mode.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Qualify -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.qualify.id_for_label }}" class="form-label">Qualify</label>
+                {{ form.qualify }}
+                {% if form.qualify.errors %}
+                    <div class="text-danger">{{ form.qualify.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- NAT -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.nat.id_for_label }}" class="form-label">NAT</label>
+                {{ form.nat }}
+                {% if form.nat.errors %}
+                    <div class="text-danger">{{ form.nat.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Max Channels -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.max_channels.id_for_label }}" class="form-label">Max Channels</label>
+                {{ form.max_channels }}
+                {% if form.max_channels.errors %}
+                    <div class="text-danger">{{ form.max_channels.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Cost Per Minute -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.cost_per_minute.id_for_label }}" class="form-label">Cost Per Minute</label>
+                {{ form.cost_per_minute }}
+                {% if form.cost_per_minute.errors %}
+                    <div class="text-danger">{{ form.cost_per_minute.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Priority -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.priority.id_for_label }}" class="form-label">Priority</label>
+                {{ form.priority }}
+                {% if form.priority.errors %}
+                    <div class="text-danger">{{ form.priority.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Is Active -->
+            <div class="col-md-6 mb-3 form-check">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}" class="form-check-label">Is Active</label>
+                {% if form.is_active.errors %}
+                    <div class="text-danger">{{ form.is_active.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Asterisk Server -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.asterisk_server.id_for_label }}" class="form-label">Asterisk Server</label>
+                {{ form.asterisk_server }}
+                {% if form.asterisk_server.errors %}
+                    <div class="text-danger">{{ form.asterisk_server.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            <div class="col-md-12 mb-3">
+                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="text-danger">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'telephony:carriers' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Client-side validation for port
+        const portInput = document.querySelector('#{{ form.port.id_for_label }}');
+        portInput.addEventListener('input', function() {
+            const value = parseInt(this.value);
+            if (value < 1 || value > 65535) {
+                this.setCustomValidity('Port must be between 1 and 65535');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+
+        // Client-side validation for server_ip (supports IP or hostname)
+        const ipInput = document.querySelector('#{{ form.server_ip.id_for_label }}');
+        ipInput.addEventListener('input', function() {
+            const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^[a-zA-Z0-9.-]+$/;
+            if (!ipRegex.test(this.value) && this.value !== '') {
+                this.setCustomValidity('Enter a valid IP address or hostname (e.g., 192.168.1.1 or sip.example.com)');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,546 @@
+<!-- templates/telephony/asterisk_server_form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Server - {{ object.name }}{% else %}Add New Server{% endif %} - {{ block.super }}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-server text-primary"></i>
+                {% if object %}Edit Server{% else %}Add New Server{% endif %}
+            </h1>
+            <p class="mb-0 text-muted">
+                {% if object %}Update Asterisk server configuration{% else %}Configure a new Asterisk server{% endif %}
+            </p>
+        </div>
+        <div>
+            <button type="submit" form="server-form" class="btn btn-primary">
+                <i class="fas fa-save"></i> 
+                {% if object %}Update Server{% else %}Create Server{% endif %}
+            </button>
+            <a href="{% if object %}{% url 'telephony:asterisk_server_detail' object.pk %}{% else %}{% url 'telephony:asterisk_servers' %}{% endif %}" 
+               class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="post" id="server-form" novalidate>
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-info-circle"></i> Basic Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                                        <i class="fas fa-tag"></i> Server Name *
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.help_text %}
+                                        <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.server_type.id_for_label }}" class="form-label">
+                                        <i class="fas fa-server"></i> Server Type
+                                    </label>
+                                    {{ form.server_type }}
+                                    {% if form.server_type.help_text %}
+                                        <small class="form-text text-muted">{{ form.server_type.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.server_type.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.server_type.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.server_ip.id_for_label }}" class="form-label">
+                                        <i class="fas fa-network-wired"></i> IP Address *
+                                    </label>
+                                    {{ form.server_ip }}
+                                    {% if form.server_ip.help_text %}
+                                        <small class="form-text text-muted">{{ form.server_ip.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.server_ip.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.server_ip.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.asterisk_version.id_for_label }}" class="form-label">
+                                        <i class="fas fa-code-branch"></i> Asterisk Version
+                                    </label>
+                                    {{ form.asterisk_version }}
+                                    {% if form.asterisk_version.help_text %}
+                                        <small class="form-text text-muted">{{ form.asterisk_version.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.asterisk_version.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.asterisk_version.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <i class="fas fa-comment"></i> Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.help_text %}
+                                <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                            {% endif %}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AMI Configuration -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-success">
+                            <i class="fas fa-plug"></i> AMI Configuration
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ami_host.id_for_label }}" class="form-label">
+                                        <i class="fas fa-server"></i> AMI Host
+                                    </label>
+                                    {{ form.ami_host }}
+                                    {% if form.ami_host.help_text %}
+                                        <small class="form-text text-muted">{{ form.ami_host.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ami_host.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ami_host.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ami_port.id_for_label }}" class="form-label">
+                                        <i class="fas fa-hashtag"></i> AMI Port
+                                    </label>
+                                    {{ form.ami_port }}
+                                    {% if form.ami_port.help_text %}
+                                        <small class="form-text text-muted">{{ form.ami_port.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ami_port.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ami_port.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ami_username.id_for_label }}" class="form-label">
+                                        <i class="fas fa-user"></i> AMI Username *
+                                    </label>
+                                    {{ form.ami_username }}
+                                    {% if form.ami_username.help_text %}
+                                        <small class="form-text text-muted">{{ form.ami_username.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ami_username.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ami_username.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ami_password.id_for_label }}" class="form-label">
+                                        <i class="fas fa-key"></i> AMI Password *
+                                    </label>
+                                    {{ form.ami_password }}
+                                    {% if form.ami_password.help_text %}
+                                        <small class="form-text text-muted">{{ form.ami_password.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ami_password.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ami_password.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.ami_secret.id_for_label }}" class="form-label">
+                                <i class="fas fa-lock"></i> AMI Secret
+                            </label>
+                            {{ form.ami_secret }}
+                            {% if form.ami_secret.help_text %}
+                                <small class="form-text text-muted">{{ form.ami_secret.help_text }}</small>
+                            {% endif %}
+                            {% if form.ami_secret.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.ami_secret.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ARI Configuration -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-info">
+                            <i class="fas fa-code"></i> ARI Configuration
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ari_host.id_for_label }}" class="form-label">
+                                        <i class="fas fa-server"></i> ARI Host
+                                    </label>
+                                    {{ form.ari_host }}
+                                    {% if form.ari_host.help_text %}
+                                        <small class="form-text text-muted">{{ form.ari_host.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ari_host.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ari_host.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ari_port.id_for_label }}" class="form-label">
+                                        <i class="fas fa-hashtag"></i> ARI Port
+                                    </label>
+                                    {{ form.ari_port }}
+                                    {% if form.ari_port.help_text %}
+                                        <small class="form-text text-muted">{{ form.ari_port.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ari_port.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ari_port.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ari_username.id_for_label }}" class="form-label">
+                                        <i class="fas fa-user"></i> ARI Username *
+                                    </label>
+                                    {{ form.ari_username }}
+                                    {% if form.ari_username.help_text %}
+                                        <small class="form-text text-muted">{{ form.ari_username.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ari_username.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ari_username.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.ari_password.id_for_label }}" class="form-label">
+                                        <i class="fas fa-key"></i> ARI Password *
+                                    </label>
+                                    {{ form.ari_password }}
+                                    {% if form.ari_password.help_text %}
+                                        <small class="form-text text-muted">{{ form.ari_password.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.ari_password.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.ari_password.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.ari_application.id_for_label }}" class="form-label">
+                                <i class="fas fa-desktop"></i> ARI Application
+                            </label>
+                            {{ form.ari_application }}
+                            {% if form.ari_application.help_text %}
+                                <small class="form-text text-muted">{{ form.ari_application.help_text }}</small>
+                            {% endif %}
+                            {% if form.ari_application.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.ari_application.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-warning">
+                            <i class="fas fa-cogs"></i> Settings
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            <i class="fas fa-power-off"></i> Server Active
+                                        </label>
+                                    </div>
+                                    {% if form.is_active.help_text %}
+                                        <small class="form-text text-muted">{{ form.is_active.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.is_active.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.is_active.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-check">
+                                {{ form.is_recording_server }}
+                                <label class="form-check-label" for="{{ form.is_recording_server.id_for_label }}">
+                                    <i class="fas fa-microphone"></i> Recording Server
+                                </label>
+                            </div>
+                            {% if form.is_recording_server.help_text %}
+                                <small class="form-text text-muted">{{ form.is_recording_server.help_text }}</small>
+                            {% endif %}
+                            {% if form.is_recording_server.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.is_recording_server.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar with help and tips -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i> Configuration Help
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>AMI Configuration</h6>
+                    <p class="small text-muted">
+                        The Asterisk Manager Interface (AMI) is used for real-time management of your Asterisk server. 
+                        Make sure the AMI user has the necessary permissions in your manager.conf file.
+                    </p>
+                    
+                    <h6>ARI Configuration</h6>
+                    <p class="small text-muted">
+                        The Asterisk REST Interface (ARI) provides HTTP REST API access to Asterisk. 
+                        Configure this in your ari.conf file and ensure the application name matches.
+                    </p>
+                    
+                    <h6>Security Notes</h6>
+                    <ul class="small text-muted">
+                        <li>Use strong passwords for AMI/ARI access</li>
+                        <li>Restrict IP access where possible</li>
+                        <li>Enable SSL/TLS for production</li>
+                        <li>Regular password rotation</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if object %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-tools"></i> Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'telephony:test_asterisk_connection' object.pk %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-plug"></i> Test Connection
+                        </a>
+                        <a href="{% url 'telephony:asterisk_server_detail' object.pk %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+                        <a href="{% url 'telephony:create_carrier' %}?server={{ object.pk }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add Carrier
+                        </a>
+                        <a href="{% url 'telephony:create_did' %}?server={{ object.pk }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add DID
+                        </a>
+                        <a href="{% url 'telephony:create_phone' %}?server={{ object.pk }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add Extension
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Important Notes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small text-muted mb-0">
+                        <li>Server must be accessible from this application</li>
+                        <li>Asterisk version 13+ recommended</li>
+                        <li>Ensure firewall allows AMI/ARI ports</li>
+                        <li>Test connection after saving</li>
+                        <li>Recording servers need adequate disk space</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    $('#server-form').on('submit', function(e) {
+        let isValid = true;
+        
+        // Clear previous errors
+        $('.text-danger').remove();
+        
+        // Validate required fields
+        const requiredFields = ['name', 'server_ip', 'ami_username', 'ami_password', 'ari_username', 'ari_password'];
+        
+        requiredFields.forEach(function(fieldName) {
+            const field = $(`#id_${fieldName}`);
+            if (!field.val().trim()) {
+                field.after('<div class="text-danger small">This field is required.</div>');
+                isValid = false;
+            }
+        });
+        
+        // Validate IP address format
+        const ipField = $('#id_server_ip');
+        const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        if (ipField.val() && !ipRegex.test(ipField.val())) {
+            ipField.after('<div class="text-danger small">Please enter a valid IP address.</div>');
+            isValid = false;
+        }
+        
+        // Validate port numbers
+        const ports = ['ami_port', 'ari_port'];
+        ports.forEach(function(portField) {
+            const field = $(`#id_${portField}`);
+            const port = parseInt(field.val());
+            if (port && (port < 1 || port > 65535)) {
+                field.after('<div class="text-danger small">Port must be between 1 and 65535.</div>');
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            $('html, body').animate({
+                scrollTop: $('.text-danger').first().offset().top - 100
+            }, 500);
+        }
+    });
+    
+    // Auto-fill defaults when server type changes
+    $('#id_server_type').on('change', function() {
+        const serverType = $(this).val();
+        if (serverType === 'master') {
+            $('#id_is_recording_server').prop('checked', true);
+            $('#id_max_calls').val(500);
+        } else if (serverType === 'slave') {
+            $('#id_is_recording_server').prop('checked', false);
+            $('#id_max_calls').val(200);
+        }
+    });
+    
+    // Show/hide password fields
+    $('.password-toggle').on('click', function() {
+        const target = $(this).data('target');
+        const field = $(target);
+        const type = field.attr('type') === 'password' ? 'text' : 'password';
+        field.attr('type', type);
+        $(this).find('i').toggleClass('fa-eye fa-eye-slash');
+    });
+});
+
+// Test connection function
+function testConnection() {
+    const formData = $('#server-form').serialize();
+    
+    $.ajax({
+        url: '{% url "telephony:test_asterisk_connection" 0 %}'.replace('0', 'test'),
+        method: 'POST',
+        data: formData,
+        success: function(response) {
+            if (response.success) {
+                alert('Connection successful!');
+            } else {
+                alert('Connection failed: ' + response.error);
+            }
+        },
+        error: function() {
+            alert('Failed to test connection. Please check your settings.');
+        }
+    });
+}
+</script>
+{% endblock %}

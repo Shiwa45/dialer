@@ -1,0 +1,305 @@
+<!-- templates/telephony/base.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% block telephony_title %}Telephony{% endblock %} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .telephony-sidebar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px 0;
+    }
+    
+    .telephony-nav .nav-link {
+        color: rgba(255, 255, 255, 0.8);
+        padding: 12px 20px;
+        margin: 2px 0;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .telephony-nav .nav-link:hover,
+    .telephony-nav .nav-link.active {
+        color: white;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateX(5px);
+    }
+    
+    .telephony-nav .nav-link i {
+        width: 20px;
+        margin-right: 10px;
+    }
+    
+    .content-header {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        border-left: 5px solid #667eea;
+    }
+    
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-connected { background: #d4edda; color: #155724; }
+    .status-disconnected { background: #f8d7da; color: #721c24; }
+    .status-error { background: #fff3cd; color: #856404; }
+    .status-unknown { background: #e9ecef; color: #495057; }
+    
+    .btn-telephony {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-telephony:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        color: white;
+    }
+    
+    .card-telephony {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: transform 0.3s ease;
+    }
+    
+    .card-telephony:hover {
+        transform: translateY(-5px);
+    }
+    
+    .table-telephony {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    
+    .table-telephony th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 15px;
+        font-weight: 600;
+    }
+    
+    .table-telephony td {
+        padding: 15px;
+        border-color: #f8f9fa;
+        vertical-align: middle;
+    }
+    
+    .action-buttons .btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-2 col-md-3 p-0">
+            <div class="telephony-sidebar">
+                <div class="text-center mb-4">
+                    <h5 class="text-white">
+                        <i class="fas fa-phone-alt"></i>
+                        Telephony
+                    </h5>
+                </div>
+                
+                <nav class="nav flex-column telephony-nav">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                       href="{% url 'telephony:dashboard' %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                    
+                    <hr class="text-white-50 mx-3">
+                    
+                    <a class="nav-link {% if 'asterisk_server' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:asterisk_servers' %}">
+                        <i class="fas fa-server"></i>
+                        Asterisk Servers
+                    </a>
+                    
+                    <a class="nav-link {% if 'carrier' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:carriers' %}">
+                        <i class="fas fa-network-wired"></i>
+                        Carriers
+                    </a>
+                    
+                    <a class="nav-link {% if 'did' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:dids' %}">
+                        <i class="fas fa-phone"></i>
+                        DID Numbers
+                    </a>
+                    
+                    <a class="nav-link {% if 'phone' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:phones' %}">
+                        <i class="fas fa-headset"></i>
+                        Extensions
+                    </a>
+                    
+                    <hr class="text-white-50 mx-3">
+                    
+                    <a class="nav-link {% if 'ivr' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:ivrs' %}">
+                        <i class="fas fa-sitemap"></i>
+                        IVR Menus
+                    </a>
+                    
+                    <a class="nav-link {% if 'queue' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:queues' %}">
+                        <i class="fas fa-users"></i>
+                        Call Queues
+                    </a>
+                    
+                    <a class="nav-link {% if 'recording' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:recordings' %}">
+                        <i class="fas fa-microphone"></i>
+                        Recordings
+                    </a>
+                    
+                    <a class="nav-link {% if 'dialplan' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:dialplan_contexts' %}">
+                        <i class="fas fa-code-branch"></i>
+                        Dialplan
+                    </a>
+                    
+                    <hr class="text-white-50 mx-3">
+                    
+                    <a class="nav-link {% if 'monitor' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:monitor_servers' %}">
+                        <i class="fas fa-chart-line"></i>
+                        Monitoring
+                    </a>
+                    
+                    <a class="nav-link {% if 'diagnostic' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'telephony:diagnostics' %}">
+                        <i class="fas fa-stethoscope"></i>
+                        Diagnostics
+                    </a>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-10 col-md-9">
+            <div class="p-4">
+                <!-- Content Header -->
+                <div class="content-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h3 mb-1">
+                                {% block page_icon %}<i class="fas fa-phone-alt text-primary"></i>{% endblock %}
+                                {% block page_title %}Telephony Management{% endblock %}
+                            </h1>
+                            <p class="text-muted mb-0">{% block page_description %}Manage your telephony infrastructure{% endblock %}</p>
+                        </div>
+                        <div class="d-flex">
+                            {% block page_actions %}
+                            <button class="btn btn-outline-primary" onclick="location.reload()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            {% endblock %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% elif message.tags == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Page Content -->
+                {% block telephony_content %}
+                <!-- Content will be filled by child templates -->
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// Common telephony JavaScript functions
+function confirmDelete(itemName, deleteUrl) {
+    if (confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+function showLoading(element) {
+    const originalContent = element.innerHTML;
+    element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    element.disabled = true;
+    
+    return function() {
+        element.innerHTML = originalContent;
+        element.disabled = false;
+    };
+}
+
+// Auto-refresh functionality
+let autoRefreshInterval;
+
+function startAutoRefresh(intervalSeconds = 30) {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    
+    autoRefreshInterval = setInterval(function() {
+        // Refresh page data without full reload
+        refreshPageData();
+    }, intervalSeconds * 1000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+function refreshPageData() {
+    // This function can be overridden by specific pages
+    console.log('Refreshing page data...');
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Auto-hide alerts after 5 seconds
+    $('.alert').delay(5000).fadeOut();
+});
+</script>
+{% block telephony_js %}
+<!-- Page-specific JavaScript -->
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,235 @@
+
+<!-- templates/telephony/asterisk_server_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ server.name }} - Server Details - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .status-connected { background: #d4edda; color: #155724; }
+    .status-disconnected { background: #f8d7da; color: #721c24; }
+    .status-error { background: #fff3cd; color: #856404; }
+    .status-unknown { background: #e9ecef; color: #495057; }
+    
+    .info-card {
+        border-left: 4px solid #007bff;
+    }
+    .stat-card {
+        transition: transform 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-server text-primary"></i>
+                {{ server.name }}
+            </h1>
+            <p class="mb-0 text-muted">Asterisk server details and configuration</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:test_asterisk_connection' server.pk %}" class="btn btn-success">
+                <i class="fas fa-plug"></i> Test Connection
+            </a>
+            <a href="{% url 'telephony:update_asterisk_server' server.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit Server
+            </a>
+            <button class="btn btn-danger" onclick="confirmDelete('{{ server.name }}', '{% url 'telephony:delete_asterisk_server' server.pk %}')">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+            <a href="{% url 'telephony:asterisk_servers' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Server Information -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card shadow mb-4 info-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i> Server Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-primary">{{ carriers|length }}</div>
+                            <small class="text-muted">Carriers</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-success">{{ dids|length }}</div>
+                            <small class="text-muted">DIDs</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-info">{{ phones|length }}</div>
+                            <small class="text-muted">Extensions</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-warning">{{ queues|length }}</div>
+                            <small class="text-muted">Queues</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-secondary">{{ ivrs|length }}</div>
+                            <small class="text-muted">IVRs</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-dark">{{ recent_calls|length }}</div>
+                            <small class="text-muted">Recent Calls</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            {% if recent_calls %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-history"></i> Recent Calls
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% for call in recent_calls %}
+                    <div class="d-flex justify-content-between align-items-center py-2 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div>
+                            <div class="font-weight-bold">{{ call.caller_id|default:"Unknown" }}</div>
+                            <small class="text-muted">{{ call.created_at|timesince }} ago</small>
+                        </div>
+                        <div>
+                            <span class="badge badge-{% if call.call_status == 'answered' %}success{% elif call.call_status == 'completed' %}primary{% else %}secondary{% endif %}">
+                                {{ call.get_call_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="mt-3">
+                        <a href="{% url 'calls:list' %}?server={{ server.pk }}" class="btn btn-sm btn-outline-primary btn-block">
+                            View All Calls
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- System Health -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-heartbeat"></i> System Health
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar 
+                            {% if server.connection_status == 'connected' %}bg-success
+                            {% elif server.connection_status == 'error' %}bg-warning
+                            {% else %}bg-danger{% endif %}" 
+                            role="progressbar" 
+                            style="width: {% if server.connection_status == 'connected' %}100{% elif server.connection_status == 'error' %}60{% else %}0{% endif %}%">
+                        </div>
+                    </div>
+                    <small class="text-muted">Connection Status: {{ server.get_connection_status_display }}</small>
+                    
+                    <hr>
+                    
+                    <div class="row text-center">
+                        <div class="col-12">
+                            <div class="small text-muted">Last Health Check</div>
+                            <div class="font-weight-bold">
+                                {% if server.last_connected %}
+                                    {{ server.last_connected|date:"M d, H:i" }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'telephony:diagnostics' %}?server={{ server.pk }}" class="btn btn-outline-danger btn-sm btn-block">
+                            <i class="fas fa-stethoscope"></i> Run Diagnostics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(itemName, deleteUrl) {
+    if (confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+        window.location.href = deleteUrl;
+    }
+}
+
+// Auto-refresh server status every 30 seconds
+$(document).ready(function() {
+    setInterval(refreshServerStatus, 30000);
+});
+
+function refreshServerStatus() {
+    $.get('{% url "telephony:server_status_api" server.pk %}', function(data) {
+        if (data.status) {
+            updateServerStatus(data);
+        }
+    }).fail(function() {
+        console.log('Failed to refresh server status');
+    });
+}
+
+function updateServerStatus(data) {
+    // Update connection status badge
+    const statusBadge = $('.status-badge');
+    statusBadge.removeClass('status-connected status-disconnected status-error status-unknown');
+    statusBadge.addClass('status-' + data.status);
+    statusBadge.find('i').next().text(data.status.charAt(0).toUpperCase() + data.status.slice(1));
+    
+    // Update progress bar
+    const progressBar = $('.progress-bar');
+    let width = 0;
+    let className = 'bg-danger';
+    
+    if (data.status === 'connected') {
+        width = 100;
+        className = 'bg-success';
+    } else if (data.status === 'error') {
+        width = 60;
+        className = 'bg-warning';
+    }
+    
+    progressBar.removeClass('bg-success bg-warning bg-danger').addClass(className);
+    progressBar.css('width', width + '%');
+}
+
+// Initialize tooltips
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

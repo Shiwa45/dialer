@@ -33,103 +33,111 @@
 
     <div class="row">
         <div class="col-lg-8">
-            <form method="post" id="server-form" novalidate>
-                {% csrf_token %}
-                
-                <!-- Basic Information -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-info-circle"></i> Basic Information
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.name.id_for_label }}" class="form-label">
-                                        <i class="fas fa-tag"></i> Server Name *
-                                    </label>
-                                    {{ form.name }}
-                                    {% if form.name.help_text %}
-                                        <small class="form-text text-muted">{{ form.name.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.name.errors %}
-                                        <div class="text-danger small">
-                                            {% for error in form.name.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
+<form method="post" id="server-form" novalidate>
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Basic Information -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-info-circle"></i> Basic Information
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            <i class="fas fa-tag"></i> Server Name *
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.help_text %}
+                            <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                        {% endif %}
+                        {% if form.name.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.name.errors %}{{ error }}{% endfor %}
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.server_type.id_for_label }}" class="form-label">
-                                        <i class="fas fa-server"></i> Server Type
-                                    </label>
-                                    {{ form.server_type }}
-                                    {% if form.server_type.help_text %}
-                                        <small class="form-text text-muted">{{ form.server_type.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.server_type.errors %}
-                                        <div class="text-danger small">
-                                            {% for error in form.server_type.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.server_ip.id_for_label }}" class="form-label">
-                                        <i class="fas fa-network-wired"></i> IP Address *
-                                    </label>
-                                    {{ form.server_ip }}
-                                    {% if form.server_ip.help_text %}
-                                        <small class="form-text text-muted">{{ form.server_ip.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.server_ip.errors %}
-                                        <div class="text-danger small">
-                                            {% for error in form.server_ip.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.asterisk_version.id_for_label }}" class="form-label">
-                                        <i class="fas fa-code-branch"></i> Asterisk Version
-                                    </label>
-                                    {{ form.asterisk_version }}
-                                    {% if form.asterisk_version.help_text %}
-                                        <small class="form-text text-muted">{{ form.asterisk_version.help_text }}</small>
-                                    {% endif %}
-                                    {% if form.asterisk_version.errors %}
-                                        <div class="text-danger small">
-                                            {% for error in form.asterisk_version.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="{{ form.description.id_for_label }}" class="form-label">
-                                <i class="fas fa-comment"></i> Description
-                            </label>
-                            {{ form.description }}
-                            {% if form.description.help_text %}
-                                <small class="form-text text-muted">{{ form.description.help_text }}</small>
-                            {% endif %}
-                            {% if form.description.errors %}
-                                <div class="text-danger small">
-                                    {% for error in form.description.errors %}{{ error }}{% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.server_type.id_for_label }}" class="form-label">
+                            <i class="fas fa-server"></i> Server Type
+                        </label>
+                        {{ form.server_type }}
+                        {% if form.server_type.help_text %}
+                            <small class="form-text text-muted">{{ form.server_type.help_text }}</small>
+                        {% endif %}
+                        {% if form.server_type.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.server_type.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.server_ip.id_for_label }}" class="form-label">
+                            <i class="fas fa-network-wired"></i> IP Address *
+                        </label>
+                        {{ form.server_ip }}
+                        {% if form.server_ip.help_text %}
+                            <small class="form-text text-muted">{{ form.server_ip.help_text }}</small>
+                        {% endif %}
+                        {% if form.server_ip.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.server_ip.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.asterisk_version.id_for_label }}" class="form-label">
+                            <i class="fas fa-code-branch"></i> Asterisk Version
+                        </label>
+                        {{ form.asterisk_version }}
+                        {% if form.asterisk_version.help_text %}
+                            <small class="form-text text-muted">{{ form.asterisk_version.help_text }}</small>
+                        {% endif %}
+                        {% if form.asterisk_version.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.asterisk_version.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    <i class="fas fa-comment"></i> Description
+                </label>
+                {{ form.description }}
+                {% if form.description.help_text %}
+                    <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                {% endif %}
+                {% if form.description.errors %}
+                    <div class="text-danger small">
+                        {% for error in form.description.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
                 <!-- AMI Configuration -->
                 <div class="card shadow mb-4">
@@ -363,6 +371,20 @@
                             {% if form.is_recording_server.errors %}
                                 <div class="text-danger small">
                                     {% for error in form.is_recording_server.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.max_calls.id_for_label }}" class="form-label">
+                                <i class="fas fa-hashtag"></i> Max Calls *
+                            </label>
+                            {{ form.max_calls }}
+                            {% if form.max_calls.help_text %}
+                                <small class="form-text text-muted">{{ form.max_calls.help_text }}</small>
+                            {% endif %}
+                            {% if form.max_calls.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.max_calls.errors %}{{ error }}{% endfor %}
                                 </div>
                             {% endif %}
                         </div>

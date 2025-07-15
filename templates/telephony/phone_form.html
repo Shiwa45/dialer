@@ -1,0 +1,589 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Edit Phone {{ object.extension }}{% else %}Create New Phone{% endif %} - Autodialer
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section {
+    border-left: 3px solid #007bff;
+    padding-left: 15px;
+    margin-bottom: 2rem;
+}
+.form-section h5 {
+    color: #007bff;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:phones' %}">Phones</a></li>
+                    {% if object %}
+                        <li class="breadcrumb-item"><a href="{% url 'telephony:phone_detail' object.pk %}">{{ object.extension }}</a></li>
+                        <li class="breadcrumb-item active">Edit</li>
+                    {% else %}
+                        <li class="breadcrumb-item active">Create New</li>
+                    {% endif %}
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">
+                {% if object %}
+                    Edit Phone {{ object.extension }}
+                {% else %}
+                    Create New Phone Extension
+                {% endif %}
+            </h2>
+            <p class="text-muted">Configure phone/extension settings for agents</p>
+        </div>
+        <div>
+            <a href="{% if object %}{% url 'telephony:phone_detail' object.pk %}{% else %}{% url 'telephony:phones' %}{% endif %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Basic Information Section -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="form-section">
+                            <h5><i class="fas fa-info-circle"></i> Basic Information</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.extension.id_for_label }}" class="form-label">
+                                            Extension <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.extension }}
+                                        {% if form.extension.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.extension.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">3-10 digit extension number</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                                            Name <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.name }}
+                                        {% if form.name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.name.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Descriptive name for this phone</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.phone_type.id_for_label }}" class="form-label">
+                                            Phone Type <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.phone_type }}
+                                        {% if form.phone_type.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.phone_type.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.user.id_for_label }}" class="form-label">
+                                            Assigned User
+                                        </label>
+                                        {{ form.user }}
+                                        {% if form.user.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.user.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Leave blank for unassigned phone</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.asterisk_server.id_for_label }}" class="form-label">
+                                    Asterisk Server <span class="text-danger">*</span>
+                                </label>
+                                {{ form.asterisk_server }}
+                                {% if form.asterisk_server.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.asterisk_server.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- SIP Configuration Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-network-wired"></i> SIP Configuration</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.secret.id_for_label }}" class="form-label">
+                                            Secret/Password <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.secret }}
+                                            <button type="button" class="btn btn-outline-secondary" onclick="generateSecret()">
+                                                <i class="fas fa-random"></i>
+                                            </button>
+                                        </div>
+                                        {% if form.secret.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.secret.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">SIP authentication password</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.host.id_for_label }}" class="form-label">
+                                            Host
+                                        </label>
+                                        {{ form.host }}
+                                        {% if form.host.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.host.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Usually 'dynamic' for softphones</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.context.id_for_label }}" class="form-label">
+                                            Context
+                                        </label>
+                                        {{ form.context }}
+                                        {% if form.context.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.context.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Dialplan context for this phone</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.codec.id_for_label }}" class="form-label">
+                                            Codecs
+                                        </label>
+                                        {{ form.codec }}
+                                        {% if form.codec.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.codec.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Comma-separated list of allowed codecs</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.qualify.id_for_label }}" class="form-label">
+                                            Qualify
+                                        </label>
+                                        {{ form.qualify }}
+                                        {% if form.qualify.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.qualify.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">Keep-alive mechanism</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.nat.id_for_label }}" class="form-label">
+                                            NAT
+                                        </label>
+                                        {{ form.nat }}
+                                        {% if form.nat.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.nat.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">NAT traversal settings</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Features Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-cogs"></i> Phone Features</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        {{ form.call_waiting }}
+                                        <label class="form-check-label" for="{{ form.call_waiting.id_for_label }}">
+                                            Call Waiting
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        {{ form.call_transfer }}
+                                        <label class="form-check-label" for="{{ form.call_transfer.id_for_label }}">
+                                            Call Transfer
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        {{ form.three_way_calling }}
+                                        <label class="form-check-label" for="{{ form.three_way_calling.id_for_label }}">
+                                            Three-Way Calling
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        {{ form.voicemail }}
+                                        <label class="form-check-label" for="{{ form.voicemail.id_for_label }}">
+                                            Voicemail
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- WebRTC Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-globe"></i> WebRTC Configuration</h5>
+                            
+                            <div class="form-check mb-3">
+                                {{ form.webrtc_enabled }}
+                                <label class="form-check-label" for="{{ form.webrtc_enabled.id_for_label }}">
+                                    Enable WebRTC
+                                </label>
+                                <div class="form-text">Allow browser-based softphone functionality</div>
+                            </div>
+
+                            <div id="webrtcOptions" style="{% if not form.webrtc_enabled.value %}display: none;{% endif %}">
+                                <div class="mb-3">
+                                    <label for="{{ form.ice_host.id_for_label }}" class="form-label">
+                                        ICE Host
+                                    </label>
+                                    {{ form.ice_host }}
+                                    {% if form.ice_host.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.ice_host.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">STUN/TURN server for WebRTC connectivity</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-toggle-on"></i> Status</h5>
+                            
+                            <div class="form-check mb-3">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Active
+                                </label>
+                                <div class="form-text">Phone is enabled and can be used</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% if object %}{% url 'telephony:phone_detail' object.pk %}{% else %}{% url 'telephony:phones' %}{% endif %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <div class="d-flex gap-2">
+                                {% if object %}
+                                    <button type="submit" name="save_and_continue" class="btn btn-outline-primary">
+                                        <i class="fas fa-save"></i> Save & Continue Editing
+                                    </button>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> 
+                                    {% if object %}Update Phone{% else %}Create Phone{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Help Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0"><i class="fas fa-info-circle"></i> Phone Configuration Help</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Extension Guidelines:</h6>
+                    <ul class="small text-muted">
+                        <li>Use 3-10 digit numbers</li>
+                        <li>Avoid conflicts with existing extensions</li>
+                        <li>Consider numbering schemes (e.g., 1000-1999 for agents)</li>
+                    </ul>
+
+                    <h6>Phone Types:</h6>
+                    <ul class="small text-muted">
+                        <li><strong>SIP:</strong> Standard IP phones</li>
+                        <li><strong>WebRTC:</strong> Browser-based phones</li>
+                        <li><strong>IAX2:</strong> Asterisk native protocol</li>
+                        <li><strong>DAHDI:</strong> Digital/analog hardware</li>
+                        <li><strong>Virtual:</strong> Software-only phones</li>
+                    </ul>
+
+                    <h6>Security Tips:</h6>
+                    <ul class="small text-muted">
+                        <li>Use strong passwords (12+ characters)</li>
+                        <li>Include letters, numbers, and symbols</li>
+                        <li>Regularly rotate secrets</li>
+                        <li>Enable qualify for connection monitoring</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-info" onclick="fillSampleData()">
+                            <i class="fas fa-magic"></i> Fill Sample Data
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="validateExtension()">
+                            <i class="fas fa-check"></i> Check Extension Availability
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="previewConfig()">
+                            <i class="fas fa-eye"></i> Preview Configuration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Configuration Modal -->
+<div class="modal fade" id="configPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configuration Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="configPreview" class="bg-light p-3"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyPreviewConfig()">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Toggle WebRTC options based on checkbox
+    $('#{{ form.webrtc_enabled.id_for_label }}').change(function() {
+        if ($(this).is(':checked')) {
+            $('#webrtcOptions').slideDown();
+        } else {
+            $('#webrtcOptions').slideUp();
+        }
+    });
+
+    // Form validation
+    $('.needs-validation').on('submit', function(e) {
+        if (!this.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        $(this).addClass('was-validated');
+    });
+
+    // Real-time extension validation
+    $('#{{ form.extension.id_for_label }}').on('blur', function() {
+        validateExtension();
+    });
+});
+
+function generateSecret() {
+    var charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    var password = "";
+    for (var i = 0; i < 16; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    $('#{{ form.secret.id_for_label }}').val(password);
+}
+
+function fillSampleData() {
+    if (confirm('This will overwrite current form data. Continue?')) {
+        $('#{{ form.name.id_for_label }}').val('Agent Extension');
+        $('#{{ form.phone_type.id_for_label }}').val('sip');
+        $('#{{ form.host.id_for_label }}').val('dynamic');
+        $('#{{ form.context.id_for_label }}').val('agents');
+        $('#{{ form.codec.id_for_label }}').val('ulaw,alaw,g729');
+        $('#{{ form.qualify.id_for_label }}').val('yes');
+        $('#{{ form.nat.id_for_label }}').val('force_rport,comedia');
+        $('#{{ form.call_waiting.id_for_label }}').prop('checked', true);
+        $('#{{ form.call_transfer.id_for_label }}').prop('checked', true);
+        $('#{{ form.three_way_calling.id_for_label }}').prop('checked', true);
+        $('#{{ form.is_active.id_for_label }}').prop('checked', true);
+        generateSecret();
+    }
+}
+
+function validateExtension() {
+    var extension = $('#{{ form.extension.id_for_label }}').val();
+    if (extension.length >= 3) {
+    $.get('{% url "telephony:validate_extension_api" %}', {extension: extension})
+        .done(function(data) {
+                var feedback = $('#{{ form.extension.id_for_label }}').siblings('.invalid-feedback, .valid-feedback');
+                feedback.remove();
+                
+                if (data.available) {
+                    $('#{{ form.extension.id_for_label }}').removeClass('is-invalid').addClass('is-valid');
+                    $('#{{ form.extension.id_for_label }}').after('<div class="valid-feedback">Extension is available</div>');
+                } else {
+                    $('#{{ form.extension.id_for_label }}').removeClass('is-valid').addClass('is-invalid');
+                    $('#{{ form.extension.id_for_label }}').after('<div class="invalid-feedback">Extension is already in use</div>');
+                }
+            })
+            .fail(function() {
+                console.log('Failed to check extension availability');
+            });
+    }
+}
+
+function previewConfig() {
+    var extension = $('#{{ form.extension.id_for_label }}').val();
+    var secret = $('#{{ form.secret.id_for_label }}').val();
+    var context = $('#{{ form.context.id_for_label }}').val();
+    var codec = $('#{{ form.codec.id_for_label }}').val();
+    var qualify = $('#{{ form.qualify.id_for_label }}').val();
+    var nat = $('#{{ form.nat.id_for_label }}').val();
+    var webrtc = $('#{{ form.webrtc_enabled.id_for_label }}').is(':checked');
+    
+    var config = '';
+    
+    if (webrtc) {
+        config = `; WebRTC Configuration for ${extension}
+[${extension}]
+type=aor
+contact=sip:${extension}@\${ASTERISK_SERVER_IP}
+max_contacts=1
+
+[${extension}]
+type=auth
+auth_type=userpass
+username=${extension}
+password=${secret}
+
+[${extension}]
+type=endpoint
+context=${context}
+disallow=all
+allow=${codec}
+webrtc=yes
+use_ptime=yes
+media_encryption=dtls
+dtls_verify=fingerprint
+dtls_setup=actpass
+ice_support=yes
+media_use_received_transport=yes
+rtcp_mux=yes
+auth=${extension}
+aors=${extension}`;
+    } else {
+        config = `; SIP Configuration for ${extension}
+[${extension}]
+type=friend
+host=dynamic
+secret=${secret}
+context=${context}
+disallow=all
+allow=${codec}
+qualify=${qualify}
+nat=${nat}
+canreinvite=no
+dtmfmode=rfc2833`;
+    }
+    
+    $('#configPreview').text(config);
+    $('#configPreviewModal').modal('show');
+}
+
+function copyPreviewConfig() {
+    var config = document.getElementById('configPreview');
+    navigator.clipboard.writeText(config.textContent).then(function() {
+        alert('Configuration copied to clipboard!');
+    });
+}
+
+// Phone type change handler
+$('#{{ form.phone_type.id_for_label }}').change(function() {
+    var phoneType = $(this).val();
+    
+    // Auto-fill appropriate settings based on phone type
+    switch(phoneType) {
+        case 'webrtc':
+            $('#{{ form.webrtc_enabled.id_for_label }}').prop('checked', true);
+            $('#webrtcOptions').slideDown();
+            $('#{{ form.codec.id_for_label }}').val('opus,ulaw,alaw');
+            $('#{{ form.nat.id_for_label }}').val('force_rport,comedia');
+            break;
+        case 'sip':
+            $('#{{ form.codec.id_for_label }}').val('ulaw,alaw,g729');
+            $('#{{ form.nat.id_for_label }}').val('force_rport,comedia');
+            break;
+        case 'iax2':
+            $('#{{ form.codec.id_for_label }}').val('ulaw,alaw');
+            $('#{{ form.nat.id_for_label }}').val('yes');
+            break;
+        case 'dahdi':
+            $('#{{ form.codec.id_for_label }}').val('ulaw');
+            $('#{{ form.host.id_for_label }}').val('static');
+            break;
+    }
+});
+</script>
+{% endblock %}

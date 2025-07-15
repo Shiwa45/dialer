@@ -1,0 +1,580 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Phone {{ phone.extension }} - Autodialer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:phones' %}">Phones</a></li>
+                    <li class="breadcrumb-item active">{{ phone.extension }}</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">Phone Extension {{ phone.extension }}</h2>
+            <p class="text-muted">{{ phone.name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'telephony:update_phone' phone.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Phone
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    More Actions
+                </button>
+                <ul class="dropdown-menu">
+                    {% if phone.webrtc_enabled %}
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="testWebRTC()">
+                                <i class="fas fa-phone"></i> Test WebRTC
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="generateConfig()">
+                            <i class="fas fa-download"></i> Download Config
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" onclick="confirmDelete()">
+                            <i class="fas fa-trash"></i> Delete Phone
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Basic Information -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Extension:</td>
+                                    <td>{{ phone.extension }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Name:</td>
+                                    <td>{{ phone.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Phone Type:</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ phone.get_phone_type_display }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Status:</td>
+                                    <td>
+                                        {% if phone.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Assigned User:</td>
+                                    <td>
+                                        {% if phone.user %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary text-white rounded-circle p-1 me-2" style="width: 24px; height: 24px; font-size: 10px;">
+                                                    <i class="fas fa-user"></i>
+                                                </div>
+                                                {{ phone.user.get_full_name|default:phone.user.username }}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Asterisk Server:</td>
+                                    <td>{{ phone.asterisk_server.name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Created:</td>
+                                    <td>{{ phone.created_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Last Updated:</td>
+                                    <td>{{ phone.updated_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Context:</td>
+                                    <td><code>{{ phone.context }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Host:</td>
+                                    <td><code>{{ phone.host }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Codecs:</td>
+                                    <td><code>{{ phone.codec }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Qualify:</td>
+                                    <td><code>{{ phone.qualify }}</code></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIP/Technical Configuration -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Technical Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">SIP Settings</h6>
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="fw-bold text-muted">Secret:</td>
+                                    <td>
+                                        <code id="secret" style="display: none;">{{ phone.secret }}</code>
+                                        <span id="secretMask">••••••••••</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="toggleSecret()">
+                                            <i class="fas fa-eye" id="secretIcon"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">NAT:</td>
+                                    <td><code>{{ phone.nat }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Qualify:</td>
+                                    <td><code>{{ phone.qualify }}</code></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Features</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" {% if phone.call_waiting %}checked{% endif %} disabled>
+                                        <label class="form-check-label">Call Waiting</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" {% if phone.call_transfer %}checked{% endif %} disabled>
+                                        <label class="form-check-label">Call Transfer</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" {% if phone.three_way_calling %}checked{% endif %} disabled>
+                                        <label class="form-check-label">3-Way Calling</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" {% if phone.voicemail %}checked{% endif %} disabled>
+                                        <label class="form-check-label">Voicemail</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WebRTC Configuration -->
+            {% if phone.webrtc_enabled %}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">WebRTC Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td class="fw-bold text-muted">WebRTC Enabled:</td>
+                                        <td><span class="badge bg-success">Yes</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold text-muted">ICE Host:</td>
+                                        <td><code>{{ phone.ice_host|default:"Not specified" }}</code></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="testWebRTC()">
+                                        <i class="fas fa-phone"></i> Test WebRTC
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="showWebRTCConfig()">
+                                        <i class="fas fa-cog"></i> Show Config
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Queue Memberships -->
+            {% if phone.queues.exists %}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">Queue Memberships</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Queue</th>
+                                        <th>Extension</th>
+                                        <th>Penalty</th>
+                                        <th>Status</th>
+                                        <th>Paused</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for membership in phone.queuemember_set.all %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'telephony:queue_detail' membership.queue.pk %}">
+                                                    {{ membership.queue.name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ membership.queue.extension }}</td>
+                                            <td>{{ membership.penalty }}</td>
+                                            <td>
+                                                {% if membership.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if membership.paused %}
+                                                    <span class="badge bg-warning">Paused</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Available</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Status Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Registration Status</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="registrationStatus">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Checking status...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if phone.webrtc_enabled %}
+                            <button type="button" class="btn btn-outline-primary" onclick="testWebRTC()">
+                                <i class="fas fa-phone"></i> Test WebRTC Call
+                            </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-outline-info" onclick="generateConfig()">
+                            <i class="fas fa-download"></i> Download Config
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="resetSecret()">
+                            <i class="fas fa-key"></i> Reset Secret
+                        </button>
+                        {% if phone.is_active %}
+                            <button type="button" class="btn btn-outline-secondary" onclick="deactivatePhone()">
+                                <i class="fas fa-pause"></i> Deactivate
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-outline-success" onclick="activatePhone()">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Recent Call Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_calls %}
+                        <div class="list-group list-group-flush">
+                            {% for call in recent_calls %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ call.called_number }}</h6>
+                                            <p class="mb-1 small text-muted">{{ call.get_call_type_display }} call</p>
+                                            <small class="text-muted">{{ call.start_time|date:"M d, g:i A" }}</small>
+                                        </div>
+                                        <span class="badge bg-{% if call.call_status == 'answered' %}success{% elif call.call_status == 'busy' %}warning{% else %}secondary{% endif %}">
+                                            {{ call.get_call_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-sm btn-outline-primary">View All Calls</a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-phone fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small mb-0">No recent call activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary mb-0">{{ call_stats.total_calls|default:0 }}</h4>
+                            <small class="text-muted">Total Calls</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-0">{{ call_stats.answered_calls|default:0 }}</h4>
+                            <small class="text-muted">Answered</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-info mb-0">{{ call_stats.avg_duration|default:0 }}s</h4>
+                            <small class="text-muted">Avg Duration</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning mb-0">{{ call_stats.today_calls|default:0 }}</h4>
+                            <small class="text-muted">Today</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete phone extension <strong>{{ phone.extension }}</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    This will also remove the phone from all queue memberships.
+                </div>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Delete Phone</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WebRTC Config Modal -->
+<div class="modal fade" id="webrtcConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">WebRTC Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="webrtcConfig" class="bg-light p-3"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyConfig()">Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    checkRegistrationStatus();
+    setInterval(checkRegistrationStatus, 30000); // Check every 30 seconds
+});
+
+function toggleSecret() {
+    var secret = document.getElementById('secret');
+    var mask = document.getElementById('secretMask');
+    var icon = document.getElementById('secretIcon');
+    
+    if (secret.style.display === 'none') {
+        secret.style.display = 'inline';
+        mask.style.display = 'none';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        secret.style.display = 'none';
+        mask.style.display = 'inline';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function checkRegistrationStatus() {
+    $.get('{% url "telephony:phone_status" phone.pk %}')
+        .done(function(data) {
+            var statusHtml = '';
+            if (data.registered) {
+                statusHtml = `
+                    <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                    <h5 class="text-success">Registered</h5>
+                    <p class="text-muted small">IP: ${data.ip_address}</p>
+                    <p class="text-muted small">Last seen: ${data.last_seen}</p>
+                `;
+            } else {
+                statusHtml = `
+                    <i class="fas fa-times-circle fa-3x text-danger mb-2"></i>
+                    <h5 class="text-danger">Not Registered</h5>
+                    <p class="text-muted small">Phone is offline</p>
+                `;
+            }
+            $('#registrationStatus').html(statusHtml);
+        })
+        .fail(function() {
+            $('#registrationStatus').html(`
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-2"></i>
+                <h5 class="text-warning">Status Unknown</h5>
+                <p class="text-muted small">Unable to check status</p>
+            `);
+        });
+}
+
+function testWebRTC() {
+    // Implement WebRTC testing
+    alert('WebRTC test functionality would be implemented here.');
+}
+
+function generateConfig() {
+    window.open('{% url "telephony:phone_config" phone.pk %}', '_blank');
+}
+
+function resetSecret() {
+    if (confirm('Are you sure you want to reset the secret for this phone?')) {
+        $.post('{% url "telephony:reset_phone_secret" phone.pk %}')
+            .done(function(data) {
+                alert('Secret has been reset successfully.');
+                location.reload();
+            })
+            .fail(function() {
+                alert('Failed to reset secret. Please try again.');
+            });
+    }
+}
+
+function activatePhone() {
+    $.post('{% url "telephony:toggle_phone_status" phone.pk %}', {'activate': true})
+        .done(function() {
+            location.reload();
+        });
+}
+
+function deactivatePhone() {
+    $.post('{% url "telephony:toggle_phone_status" phone.pk %}', {'activate': false})
+        .done(function() {
+            location.reload();
+        });
+}
+
+function confirmDelete() {
+    $('#confirmDeleteBtn').attr('href', '{% url "telephony:phone_confirm_delete" phone.pk %}');
+    $('#deleteModal').modal('show');
+}
+
+function showWebRTCConfig() {
+    var config = `
+[${phone.extension}]
+type=aor
+contact=sip:${phone.extension}@${phone.asterisk_server.server_ip}
+max_contacts=1
+
+[${phone.extension}]
+type=auth
+auth_type=userpass
+username=${phone.extension}
+password=${phone.secret}
+
+[${phone.extension}]
+type=endpoint
+context=${phone.context}
+disallow=all
+allow=${phone.codec}
+webrtc=yes
+use_ptime=yes
+media_encryption=dtls
+dtls_verify=fingerprint
+dtls_setup=actpass
+ice_support=yes
+media_use_received_transport=yes
+rtcp_mux=yes
+auth=${phone.extension}
+aors=${phone.extension}
+`;
+    
+    $('#webrtcConfig').text(config);
+    $('#webrtcConfigModal').modal('show');
+}
+
+function copyConfig() {
+    var config = document.getElementById('webrtcConfig');
+    navigator.clipboard.writeText(config.textContent).then(function() {
+        alert('Configuration copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}IVR Options - {{ ivr.name }} - Autodialer{% endblock %}
+
+{% block extra_css %}
+<style>
+.option-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.option-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.digit-badge {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+.sortable-list {
+    min-height: 100px;
+}
+.option-inactive {
+    opacity: 0.6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:ivrs' %}">IVRs</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:ivr_detail' ivr.pk %}">{{ ivr.name }}</a></li>
+                    <li class="breadcrumb-item active">Options</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">IVR Options: {{ ivr.name }}</h2>
+            <p class="text-muted">Manage menu options and their actions</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'telephony:create_ivr_option' ivr.pk %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Option
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    More Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="testIVR()">
+                            <i class="fas fa-phone"></i> Test IVR
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="exportOptions()">
+                            <i class="fas fa-download"></i> Export Options
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="importOptions()">
+                            <i class="fas fa-upload"></i> Import Options
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="reorderOptions()">
+                            <i class="fas fa-sort"></i> Reorder Options
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- IVR Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6 class="mb-1">{{ ivr.name }}</h6>
+                    <p class="text-muted mb-0">{{ ivr.description|default:"No description provided" }}</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex justify-content-end gap-3">
+                        <div class="text-center">
+                            <div class="fw-bold text-primary">{{ options.count }}</div>
+                            <small class="text-muted">Options</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-success">{{ active_options_count }}</div>
+                            <small class="text-muted">Active</small>
+                        </div>
+                        <div class="text-center">
+                            {% if ivr.is_active %}
+                                <span class="badge bg-success">Live</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Options List -->
+        <div class="col-lg-8">
+            {% if options %}
+                <!-- Quick Actions Bar -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-success" onclick="activateAll()">
+                                    <i class="fas fa-check"></i> Activate All
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning" onclick="deactivateAll()">
+                                    <i class="fas fa-pause"></i> Deactivate All
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteSelected()">
+                                    <i class="fas fa-trash"></i> Delete Selected
+                                </button>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label" for="selectAll">Select All</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Options Grid -->
+                <div id="optionsContainer" class="sortable-list">
+                    {% for option in options %}
+                        <div class="card border-0 shadow-sm mb-3 option-card {% if not option.is_active %}option-inactive{% endif %}" 
+                             data-option-id="{{ option.pk }}" data-sort-order="{{ option.sort_order }}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <input class="form-check-input option-checkbox" type="checkbox" value="{{ option.pk }}">
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="digit-badge bg-primary text-white rounded-circle">
+                                            {{ option.digit }}
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">{{ option.description }}</h6>
+                                                <div class="small text-muted mb-1">
+                                                    <strong>Action:</strong> {{ option.get_action_type_display }}
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <strong>Value:</strong> <code>{{ option.action_value }}</code>
+                                                </div>
+                                                {% if option.option_message %}
+                                                    <div class="small text-info mt-1">
+                                                        <i class="fas fa-volume-up"></i> Custom message configured
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="d-flex flex-column align-items-end gap-2">
+                                                <!-- Status -->
+                                                <div>
+                                                    {% if option.is_active %}
+                                                        <span class="badge bg-success">Active</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Inactive</span>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <!-- Actions -->
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                        Actions
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'telephony:update_ivr_option' option.pk %}">
+                                                                <i class="fas fa-edit"></i> Edit
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="testOption('{{ option.pk }}')">
+                                                                <i class="fas fa-phone"></i> Test Option
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="duplicateOption('{{ option.pk }}')">
+                                                                <i class="fas fa-copy"></i> Duplicate
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        {% if option.is_active %}
+                                                            <li>
+                                                                <a class="dropdown-item text-warning" href="#" onclick="toggleOptionStatus('{{ option.pk }}', false)">
+                                                                    <i class="fas fa-pause"></i> Deactivate
+                                                                </a>
+                                                            </li>
+                                                        {% else %}
+                                                            <li>
+                                                                <a class="dropdown-item text-success" href="#" onclick="toggleOptionStatus('{{ option.pk }}', true)">
+                                                                    <i class="fas fa-play"></i> Activate
+                                                                </a>
+                                                            </li>
+                                                        {% endif %}
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="#" onclick="deleteOption('{{ option.pk }}', '{{ option.digit }}')">
+                                                                <i class="fas fa-trash"></i> Delete
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="drag-handle text-muted" style="cursor: move;">
+                                            <i class="fas fa-grip-vertical"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Add Option Prompt -->
+                <div class="card border-2 border-dashed border-primary mb-4">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-plus-circle fa-2x text-primary mb-2"></i>
+                        <h6>Add Another Option</h6>
+                        <p class="text-muted mb-3">Create additional menu choices for callers</p>
+                        <a href="{% url 'telephony:create_ivr_option' ivr.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Option
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Empty State -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-list fa-4x text-muted mb-4"></i>
+                        <h4>No Options Configured</h4>
+                        <p class="text-muted mb-4">This IVR menu doesn't have any options yet. Add your first option to get started.</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'telephony:create_ivr_option' ivr.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add First Option
+                            </a>
+                            <button class="btn btn-outline-secondary" onclick="loadTemplate()">
+                                <i class="fas fa-magic"></i> Load Template
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Available Digits -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Available Digits</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for digit in "0123456789*#" %}
+                            {% if digit in used_digits %}
+                                <span class="badge bg-secondary">{{ digit }}</span>
+                            {% else %}
+                                <a href="{% url 'telephony:create_ivr_option' ivr.pk %}?digit={{ digit }}" 
+                                   class="badge bg-primary text-decoration-none">{{ digit }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <span class="badge bg-primary me-1">Blue</span> = Available
+                            <span class="badge bg-secondary me-1">Gray</span> = Used
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IVR Flow Preview -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Call Flow Preview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <!-- Start -->
+                        <div class="bg-success text-white rounded-pill p-2 mb-2 small">
+                            <i class="fas fa-play"></i> Call Enters IVR
+                        </div>
+                        
+                        <!-- Welcome Message -->
+                        {% if ivr.welcome_message %}
+                            <div class="mb-2">
+                                <i class="fas fa-arrow-down text-muted"></i>
+                            </div>
+                            <div

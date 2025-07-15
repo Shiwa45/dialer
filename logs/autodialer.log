@@ -13598,3 +13598,1833 @@ Traceback (most recent call last):
     raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
 django.template.exceptions.TemplateSyntaxError: Invalid filter: 'sub'
 ERROR 2025-07-12 01:24:00,190 basehttp 11876 3480 "GET /telephony/dids/ HTTP/1.1" 500 274874
+INFO 2025-07-12 02:22:00,354 autoreload 28472 24612 Watching for file changes with StatReloader
+INFO 2025-07-12 11:00:08,872 autoreload 25512 13332 Watching for file changes with StatReloader
+INFO 2025-07-12 11:00:38,788 autoreload 9952 17032 Watching for file changes with StatReloader
+INFO 2025-07-12 11:00:43,249 basehttp 9952 27828 "GET / HTTP/1.1" 302 0
+ERROR 2025-07-12 11:00:43,409 log 9952 27828 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-12 11:00:43,416 basehttp 9952 27828 "GET /dashboard/ HTTP/1.1" 500 200882
+WARNING 2025-07-12 11:00:43,554 log 9952 27828 Not Found: /favicon.ico
+WARNING 2025-07-12 11:00:43,555 basehttp 9952 27828 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-12 11:01:24,714 basehttp 9952 27828 "GET /telephony/ HTTP/1.1" 200 43545
+INFO 2025-07-12 11:01:24,729 basehttp 9952 27828 "GET /static/css/style.css HTTP/1.1" 304 0
+INFO 2025-07-12 11:01:27,464 basehttp 9952 27828 "GET /telephony/dids/create/ HTTP/1.1" 200 25533
+INFO 2025-07-12 11:01:34,032 basehttp 9952 27828 "GET /telephony/carriers/create/ HTTP/1.1" 200 28472
+INFO 2025-07-12 11:01:44,162 basehttp 9952 27828 "GET /telephony/phones/create/ HTTP/1.1" 200 0
+INFO 2025-07-12 11:01:52,049 basehttp 9952 27828 "GET /telephony/servers/create/ HTTP/1.1" 200 39578
+INFO 2025-07-12 11:01:58,374 basehttp 9952 27828 "GET /telephony/servers/create/ HTTP/1.1" 200 39578
+INFO 2025-07-12 11:02:31,448 basehttp 9952 27828 "GET /telephony/ HTTP/1.1" 200 43545
+INFO 2025-07-12 11:02:31,983 basehttp 9952 27828 "GET /telephony/ HTTP/1.1" 200 43545
+ERROR 2025-07-12 11:02:35,106 log 9952 27828 Internal Server Error: /telephony/ivrs/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 47, in select_template
+    raise TemplateDoesNotExist(", ".join(template_name_list), chain=chain)
+django.template.exceptions.TemplateDoesNotExist: telephony/ivr_form.html
+ERROR 2025-07-12 11:02:35,109 basehttp 9952 27828 "GET /telephony/ivrs/create/ HTTP/1.1" 500 87384
+ERROR 2025-07-12 11:02:39,111 log 9952 27828 Internal Server Error: /telephony/queues/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 47, in select_template
+    raise TemplateDoesNotExist(", ".join(template_name_list), chain=chain)
+django.template.exceptions.TemplateDoesNotExist: telephony/queue_form.html
+ERROR 2025-07-12 11:02:39,114 basehttp 9952 27828 "GET /telephony/queues/create/ HTTP/1.1" 500 87440
+INFO 2025-07-12 11:02:45,224 basehttp 9952 27828 "GET /telephony/servers/ HTTP/1.1" 200 27045
+INFO 2025-07-12 11:02:53,168 basehttp 9952 27828 "GET /telephony/phones/ HTTP/1.1" 200 32395
+ERROR 2025-07-12 11:34:32,122 log 9952 7252 Internal Server Error: /telephony/phones/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'check_extension' not found. 'check_extension' is not a valid view function or pattern name.
+ERROR 2025-07-12 11:34:32,126 basehttp 9952 7252 "GET /telephony/phones/create/ HTTP/1.1" 500 180895
+ERROR 2025-07-12 11:39:18,070 log 9952 3008 Internal Server Error: /telephony/phones/bulk-create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\base.py", line 143, in dispatch
+    return handler(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\edit.py", line 178, in get
+    return super().get(request, *args, **kwargs)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\edit.py", line 142, in get
+    return self.render_to_response(self.get_context_data())
+                                   ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\edit.py", line 72, in get_context_data
+    kwargs["form"] = self.get_form()
+                     ~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\edit.py", line 37, in get_form
+    return form_class(**self.get_form_kwargs())
+TypeError: BaseForm.__init__() got an unexpected keyword argument 'instance'
+ERROR 2025-07-12 11:39:18,076 basehttp 9952 3008 "GET /telephony/phones/bulk-create/ HTTP/1.1" 500 103654
+ERROR 2025-07-12 11:39:29,099 log 9952 3008 Internal Server Error: /telephony/phones/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'check_extension' not found. 'check_extension' is not a valid view function or pattern name.
+ERROR 2025-07-12 11:39:29,105 basehttp 9952 3008 "GET /telephony/phones/create/ HTTP/1.1" 500 180895
+INFO 2025-07-12 11:39:33,931 basehttp 9952 3008 "GET /telephony/phones/ HTTP/1.1" 200 32395
+ERROR 2025-07-12 11:39:37,539 log 9952 3008 Internal Server Error: /telephony/phones/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'check_extension' not found. 'check_extension' is not a valid view function or pattern name.
+ERROR 2025-07-12 11:39:37,546 basehttp 9952 3008 "GET /telephony/phones/create/ HTTP/1.1" 500 180895
+ERROR 2025-07-12 11:39:48,401 log 9952 3008 Internal Server Error: /telephony/ivrs/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'available_extensions' not found. 'available_extensions' is not a valid view function or pattern name.
+ERROR 2025-07-12 11:39:48,407 basehttp 9952 3008 "GET /telephony/ivrs/ HTTP/1.1" 500 163069
+INFO 2025-07-12 11:41:40,306 basehttp 9952 3008 "GET /telephony/phones/ HTTP/1.1" 200 32395
+INFO 2025-07-12 11:42:49,328 basehttp 9952 12264 "GET /telephony/diagnostics/ HTTP/1.1" 200 27042
+INFO 2025-07-12 11:42:55,536 basehttp 9952 12264 "GET /telephony/diagnostics/ HTTP/1.1" 200 27042
+ERROR 2025-07-12 12:03:42,570 log 9952 8480 Internal Server Error: /telephony/phones/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'check_extension' not found. 'check_extension' is not a valid view function or pattern name.
+ERROR 2025-07-12 12:03:42,579 basehttp 9952 8480 "GET /telephony/phones/create/ HTTP/1.1" 500 180888
+INFO 2025-07-12 12:03:54,244 basehttp 9952 8480 "GET /telephony/phones/ HTTP/1.1" 200 32395
+INFO 2025-07-12 13:58:27,862 autoreload 9952 17032 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 13:58:29,050 autoreload 4520 14744 Watching for file changes with StatReloader
+INFO 2025-07-12 13:59:27,439 basehttp 4520 30472 "GET /telephony/servers/create/ HTTP/1.1" 200 38784
+INFO 2025-07-12 14:03:11,453 basehttp 4520 30472 "POST /telephony/servers/create/ HTTP/1.1" 200 39450
+INFO 2025-07-12 14:04:38,682 autoreload 4520 14744 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:04:39,459 autoreload 25760 1484 Watching for file changes with StatReloader
+ERROR 2025-07-12 14:05:53,368 views 25760 14592 Form invalid errors: {"max_calls": [{"message": "This field is required.", "code": "required"}]}
+INFO 2025-07-12 14:05:53,454 basehttp 25760 14592 "POST /telephony/servers/create/ HTTP/1.1" 200 39450
+ERROR 2025-07-12 14:07:09,127 views 25760 14592 Form invalid errors: {"max_calls": [{"message": "This field is required.", "code": "required"}]}
+INFO 2025-07-12 14:07:09,210 basehttp 25760 14592 "POST /telephony/servers/create/ HTTP/1.1" 200 40109
+INFO 2025-07-12 14:07:50,330 basehttp 25760 14592 "POST /telephony/servers/create/ HTTP/1.1" 302 0
+ERROR 2025-07-12 14:07:50,575 log 25760 14592 Internal Server Error: /telephony/servers/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 242, in render
+    nodelist.append(node.render_annotated(context))
+                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'delete_asterisk_server' not found. 'delete_asterisk_server' is not a valid view function or pattern name.
+ERROR 2025-07-12 14:07:50,581 basehttp 25760 14592 "GET /telephony/servers/ HTTP/1.1" 500 195360
+INFO 2025-07-12 14:08:23,437 autoreload 25760 1484 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 14:08:24,320 autoreload 24588 16928 Watching for file changes with StatReloader
+INFO 2025-07-12 14:08:30,546 basehttp 24588 13668 "GET /telephony/servers/ HTTP/1.1" 200 30865
+INFO 2025-07-12 14:08:35,191 basehttp 24588 13668 "GET /telephony/servers/1/ HTTP/1.1" 200 27411
+INFO 2025-07-12 14:08:44,611 basehttp 24588 13668 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:08:44,655 basehttp 24588 13668 "GET /telephony/servers/1/ HTTP/1.1" 200 28346
+INFO 2025-07-12 14:09:03,182 basehttp 24588 13668 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:09:03,215 basehttp 24588 13668 "GET /telephony/servers/1/ HTTP/1.1" 200 28346
+INFO 2025-07-12 14:18:19,347 basehttp 24588 14528 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:18:19,389 basehttp 24588 14528 "GET /telephony/servers/1/ HTTP/1.1" 200 28346
+INFO 2025-07-12 14:18:28,474 basehttp 24588 14528 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:18:28,505 basehttp 24588 14528 "GET /telephony/servers/1/ HTTP/1.1" 200 28346
+INFO 2025-07-12 14:24:24,833 basehttp 24588 7848 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:24:24,868 basehttp 24588 7848 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:34:44,078 basehttp 24588 21284 "GET /telephony/servers/1/edit/ HTTP/1.1" 200 40766
+INFO 2025-07-12 14:34:59,837 basehttp 24588 21284 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:34:59,870 basehttp 24588 21284 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:37:49,820 autoreload 24588 16928 C:\Users\shiwansh\autodialer_project\telephony\services.py changed, reloading.
+INFO 2025-07-12 14:37:50,759 autoreload 21648 18712 Watching for file changes with StatReloader
+INFO 2025-07-12 14:38:08,190 basehttp 21648 21160 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:08,378 basehttp 21648 21160 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:43,031 autoreload 21648 18712 C:\Users\shiwansh\autodialer_project\telephony\services.py changed, reloading.
+INFO 2025-07-12 14:38:43,730 autoreload 11996 21044 Watching for file changes with StatReloader
+INFO 2025-07-12 14:38:47,348 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27440
+INFO 2025-07-12 14:38:48,064 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27440
+INFO 2025-07-12 14:38:48,979 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27440
+INFO 2025-07-12 14:38:50,308 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27440
+INFO 2025-07-12 14:38:52,702 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:52,733 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:54,488 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:54,524 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:54,819 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:54,859 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:55,179 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:55,211 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:55,523 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:55,551 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:55,828 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:55,855 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:56,175 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:56,203 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:38:56,534 basehttp 11996 15784 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:38:56,564 basehttp 11996 15784 "GET /telephony/servers/1/ HTTP/1.1" 200 27997
+INFO 2025-07-12 14:46:12,949 basehttp 11996 25964 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:46:13,002 basehttp 11996 25964 "GET /telephony/servers/1/ HTTP/1.1" 200 27982
+INFO 2025-07-12 14:46:24,719 basehttp 11996 25964 "GET /telephony/servers/1/ HTTP/1.1" 200 27453
+INFO 2025-07-12 14:46:32,821 basehttp 11996 25964 "GET /telephony/servers/create/ HTTP/1.1" 200 39243
+INFO 2025-07-12 14:46:37,905 basehttp 11996 25964 "GET /telephony/servers/ HTTP/1.1" 200 30947
+INFO 2025-07-12 14:46:46,311 basehttp 11996 25964 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:46:46,355 basehttp 11996 25964 "GET /telephony/servers/1/ HTTP/1.1" 200 27982
+INFO 2025-07-12 14:46:56,467 basehttp 11996 25964 "GET /telephony/servers/ HTTP/1.1" 200 30947
+INFO 2025-07-12 14:47:29,929 basehttp 11996 25964 "GET /telephony/servers/1/edit/ HTTP/1.1" 200 40766
+INFO 2025-07-12 14:47:36,653 basehttp 11996 25964 "GET /telephony/servers/1/ HTTP/1.1" 200 27453
+INFO 2025-07-12 14:47:49,748 basehttp 11996 25964 "GET /telephony/diagnostics/?server=1 HTTP/1.1" 200 30944
+INFO 2025-07-12 14:48:03,054 basehttp 11996 25964 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 14:48:03,095 basehttp 11996 25964 "GET /telephony/servers/1/ HTTP/1.1" 200 27982
+INFO 2025-07-12 14:48:25,998 basehttp 11996 25964 "GET /telephony/ HTTP/1.1" 200 44261
+ERROR 2025-07-12 14:48:38,437 log 11996 25964 Internal Server Error: /telephony/phones/create/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'check_extension' not found. 'check_extension' is not a valid view function or pattern name.
+ERROR 2025-07-12 14:48:38,445 basehttp 11996 25964 "GET /telephony/phones/create/ HTTP/1.1" 500 180888
+INFO 2025-07-12 14:50:27,818 basehttp 11996 25964 "GET /telephony/phones/create/ HTTP/1.1" 200 44530
+INFO 2025-07-12 14:51:16,371 basehttp 11996 25964 "POST /telephony/phones/create/ HTTP/1.1" 302 0
+ERROR 2025-07-12 14:51:16,475 log 11996 25964 Internal Server Error: /telephony/phones/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 242, in render
+    nodelist.append(node.render_annotated(context))
+                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'delete_phone' not found. 'delete_phone' is not a valid view function or pattern name.
+ERROR 2025-07-12 14:51:16,479 basehttp 11996 25964 "GET /telephony/phones/ HTTP/1.1" 500 203581
+INFO 2025-07-12 14:51:49,483 autoreload 11996 21044 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 14:51:50,285 autoreload 1440 22796 Watching for file changes with StatReloader
+INFO 2025-07-12 14:55:27,333 autoreload 1440 22796 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:55:28,677 autoreload 19724 4824 Watching for file changes with StatReloader
+INFO 2025-07-12 14:56:25,248 autoreload 19724 4824 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:56:26,355 autoreload 19308 28052 Watching for file changes with StatReloader
+INFO 2025-07-12 14:57:58,911 autoreload 19308 28052 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:58:00,259 autoreload 8408 2116 Watching for file changes with StatReloader
+INFO 2025-07-12 14:58:06,553 autoreload 16948 16872 Watching for file changes with StatReloader
+INFO 2025-07-12 14:58:14,295 autoreload 16948 16872 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:58:15,757 autoreload 25716 14664 Watching for file changes with StatReloader
+INFO 2025-07-12 14:58:51,652 autoreload 25716 14664 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:58:52,859 autoreload 29672 15124 Watching for file changes with StatReloader
+INFO 2025-07-12 14:59:00,669 autoreload 29672 15124 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:59:01,441 autoreload 11752 7948 Watching for file changes with StatReloader
+INFO 2025-07-12 14:59:38,903 autoreload 11752 7948 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 14:59:39,844 autoreload 25432 1988 Watching for file changes with StatReloader
+INFO 2025-07-12 15:00:12,471 autoreload 25432 1988 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:00:13,534 autoreload 6368 12716 Watching for file changes with StatReloader
+INFO 2025-07-12 15:00:32,123 autoreload 6368 12716 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:00:33,120 autoreload 28204 21036 Watching for file changes with StatReloader
+INFO 2025-07-12 15:02:17,358 autoreload 28204 21036 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:02:18,324 autoreload 6892 4808 Watching for file changes with StatReloader
+INFO 2025-07-12 15:02:44,226 autoreload 6892 4808 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:02:45,434 autoreload 24736 10176 Watching for file changes with StatReloader
+INFO 2025-07-12 15:03:00,921 autoreload 24736 10176 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:03:02,063 autoreload 22740 30812 Watching for file changes with StatReloader
+INFO 2025-07-12 15:03:10,836 autoreload 22740 30812 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:03:11,920 autoreload 12148 16796 Watching for file changes with StatReloader
+ERROR 2025-07-12 15:03:26,597 log 12148 31460 Internal Server Error: /telephony/phones/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 242, in render
+    nodelist.append(node.render_annotated(context))
+                    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'delete_phone' not found. 'delete_phone' is not a valid view function or pattern name.
+ERROR 2025-07-12 15:03:26,609 basehttp 12148 31460 "GET /telephony/phones/ HTTP/1.1" 500 203311
+INFO 2025-07-12 15:04:31,573 basehttp 12148 31460 "GET /telephony/phones/ HTTP/1.1" 200 37979
+ERROR 2025-07-12 15:04:36,927 log 12148 31460 Internal Server Error: /telephony/phones/1/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'phone_status' not found. 'phone_status' is not a valid view function or pattern name.
+ERROR 2025-07-12 15:04:36,933 basehttp 12148 31460 "GET /telephony/phones/1/ HTTP/1.1" 500 166233
+INFO 2025-07-12 15:06:55,692 autoreload 12148 16796 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:06:57,203 autoreload 13568 11032 Watching for file changes with StatReloader
+INFO 2025-07-12 15:07:10,383 autoreload 13568 11032 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:07:11,651 autoreload 19956 21796 Watching for file changes with StatReloader
+INFO 2025-07-12 15:08:34,131 autoreload 19956 21796 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:08:35,386 autoreload 16264 656 Watching for file changes with StatReloader
+INFO 2025-07-12 15:09:43,827 autoreload 16264 656 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:09:44,914 autoreload 9884 17048 Watching for file changes with StatReloader
+INFO 2025-07-12 15:09:59,227 autoreload 9884 17048 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:10:00,424 autoreload 18284 4240 Watching for file changes with StatReloader
+INFO 2025-07-12 15:10:09,246 autoreload 18284 4240 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:10:10,296 autoreload 28384 20040 Watching for file changes with StatReloader
+INFO 2025-07-12 15:10:22,484 autoreload 28384 20040 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:10:23,607 autoreload 29620 15248 Watching for file changes with StatReloader
+INFO 2025-07-12 15:10:28,245 autoreload 29620 15248 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:10:29,369 autoreload 20904 14352 Watching for file changes with StatReloader
+INFO 2025-07-12 15:15:34,367 autoreload 20904 14352 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:15:35,570 autoreload 1832 26576 Watching for file changes with StatReloader
+INFO 2025-07-12 15:15:55,278 autoreload 1832 26576 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:15:56,307 autoreload 16772 29268 Watching for file changes with StatReloader
+ERROR 2025-07-12 15:16:07,226 log 16772 17380 Internal Server Error: /telephony/phones/1/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'phone_config' not found. 'phone_config' is not a valid view function or pattern name.
+ERROR 2025-07-12 15:16:07,237 basehttp 16772 17380 "GET /telephony/phones/1/ HTTP/1.1" 500 165856
+INFO 2025-07-12 15:18:33,770 autoreload 16772 29268 C:\Users\shiwansh\autodialer_project\telephony\urls.py changed, reloading.
+INFO 2025-07-12 15:18:34,965 autoreload 8764 21104 Watching for file changes with StatReloader
+INFO 2025-07-12 15:18:55,666 autoreload 8764 21104 C:\Users\shiwansh\autodialer_project\telephony\views.py changed, reloading.
+INFO 2025-07-12 15:18:56,717 autoreload 19996 26824 Watching for file changes with StatReloader
+INFO 2025-07-12 15:19:03,038 basehttp 19996 18652 "GET /telephony/phones/1/ HTTP/1.1" 200 39485
+INFO 2025-07-12 15:20:43,418 basehttp 19996 18652 "GET /telephony/phones/1/ HTTP/1.1" 200 39485
+INFO 2025-07-12 15:20:49,018 basehttp 19996 18652 "GET /telephony/phones/1/config/ HTTP/1.1" 200 173
+INFO 2025-07-12 15:22:28,165 basehttp 19996 13268 "GET /telephony/phones/1/ HTTP/1.1" 200 39485
+INFO 2025-07-12 15:22:30,538 basehttp 19996 13268 "GET /telephony/phones/1/ HTTP/1.1" 200 39485
+INFO 2025-07-12 15:23:21,844 basehttp 19996 30196 "GET /telephony/phones/create/ HTTP/1.1" 200 44530
+ERROR 2025-07-12 15:23:27,067 log 19996 30196 Internal Server Error: /telephony/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\telephony\views.py", line 722, in telephony_dashboard
+    return render(request, 'telephony/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'ivrs' not found. 'ivrs' is not a valid view function or pattern name.
+ERROR 2025-07-12 15:23:27,077 basehttp 19996 30196 "GET /telephony/ HTTP/1.1" 500 192064
+INFO 2025-07-12 15:23:31,704 basehttp 19996 30196 "GET /telephony/servers/ HTTP/1.1" 200 30947
+INFO 2025-07-12 15:23:37,178 basehttp 19996 30196 "GET /telephony/servers/1/ HTTP/1.1" 200 27453
+INFO 2025-07-12 15:23:41,050 basehttp 19996 30196 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:23:41,105 basehttp 19996 30196 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:26:32,177 basehttp 19996 30196 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:26:32,244 basehttp 19996 30196 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:30:36,105 basehttp 19996 2976 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:30:36,162 basehttp 19996 2976 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:30:40,844 basehttp 19996 2976 - Broken pipe from ('127.0.0.1', 63778)
+INFO 2025-07-12 15:30:41,857 basehttp 19996 11468 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:30:41,909 basehttp 19996 11468 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:30:54,127 basehttp 19996 11468 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:30:54,186 basehttp 19996 11468 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:31:58,921 basehttp 19996 25552 - Broken pipe from ('127.0.0.1', 63832)
+INFO 2025-07-12 15:32:00,635 basehttp 19996 16796 - Broken pipe from ('127.0.0.1', 63833)
+INFO 2025-07-12 15:32:02,031 basehttp 19996 19084 - Broken pipe from ('127.0.0.1', 63839)
+INFO 2025-07-12 15:32:02,844 basehttp 19996 23916 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:32:02,916 basehttp 19996 23916 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:32:17,567 autoreload 8224 21880 Watching for file changes with StatReloader
+INFO 2025-07-12 15:32:23,403 basehttp 8224 3304 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:32:23,486 basehttp 8224 3304 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:32:26,365 basehttp 8224 3304 "GET /telephony/servers/1/ HTTP/1.1" 200 27448
+INFO 2025-07-12 15:32:30,397 basehttp 8224 3304 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:32:30,453 basehttp 8224 3304 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:33:42,426 basehttp 8224 3304 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:33:42,479 basehttp 8224 3304 "GET /telephony/servers/1/ HTTP/1.1" 200 28357
+INFO 2025-07-12 15:38:42,955 basehttp 8224 27764 "GET /telephony/servers/1/edit/ HTTP/1.1" 200 40766
+INFO 2025-07-12 15:39:06,665 basehttp 8224 27764 "POST /telephony/servers/1/edit/ HTTP/1.1" 200 41254
+INFO 2025-07-12 15:39:54,871 basehttp 8224 27764 "POST /telephony/servers/1/edit/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:39:54,924 basehttp 8224 27764 "GET /telephony/servers/1/ HTTP/1.1" 200 27980
+INFO 2025-07-12 15:40:02,336 basehttp 8224 27764 "GET /telephony/servers/1/test/ HTTP/1.1" 302 0
+INFO 2025-07-12 15:40:02,391 basehttp 8224 27764 "GET /telephony/servers/1/ HTTP/1.1" 200 27982
+ERROR 2025-07-12 15:40:31,826 log 8224 27764 Internal Server Error: /telephony/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\telephony\views.py", line 722, in telephony_dashboard
+    return render(request, 'telephony/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'ivrs' not found. 'ivrs' is not a valid view function or pattern name.
+ERROR 2025-07-12 15:40:31,837 basehttp 8224 27764 "GET /telephony/ HTTP/1.1" 500 192064
+INFO 2025-07-12 15:40:37,776 basehttp 8224 27764 "GET /telephony/phones/1/ HTTP/1.1" 200 39485
+INFO 2025-07-12 15:43:46,259 autoreload 8224 21880 C:\Users\shiwansh\autodialer_project\telephony\services.py changed, reloading.
+INFO 2025-07-12 15:43:47,376 autoreload 28808 30328 Watching for file changes with StatReloader
+INFO 2025-07-14 11:51:43,309 autoreload 4640 22376 Watching for file changes with StatReloader
+INFO 2025-07-14 11:51:47,273 basehttp 4640 23376 "GET / HTTP/1.1" 302 0
+INFO 2025-07-14 11:51:47,310 basehttp 4640 23376 "GET /dashboard/ HTTP/1.1" 302 0
+INFO 2025-07-14 11:51:47,424 basehttp 4640 23376 "GET /users/login/?next=/dashboard/ HTTP/1.1" 200 5364
+INFO 2025-07-14 11:51:47,535 basehttp 4640 23376 "GET /static/css/style.css HTTP/1.1" 200 18748
+WARNING 2025-07-14 11:51:47,929 log 4640 23376 Not Found: /favicon.ico
+WARNING 2025-07-14 11:51:47,930 basehttp 4640 23376 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-14 11:51:55,714 basehttp 4640 23376 "POST /users/login/?next=/dashboard/ HTTP/1.1" 302 0
+ERROR 2025-07-14 11:51:56,223 log 4640 23376 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-14 11:51:56,234 basehttp 4640 23376 "GET /dashboard/ HTTP/1.1" 500 201463
+INFO 2025-07-14 11:52:06,445 basehttp 4640 23376 "GET /campaigns/create/ HTTP/1.1" 200 53663
+INFO 2025-07-14 11:54:05,721 basehttp 4640 23376 "GET /telephony/ HTTP/1.1" 200 44268
+INFO 2025-07-14 11:54:09,887 basehttp 4640 23376 "GET /telephony/ivrs/create/ HTTP/1.1" 200 44881
+INFO 2025-07-14 11:58:07,757 autoreload 4640 22376 C:\Users\shiwansh\autodialer_project\autodialer\settings.py changed, reloading.
+INFO 2025-07-14 11:58:08,807 autoreload 17420 9068 Watching for file changes with StatReloader
+INFO 2025-07-14 12:02:20,155 autoreload 17420 9068 C:\Users\shiwansh\autodialer_project\autodialer\settings.py changed, reloading.
+INFO 2025-07-14 12:02:21,253 autoreload 9856 14852 Watching for file changes with StatReloader
+INFO 2025-07-14 12:03:09,044 basehttp 9856 20776 "GET /telephony/dids/create/ HTTP/1.1" 200 25586
+INFO 2025-07-14 13:08:52,771 autoreload 23348 17928 Watching for file changes with StatReloader
+INFO 2025-07-14 13:08:56,088 basehttp 23348 25432 "GET / HTTP/1.1" 302 0
+INFO 2025-07-14 13:08:56,115 basehttp 23348 25432 "GET /dashboard/ HTTP/1.1" 302 0
+INFO 2025-07-14 13:08:56,138 basehttp 23348 25432 "GET /users/login/?next=/dashboard/ HTTP/1.1" 200 5364
+INFO 2025-07-14 13:08:56,199 basehttp 23348 25432 "GET /static/css/style.css HTTP/1.1" 304 0
+WARNING 2025-07-14 13:08:56,674 log 23348 25432 Not Found: /favicon.ico
+WARNING 2025-07-14 13:08:56,675 basehttp 23348 25432 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-14 13:08:59,433 basehttp 23348 25432 "POST /users/login/?next=/dashboard/ HTTP/1.1" 302 0
+ERROR 2025-07-14 13:08:59,947 log 23348 25432 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-14 13:08:59,960 basehttp 23348 25432 "GET /dashboard/ HTTP/1.1" 500 200805
+INFO 2025-07-14 13:09:04,886 basehttp 23348 25432 "GET /telephony/ HTTP/1.1" 200 44268
+INFO 2025-07-14 13:09:09,901 basehttp 23348 25432 "GET /telephony/ivrs/create/ HTTP/1.1" 200 44881
+ERROR 2025-07-14 13:10:21,970 log 23348 25432 Internal Server Error: /telephony/ivrs/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'available_extensions' not found. 'available_extensions' is not a valid view function or pattern name.
+ERROR 2025-07-14 13:10:21,977 basehttp 23348 25432 "GET /telephony/ivrs/ HTTP/1.1" 500 162436
+INFO 2025-07-14 18:53:12,228 autoreload 24584 6092 Watching for file changes with StatReloader
+INFO 2025-07-14 19:24:58,897 autoreload 24584 6092 C:\Users\shiwansh\autodialer_project\autodialer\settings.py changed, reloading.
+INFO 2025-07-14 19:25:00,211 autoreload 11952 2860 Watching for file changes with StatReloader
+INFO 2025-07-14 22:14:12,915 autoreload 14280 9596 Watching for file changes with StatReloader
+INFO 2025-07-14 22:14:16,415 basehttp 14280 15140 "GET / HTTP/1.1" 302 0
+INFO 2025-07-14 22:14:16,442 basehttp 14280 15140 "GET /dashboard/ HTTP/1.1" 302 0
+INFO 2025-07-14 22:14:16,462 basehttp 14280 15140 "GET /users/login/?next=/dashboard/ HTTP/1.1" 200 5364
+INFO 2025-07-14 22:14:16,634 basehttp 14280 15140 "GET /static/css/style.css HTTP/1.1" 304 0
+WARNING 2025-07-14 22:14:16,851 log 14280 10168 Not Found: /favicon.ico
+WARNING 2025-07-14 22:14:16,852 basehttp 14280 10168 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-14 22:14:19,398 basehttp 14280 6308 "POST /users/login/?next=/dashboard/ HTTP/1.1" 302 0
+ERROR 2025-07-14 22:14:19,771 log 14280 21540 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-14 22:14:19,776 basehttp 14280 21540 "GET /dashboard/ HTTP/1.1" 500 202872
+INFO 2025-07-14 22:14:30,020 basehttp 14280 21540 "GET /telephony/ HTTP/1.1" 200 45411
+INFO 2025-07-14 22:14:33,590 basehttp 14280 21540 "GET /telephony/ HTTP/1.1" 200 45411
+INFO 2025-07-14 22:14:46,667 basehttp 14280 22588 "GET /telephony/ HTTP/1.1" 302 0
+INFO 2025-07-14 22:14:46,673 basehttp 14280 22588 "GET /users/login/?next=/telephony/ HTTP/1.1" 200 5364
+WARNING 2025-07-14 22:14:46,797 log 14280 22588 Not Found: /favicon.ico
+WARNING 2025-07-14 22:14:46,798 basehttp 14280 22588 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-14 22:14:59,039 basehttp 14280 22588 "POST /users/login/?next=/telephony/ HTTP/1.1" 302 0
+INFO 2025-07-14 22:14:59,080 basehttp 14280 22588 "GET /telephony/ HTTP/1.1" 200 45929
+INFO 2025-07-14 22:15:12,413 basehttp 14280 22588 "GET /telephony/servers/ HTTP/1.1" 200 34382
+INFO 2025-07-14 22:15:20,118 basehttp 14280 22588 "GET /telephony/servers/2/test/ HTTP/1.1" 302 0
+INFO 2025-07-14 22:15:20,197 basehttp 14280 22588 "GET /telephony/servers/2/ HTTP/1.1" 200 28030
+INFO 2025-07-14 22:15:24,703 basehttp 14280 22588 "GET /telephony/servers/2/test/ HTTP/1.1" 302 0
+INFO 2025-07-14 22:15:24,741 basehttp 14280 22588 "GET /telephony/servers/2/ HTTP/1.1" 200 28030
+INFO 2025-07-14 22:15:33,906 basehttp 14280 22588 "GET /telephony/servers/2/ HTTP/1.1" 200 27489
+INFO 2025-07-14 22:15:41,209 basehttp 14280 22588 "GET /telephony/servers/1/edit/ HTTP/1.1" 200 40850
+INFO 2025-07-14 22:15:51,925 basehttp 14280 22588 "GET /telephony/servers/1/delete/ HTTP/1.1" 200 32576
+INFO 2025-07-14 22:16:32,908 basehttp 14280 22588 "GET /telephony/servers/ HTTP/1.1" 200 34464
+INFO 2025-07-14 22:16:42,750 basehttp 14280 22588 "GET /telephony/servers/1/delete/ HTTP/1.1" 200 32576
+INFO 2025-07-14 22:52:03,823 autoreload 14280 9596 C:\Users\shiwansh\autodialer_project\telephony\models.py changed, reloading.
+INFO 2025-07-14 22:52:04,540 autoreload 8856 2384 Watching for file changes with StatReloader
+INFO 2025-07-15 00:02:09,984 autoreload 9252 644 Watching for file changes with StatReloader
+INFO 2025-07-15 00:02:16,411 basehttp 9252 12380 "GET / HTTP/1.1" 302 0
+ERROR 2025-07-15 00:02:16,918 log 9252 12380 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-15 00:02:16,924 basehttp 9252 12380 "GET /dashboard/ HTTP/1.1" 500 202309
+WARNING 2025-07-15 00:02:17,075 log 9252 12380 Not Found: /favicon.ico
+WARNING 2025-07-15 00:02:17,075 basehttp 9252 12380 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-15 00:02:25,757 basehttp 9252 22876 "GET /dashboard/ HTTP/1.1" 302 0
+INFO 2025-07-15 00:02:25,792 basehttp 9252 22876 "GET /users/login/?next=/dashboard/ HTTP/1.1" 200 5364
+INFO 2025-07-15 00:02:25,804 basehttp 9252 22876 "GET /static/css/style.css HTTP/1.1" 304 0
+WARNING 2025-07-15 00:02:25,959 log 9252 22876 Not Found: /favicon.ico
+WARNING 2025-07-15 00:02:25,959 basehttp 9252 22876 "GET /favicon.ico HTTP/1.1" 404 3171
+INFO 2025-07-15 00:02:28,274 basehttp 9252 22876 "POST /users/login/?next=/dashboard/ HTTP/1.1" 302 0
+ERROR 2025-07-15 00:02:28,422 log 9252 22876 Internal Server Error: /dashboard/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 71, in reverse
+    extra, resolver = resolver.namespace_dict[ns]
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+KeyError: 'reports'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\core\views.py", line 44, in dashboard
+    return render(request, 'core/dashboard.html', context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 326, in render
+    return nodelist.render(context)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 82, in reverse
+    raise NoReverseMatch("%s is not a registered namespace" % key)
+django.urls.exceptions.NoReverseMatch: 'reports' is not a registered namespace
+ERROR 2025-07-15 00:02:28,427 basehttp 9252 22876 "GET /dashboard/ HTTP/1.1" 500 202883
+WARNING 2025-07-15 00:02:39,302 log 9252 22876 Not Found: /teliphony/
+WARNING 2025-07-15 00:02:39,302 basehttp 9252 22876 "GET /teliphony/ HTTP/1.1" 404 3168
+INFO 2025-07-15 00:02:47,225 basehttp 9252 22876 "GET /telephony/ HTTP/1.1" 200 45428
+INFO 2025-07-15 00:02:57,438 basehttp 9252 22876 "GET /telephony/servers/ HTTP/1.1" 200 34464
+INFO 2025-07-15 00:03:03,530 basehttp 9252 22876 "GET /telephony/servers/2/ HTTP/1.1" 200 27489
+INFO 2025-07-15 00:03:07,304 basehttp 9252 22876 "GET /telephony/servers/ HTTP/1.1" 200 34464
+INFO 2025-07-15 00:03:21,855 basehttp 9252 22876 "GET /telephony/carriers/create/ HTTP/1.1" 200 28587
+INFO 2025-07-15 00:03:40,815 basehttp 9252 22876 "GET /telephony/phones/create/ HTTP/1.1" 200 44831
+ERROR 2025-07-15 00:04:08,736 log 9252 22876 Internal Server Error: /telephony/dids/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 42, in select_template
+    return engine.get_template(template_name)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 177, in get_template
+    template, origin = self.find_template(template_name)
+                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 159, in find_template
+    template = loader.get_template(name, skip=skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\base.py", line 28, in get_template
+    return Template(
+        contents,
+    ...<2 lines>...
+        self.engine,
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 481, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 479, in parse
+    filter_expression = self.compile_filter(token.contents)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'sub'
+ERROR 2025-07-15 00:04:08,743 basehttp 9252 22876 "GET /telephony/dids/ HTTP/1.1" 500 276326
+INFO 2025-07-15 01:06:21,415 autoreload 8784 26368 Watching for file changes with StatReloader
+INFO 2025-07-15 01:06:28,108 basehttp 8784 26140 "GET /telephony/ivrs/create/ HTTP/1.1" 200 44943
+INFO 2025-07-15 01:06:35,563 basehttp 8784 26140 "GET /telephony/carriers/create/ HTTP/1.1" 200 28587
+ERROR 2025-07-15 01:06:56,197 log 8784 26140 Internal Server Error: /telephony/recordings/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 1034, in find_library
+    return parser.libraries[name]
+           ~~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'humanize'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader.py", line 42, in select_template
+    return engine.get_template(template_name)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 177, in get_template
+    template, origin = self.find_template(template_name)
+                       ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\engine.py", line 159, in find_template
+    template = loader.get_template(name, skip=skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loaders\base.py", line 28, in get_template
+    return Template(
+        contents,
+    ...<2 lines>...
+        self.engine,
+    )
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ~~~~~~~~~~~~^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 510, in parse
+    raise self.error(token, e)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 1096, in load
+    lib = find_library(parser, name)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 1036, in find_library
+    raise TemplateSyntaxError(
+    ...<5 lines>...
+    )
+django.template.exceptions.TemplateSyntaxError: 'humanize' is not a registered tag library. Must be one of:
+admin_list
+admin_modify
+admin_urls
+cache
+debugger_tags
+highlighting
+i18n
+indent_text
+l10n
+lead_tags
+log
+math_filters
+static
+syntax_color
+tz
+user_tags
+widont
+ERROR 2025-07-15 01:06:56,206 basehttp 8784 26140 "GET /telephony/recordings/ HTTP/1.1" 500 236780
+ERROR 2025-07-15 01:07:10,449 log 8784 26140 Internal Server Error: /telephony/ivrs/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 220, in _get_response
+    response = response.render()
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\backends\django.py", line 61, in render
+    return self.template.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 171, in render
+    return self._render(context)
+           ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\base.py", line 961, in render_annotated
+    return self.render(context)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\template\defaulttags.py", line 479, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\base.py", line 88, in reverse
+    return resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\urls\resolvers.py", line 851, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'available_extensions' not found. 'available_extensions' is not a valid view function or pattern name.
+ERROR 2025-07-15 01:07:10,453 basehttp 8784 26140 "GET /telephony/ivrs/ HTTP/1.1" 500 164501
+INFO 2025-07-15 01:07:15,388 basehttp 8784 26140 "GET /telephony/phones/ HTTP/1.1" 200 41751
+ERROR 2025-07-15 01:07:37,599 log 8784 26140 Internal Server Error: /telephony/phones/1/
+Traceback (most recent call last):
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\contrib\auth\mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\base.py", line 143, in dispatch
+    return handler(request, *args, **kwargs)
+  File "C:\Users\shiwansh\autodialer_project\venv\Lib\site-packages\django\views\generic\detail.py", line 109, in get
+    context = self.get_context_data(object=self.object)
+  File "C:\Users\shiwansh\autodialer_project\telephony\views.py", line 496, in get_context_data
+    'asterisk_status': phone.get_asterisk_status(),
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Phone' object has no attribute 'get_asterisk_status'
+ERROR 2025-07-15 01:07:37,605 basehttp 8784 26140 "GET /telephony/phones/1/ HTTP/1.1" 500 96964

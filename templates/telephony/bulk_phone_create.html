@@ -1,0 +1,701 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Create Phones - Autodialer{% endblock %}
+
+{% block extra_css %}
+<style>
+.preview-table {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.step-indicator {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+}
+.step-indicator .step {
+    flex: 1;
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    margin-right: 1rem;
+    border-radius: 0.375rem;
+    position: relative;
+}
+.step-indicator .step:last-child {
+    margin-right: 0;
+}
+.step-indicator .step.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+.step-indicator .step.completed {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+.progress-section {
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:phones' %}">Phones</a></li>
+                    <li class="breadcrumb-item active">Bulk Create</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">Bulk Create Phone Extensions</h2>
+            <p class="text-muted">Create multiple phone extensions with sequential numbering</p>
+        </div>
+        <div>
+            <a href="{% url 'telephony:phones' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Phones
+            </a>
+        </div>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step active" id="step1">
+            <div class="fw-bold">1. Configuration</div>
+            <div class="small">Set parameters</div>
+        </div>
+        <div class="step" id="step2">
+            <div class="fw-bold">2. Preview</div>
+            <div class="small">Review extensions</div>
+        </div>
+        <div class="step" id="step3">
+            <div class="fw-bold">3. Create</div>
+            <div class="small">Generate phones</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Configuration Form -->
+            <div id="configurationStep" class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Extension Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="bulkCreateForm" method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.extension_start.id_for_label }}" class="form-label">
+                                        Starting Extension <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.extension_start }}
+                                    {% if form.extension_start.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.extension_start.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">First extension number to create</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.extension_count.id_for_label }}" class="form-label">
+                                        Number of Extensions <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.extension_count }}
+                                    {% if form.extension_count.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.extension_count.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">How many extensions to create (max 100)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.name_prefix.id_for_label }}" class="form-label">
+                                        Name Prefix <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.name_prefix }}
+                                    {% if form.name_prefix.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.name_prefix.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Prefix for phone names (e.g., "Agent" creates "Agent 1001")</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.phone_type.id_for_label }}" class="form-label">
+                                        Phone Type <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.phone_type }}
+                                    {% if form.phone_type.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.phone_type.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.asterisk_server.id_for_label }}" class="form-label">
+                                        Asterisk Server <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.asterisk_server }}
+                                    {% if form.asterisk_server.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.asterisk_server.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.context.id_for_label }}" class="form-label">
+                                        Context
+                                    </label>
+                                    {{ form.context }}
+                                    {% if form.context.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.context.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Dialplan context (default: agents)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Settings (Collapsible) -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#advancedSettings">
+                                <i class="fas fa-cog"></i> Advanced Settings
+                            </button>
+                        </div>
+
+                        <div class="collapse" id="advancedSettings">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="passwordPattern" class="form-label">Password Pattern</label>
+                                                <select class="form-select" id="passwordPattern">
+                                                    <option value="random">Random (16 chars)</option>
+                                                    <option value="extension">Based on extension</option>
+                                                    <option value="sequential">Sequential pattern</option>
+                                                </select>
+                                                <div class="form-text">How to generate SIP passwords</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="codecPreset" class="form-label">Codec Preset</label>
+                                                <select class="form-select" id="codecPreset">
+                                                    <option value="standard">Standard (ulaw,alaw,g729)</option>
+                                                    <option value="hd">HD Audio (opus,g722,ulaw)</option>
+                                                    <option value="webrtc">WebRTC (opus,ulaw,alaw)</option>
+                                                    <option value="minimal">Minimal (ulaw)</option>
+                                                </select>
+                                                <div class="form-text">Audio codec configuration</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                                <label class="form-label">Default Features</label>
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="enableCallWaiting" checked>
+                                                            <label class="form-check-label" for="enableCallWaiting">Call Waiting</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="enableCallTransfer" checked>
+                                                            <label class="form-check-label" for="enableCallTransfer">Call Transfer</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="enableThreeWay" checked>
+                                                            <label class="form-check-label" for="enableThreeWay">3-Way Calling</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="enableWebRTC">
+                                                            <label class="form-check-label" for="enableWebRTC">WebRTC</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'telephony:phones' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="button" class="btn btn-primary" onclick="generatePreview()">
+                                <i class="fas fa-eye"></i> Preview Extensions
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview Step -->
+            <div id="previewStep" class="card border-0 shadow-sm mb-4" style="display: none;">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Extension Preview</h5>
+                    <span id="previewCount" class="badge bg-primary"></span>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Review the extensions that will be created. You can modify the configuration if needed.
+                    </div>
+
+                    <!-- Conflict Warnings -->
+                    <div id="conflictWarnings" style="display: none;">
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Extension Conflicts Detected</h6>
+                            <div id="conflictList"></div>
+                            <p class="mb-0">These extensions already exist and will be skipped.</p>
+                        </div>
+                    </div>
+
+                    <!-- Preview Table -->
+                    <div class="preview-table">
+                        <table class="table table-sm" id="previewTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Extension</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Secret</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewTableBody">
+                                <!-- Preview rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goBackToConfig()">
+                            <i class="fas fa-arrow-left"></i> Back to Configuration
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="createExtensions()" id="createButton">
+                            <i class="fas fa-plus"></i> Create Extensions
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Creation Progress Step -->
+            <div id="creationStep" class="card border-0 shadow-sm mb-4" style="display: none;">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Creating Extensions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress-section">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Progress:</span>
+                            <span id="progressText">0 / 0</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" id="progressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Creation Results -->
+                    <div id="creationResults" style="display: none;">
+                        <div class="row text-center mb-4">
+                            <div class="col-md-4">
+                                <div class="bg-success text-white rounded p-3">
+                                    <h4 class="mb-0" id="successCount">0</h4>
+                                    <small>Created Successfully</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-warning text-white rounded p-3">
+                                    <h4 class="mb-0" id="skippedCount">0</h4>
+                                    <small>Skipped (Conflicts)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-danger text-white rounded p-3">
+                                    <h4 class="mb-0" id="errorCount">0</h4>
+                                    <small>Failed</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Results -->
+                        <div id="detailedResults"></div>
+
+                        <div class="text-center mt-4">
+                            <a href="{% url 'telephony:phones' %}" class="btn btn-primary">
+                                <i class="fas fa-list"></i> View All Phones
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetForm()">
+                                <i class="fas fa-redo"></i> Create More Extensions
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loadingState" class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted">Creating phone extensions...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Tips Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0"><i class="fas fa-lightbulb"></i> Bulk Creation Tips</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Extension Numbering:</h6>
+                    <ul class="small text-muted">
+                        <li>Use consistent ranges (e.g., 1000-1999 for agents)</li>
+                        <li>Leave gaps for future expansion</li>
+                        <li>Avoid conflicts with existing DIDs</li>
+                    </ul>
+
+                    <h6>Best Practices:</h6>
+                    <ul class="small text-muted">
+                        <li>Start with smaller batches (20-50 extensions)</li>
+                        <li>Use descriptive name prefixes</li>
+                        <li>Review conflicts before creation</li>
+                        <li>Test a few extensions before bulk deployment</li>
+                    </ul>
+
+                    <h6>Security Considerations:</h6>
+                    <ul class="small text-muted">
+                        <li>Use random passwords for better security</li>
+                        <li>Change default passwords before deployment</li>
+                        <li>Enable appropriate features only</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Extension Range Calculator -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Extension Range Calculator</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Starting Extension:</label>
+                        <input type="text" class="form-control" id="calcStart" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ending Extension:</label>
+                        <input type="text" class="form-control" id="calcEnd" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Total Extensions:</label>
+                        <input type="text" class="form-control" id="calcTotal" readonly>
+                    </div>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="checkAvailability()">
+                        <i class="fas fa-search"></i> Check Availability
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Quick Presets</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyPreset('agents')">
+                            <i class="fas fa-user"></i> Agent Extensions (1000-1099)
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="applyPreset('supervisors')">
+                            <i class="fas fa-user-tie"></i> Supervisor Extensions (2000-2019)
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="applyPreset('conference')">
+                            <i class="fas fa-users"></i> Conference Rooms (3000-3009)
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="applyPreset('test')">
+                            <i class="fas fa-flask"></i> Test Extensions (9000-9009)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let previewData = [];
+let currentStep = 1;
+
+$(document).ready(function() {
+    updateCalculator();
+    
+    // Update calculator when form values change
+    $('#{{ form.extension_start.id_for_label }}, #{{ form.extension_count.id_for_label }}').on('input', updateCalculator);
+});
+
+function updateCalculator() {
+    const start = parseInt($('#{{ form.extension_start.id_for_label }}').val()) || 0;
+    const count = parseInt($('#{{ form.extension_count.id_for_label }}').val()) || 0;
+    const end = start + count - 1;
+    
+    $('#calcStart').val(start || '');
+    $('#calcEnd').val(count > 0 ? end : '');
+    $('#calcTotal').val(count || '');
+}
+
+function generatePreview() {
+    const start = parseInt($('#{{ form.extension_start.id_for_label }}').val());
+    const count = parseInt($('#{{ form.extension_count.id_for_label }}').val());
+    const namePrefix = $('#{{ form.name_prefix.id_for_label }}').val();
+    const phoneType = $('#{{ form.phone_type.id_for_label }}').val();
+    
+    if (!start || !count || !namePrefix) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Show loading
+    showStep(2);
+    
+    // Check for conflicts and generate preview
+    $.post('{% url "telephony:bulk_phone_preview" %}', {
+        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+        'extension_start': start,
+        'extension_count': count,
+        'name_prefix': namePrefix,
+        'phone_type': phoneType
+    })
+    .done(function(data) {
+        previewData = data.extensions;
+        displayPreview(data);
+    })
+    .fail(function() {
+        alert('Failed to generate preview');
+        showStep(1);
+    });
+}
+
+function displayPreview(data) {
+    const tbody = $('#previewTableBody');
+    tbody.empty();
+    
+    $('#previewCount').text(data.extensions.length + ' extensions');
+    
+    // Show conflicts if any
+    if (data.conflicts.length > 0) {
+        $('#conflictWarnings').show();
+        $('#conflictList').html('<ul>' + data.conflicts.map(ext => '<li>' + ext + '</li>').join('') + '</ul>');
+    } else {
+        $('#conflictWarnings').hide();
+    }
+    
+    // Populate preview table
+    data.extensions.forEach(function(ext) {
+        const row = `
+            <tr class="${ext.conflict ? 'table-warning' : ''}">
+                <td>${ext.extension}</td>
+                <td>${ext.name}</td>
+                <td>${ext.phone_type}</td>
+                <td><code>${ext.secret.substring(0, 8)}...</code></td>
+                <td>${ext.conflict ? '<span class="badge bg-warning">Conflict</span>' : '<span class="badge bg-success">Available</span>'}</td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+function goBackToConfig() {
+    showStep(1);
+}
+
+function createExtensions() {
+    showStep(3);
+    
+    const validExtensions = previewData.filter(ext => !ext.conflict);
+    let processed = 0;
+    let results = {
+        success: 0,
+        skipped: 0,
+        errors: 0,
+        details: []
+    };
+    
+    function processNext() {
+        if (processed >= validExtensions.length) {
+            showResults(results);
+            return;
+        }
+        
+        const ext = validExtensions[processed];
+        
+        // Update progress
+        processed++;
+        const progress = (processed / validExtensions.length) * 100;
+        $('#progressBar').css('width', progress + '%');
+        $('#progressText').text(processed + ' / ' + validExtensions.length);
+        
+        // Create extension
+        $.post('{% url "telephony:bulk_phone_create_single" %}', {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+            'extension_data': JSON.stringify(ext)
+        })
+        .done(function(data) {
+            if (data.success) {
+                results.success++;
+                results.details.push({type: 'success', extension: ext.extension, message: 'Created successfully'});
+            } else {
+                results.errors++;
+                results.details.push({type: 'error', extension: ext.extension, message: data.error});
+            }
+        })
+        .fail(function() {
+            results.errors++;
+            results.details.push({type: 'error', extension: ext.extension, message: 'Network error'});
+        })
+        .always(function() {
+            setTimeout(processNext, 100); // Small delay between requests
+        });
+    }
+    
+    processNext();
+}
+
+function showResults(results) {
+    $('#loadingState').hide();
+    $('#creationResults').show();
+    
+    $('#successCount').text(results.success);
+    $('#skippedCount').text(results.skipped);
+    $('#errorCount').text(results.errors);
+    
+    // Show detailed results
+    const detailedHTML = results.details.map(detail => {
+        const iconClass = detail.type === 'success' ? 'fa-check text-success' : 'fa-times text-danger';
+        return `
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas ${iconClass} me-2"></i>
+                <span class="me-2 fw-bold">${detail.extension}:</span>
+                <span>${detail.message}</span>
+            </div>
+        `;
+    }).join('');
+    
+    $('#detailedResults').html('<div class="bg-light p-3 rounded">' + detailedHTML + '</div>');
+    
+    // Mark step as completed
+    $('#step3').addClass('completed').removeClass('active');
+}
+
+function showStep(step) {
+    // Hide all steps
+    $('#configurationStep, #previewStep, #creationStep').hide();
+    
+    // Update step indicators
+    $('.step').removeClass('active completed');
+    
+    for (let i = 1; i < step; i++) {
+        $('#step' + i).addClass('completed');
+    }
+    $('#step' + step).addClass('active');
+    
+    // Show current step
+    switch(step) {
+        case 1:
+            $('#configurationStep').show();
+            break;
+        case 2:
+            $('#previewStep').show();
+            break;
+        case 3:
+            $('#creationStep').show();
+            $('#loadingState').show();
+            $('#creationResults').hide();
+            break;
+    }
+    
+    currentStep = step;
+}
+
+function resetForm() {
+    location.reload();
+}
+
+function checkAvailability() {
+    const start = parseInt($('#{{ form.extension_start.id_for_label }}').val());
+    const count = parseInt($('#{{ form.extension_count.id_for_label }}').val());
+    
+    if (!start || !count) {
+        alert('Please enter starting extension and count');
+        return;
+    }
+    
+    $.get('{% url "telephony:check_extension_range" %}', {
+        start: start,
+        count: count
+    })
+    .done(function(data) {
+        alert('Available: ' + data.available + ', Conflicts: ' + data.conflicts);
+    });
+}
+
+function applyPreset(preset) {
+    const presets = {
+        agents: {start: 1000, count: 100, prefix: 'Agent', type: 'sip'},
+        supervisors: {start: 2000, count: 20, prefix: 'Supervisor', type: 'sip'},
+        conference: {start: 3000, count: 10, prefix: 'Conference', type: 'virtual'},
+        test: {start: 9000, count: 10, prefix: 'Test', type: 'sip'}
+    };
+    
+    const config = presets[preset];
+    if (config) {
+        $('#{{ form.extension_start.id_for_label }}').val(config.start);
+        $('#{{ form.extension_count.id_for_label }}').val(config.count);
+        $('#{{ form.name_prefix.id_for_label }}').val(config.prefix);
+        $('#{{ form.phone_type.id_for_label }}').val(config.type);
+        updateCalculator();
+    }
+}
+</script>
+{% endblock %}

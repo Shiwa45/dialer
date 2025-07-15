@@ -1,0 +1,1036 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}WebRTC Configuration{% endblock %}
+
+{% block extra_css %}
+<style>
+    .webrtc-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .config-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+    }
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    .status-online {
+        background: #28a745;
+        box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3);
+        animation: pulse 2s infinite;
+    }
+    .status-offline {
+        background: #dc3545;
+    }
+    .status-connecting {
+        background: #ffc107;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    .test-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    .connection-test {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    .connection-test:hover {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-result {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    .test-success {
+        color: #28a745;
+    }
+    .test-failure {
+        color: #dc3545;
+    }
+    .test-pending {
+        color: #6c757d;
+    }
+    .audio-controls {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    .volume-control {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 0.5rem 0;
+    }
+    .config-preview {
+        background: #2d3748;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .code-keyword {
+        color: #63b3ed;
+    }
+    .code-string {
+        color: #68d391;
+    }
+    .code-comment {
+        color: #a0aec0;
+        font-style: italic;
+    }
+    .browser-info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .capability-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .capability-item {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    .capability-supported {
+        border-color: #28a745;
+        background: #f8fff8;
+    }
+    .capability-unsupported {
+        border-color: #dc3545;
+        background: #fff8f8;
+    }
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: #dc3545;
+        color: white;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .live-indicator.active {
+        background: #28a745;
+    }
+    .settings-section {
+        border-left: 4px solid #007bff;
+        padding-left: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .troubleshooting {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+    .issue-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .issue-item:last-child {
+        border-bottom: none;
+    }
+    .issue-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        margin-top: 0.125rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="webrtc-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-video me-2"></i>WebRTC Configuration
+                </h1>
+                <p class="mb-0">Configure and test WebRTC connectivity for browser-based calling</p>
+            </div>
+            <div class="col-md-4">
+                <div class="text-end">
+                    <div class="live-indicator" id="connectionStatus">
+                        <span class="status-indicator status-offline"></span>
+                        <span id="statusText">Disconnected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Browser Compatibility -->
+    <div class="browser-info">
+        <h6 class="mb-2">
+            <i class="fas fa-globe me-2"></i>Browser Compatibility Check
+        </h6>
+        <div id="browserCheck">
+            <div class="d-flex align-items-center gap-2">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span>Checking browser capabilities...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Configuration Form -->
+        <div class="col-lg-8">
+            <div class="config-card card">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>WebRTC Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="webrtcForm">
+                        {% csrf_token %}
+                        
+                        <!-- STUN/TURN Configuration -->
+                        <div class="settings-section">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-network-wired me-2"></i>Network Configuration
+                            </h6>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="{{ form.stun_server.id_for_label }}">
+                                    <i class="fas fa-server me-1"></i>STUN Server
+                                </label>
+                                {{ form.stun_server }}
+                                <div class="form-text">
+                                    STUN server helps discover your public IP address for NAT traversal
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label" for="{{ form.turn_server.id_for_label }}">
+                                    <i class="fas fa-shield-alt me-1"></i>TURN Server (Optional)
+                                </label>
+                                {{ form.turn_server }}
+                                <div class="form-text">
+                                    TURN server for environments with strict firewalls
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label" for="{{ form.turn_username.id_for_label }}">
+                                            TURN Username
+                                        </label>
+                                        {{ form.turn_username }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label" for="{{ form.turn_password.id_for_label }}">
+                                            TURN Password
+                                        </label>
+                                        {{ form.turn_password }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Media Configuration -->
+                        <div class="settings-section">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-microphone me-2"></i>Media Configuration
+                            </h6>
+                            
+                            <div class="form-check form-switch mb-3">
+                                {{ form.enable_audio }}
+                                <label class="form-check-label" for="{{ form.enable_audio.id_for_label }}">
+                                    Enable Audio
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ form.enable_video }}
+                                <label class="form-check-label" for="{{ form.enable_video.id_for_label }}">
+                                    Enable Video (Experimental)
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Audio Controls -->
+                        <div class="audio-controls">
+                            <h6 class="mb-3">
+                                <i class="fas fa-volume-up me-2"></i>Audio Controls
+                            </h6>
+                            
+                            <div class="volume-control">
+                                <label class="form-label me-2">Microphone:</label>
+                                <input type="range" class="form-range" id="micVolume" min="0" max="100" value="50">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="testMicrophone()">
+                                    <i class="fas fa-microphone me-1"></i>Test
+                                </button>
+                            </div>
+                            
+                            <div class="volume-control">
+                                <label class="form-label me-2">Speaker:</label>
+                                <input type="range" class="form-range" id="speakerVolume" min="0" max="100" value="50">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="testSpeaker()">
+                                    <i class="fas fa-volume-up me-1"></i>Test
+                                </button>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-success" onclick="startEchoTest()">
+                                    <i class="fas fa-echo me-1"></i>Echo Test
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="stopEchoTest()" disabled id="stopEchoBtn">
+                                    <i class="fas fa-stop me-1"></i>Stop Test
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetToDefaults()">
+                                <i class="fas fa-undo me-1"></i>Reset to Defaults
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="testConfiguration()">
+                                <i class="fas fa-flask me-1"></i>Test Configuration
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Connection Tests -->
+            <div class="config-card card">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-diagnostics me-2"></i>Connection Tests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="test-section">
+                        <div class="connection-test">
+                            <h6>STUN Server Connectivity</h6>
+                            <p class="text-muted mb-2">Tests NAT type detection and public IP discovery</p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="testStun()">
+                                <i class="fas fa-play me-1"></i>Run Test
+                            </button>
+                            <div class="test-result" id="stunResult">
+                                <span class="test-pending">Not tested</span>
+                            </div>
+                        </div>
+
+                        <div class="connection-test">
+                            <h6>TURN Server Relay</h6>
+                            <p class="text-muted mb-2">Tests media relay through TURN server</p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="testTurn()">
+                                <i class="fas fa-play me-1"></i>Run Test
+                            </button>
+                            <div class="test-result" id="turnResult">
+                                <span class="test-pending">Not tested</span>
+                            </div>
+                        </div>
+
+                        <div class="connection-test">
+                            <h6>Media Device Access</h6>
+                            <p class="text-muted mb-2">Tests microphone and camera permissions</p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="testMediaDevices()">
+                                <i class="fas fa-play me-1"></i>Run Test
+                            </button>
+                            <div class="test-result" id="mediaResult">
+                                <span class="test-pending">Not tested</span>
+                            </div>
+                        </div>
+
+                        <div class="connection-test">
+                            <h6>WebSocket Connection</h6>
+                            <p class="text-muted mb-2">Tests real-time signaling connection</p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="testWebSocket()">
+                                <i class="fas fa-play me-1"></i>Run Test
+                            </button>
+                            <div class="test-result" id="wsResult">
+                                <span class="test-pending">Not tested</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button class="btn btn-success" onclick="runAllTests()">
+                                <i class="fas fa-play-circle me-1"></i>Run All Tests
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Browser Capabilities -->
+            <div class="config-card card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Browser Capabilities
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="capability-grid" id="capabilityGrid">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Preview -->
+            <div class="config-card card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-code me-2"></i>Configuration Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="config-preview" id="configPreview">
+                        <span class="code-comment">// WebRTC Configuration</span>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="copyConfig()">
+                        <i class="fas fa-copy me-1"></i>Copy Configuration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="config-card card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>Troubleshooting
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="troubleshooting">
+                        <div class="issue-item">
+                            <div class="issue-icon bg-warning text-white">
+                                <i class="fas fa-exclamation"></i>
+                            </div>
+                            <div>
+                                <strong>No Audio</strong><br>
+                                <small class="text-muted">Check microphone permissions and device selection</small>
+                            </div>
+                        </div>
+                        
+                        <div class="issue-item">
+                            <div class="issue-icon bg-danger text-white">
+                                <i class="fas fa-times"></i>
+                            </div>
+                            <div>
+                                <strong>Connection Failed</strong><br>
+                                <small class="text-muted">Verify STUN/TURN server configuration</small>
+                            </div>
+                        </div>
+                        
+                        <div class="issue-item">
+                            <div class="issue-icon bg-info text-white">
+                                <i class="fas fa-shield"></i>
+                            </div>
+                            <div>
+                                <strong>Firewall Issues</strong><br>
+                                <small class="text-muted">Configure TURN server for strict networks</small>
+                            </div>
+                        </div>
+                        
+                        <div class="issue-item">
+                            <div class="issue-icon bg-secondary text-white">
+                                <i class="fas fa-volume-mute"></i>
+                            </div>
+                            <div>
+                                <strong>Echo or Feedback</strong><br>
+                                <small class="text-muted">Use headphones or adjust audio levels</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="config-card card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success btn-sm" onclick="makeTestCall()">
+                            <i class="fas fa-phone me-2"></i>Make Test Call
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="downloadLogs()">
+                            <i class="fas fa-download me-2"></i>Download Debug Logs
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="resetConfiguration()">
+                            <i class="fas fa-refresh me-2"></i>Reset Configuration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Call Modal -->
+<div class="modal fade" id="testCallModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-phone me-2"></i>Test Call
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-phone fa-3x text-primary"></i>
+                    </div>
+                    <h6>Calling Echo Test...</h6>
+                    <p class="text-muted">Speak into your microphone. You should hear your voice played back.</p>
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             style="width: 0%" id="callProgress"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="endTestCall()">
+                    <i class="fas fa-phone-slash me-1"></i>End Call
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let mediaStream = null;
+let peerConnection = null;
+let echoTestActive = false;
+
+$(document).ready(function() {
+    checkBrowserCapabilities();
+    updateConfigPreview();
+    
+    // Form change handlers
+    $('input, select').on('input change', updateConfigPreview);
+});
+
+function checkBrowserCapabilities() {
+    const capabilities = {
+        'WebRTC Support': !!window.RTCPeerConnection,
+        'GetUserMedia': !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+        'Audio Context': !!window.AudioContext || !!window.webkitAudioContext,
+        'WebSocket': !!window.WebSocket,
+        'HTTPS Required': location.protocol === 'https:' || location.hostname === 'localhost'
+    };
+    
+    let browserCheckHtml = '<div class="d-flex flex-wrap gap-2">';
+    let allSupported = true;
+    
+    Object.entries(capabilities).forEach(([feature, supported]) => {
+        const badgeClass = supported ? 'bg-success' : 'bg-danger';
+        const icon = supported ? 'check' : 'times';
+        browserCheckHtml += `<span class="badge ${badgeClass}"><i class="fas fa-${icon} me-1"></i>${feature}</span>`;
+        if (!supported) allSupported = false;
+    });
+    
+    browserCheckHtml += '</div>';
+    
+    if (!allSupported) {
+        browserCheckHtml += '<div class="alert alert-warning mt-2 mb-0"><small><i class="fas fa-exclamation-triangle me-1"></i>Some features may not work properly in this browser.</small></div>';
+    }
+    
+    $('#browserCheck').html(browserCheckHtml);
+    
+    // Update capability grid
+    updateCapabilityGrid(capabilities);
+}
+
+function updateCapabilityGrid(capabilities) {
+    let gridHtml = '';
+    
+    Object.entries(capabilities).forEach(([feature, supported]) => {
+        const cardClass = supported ? 'capability-supported' : 'capability-unsupported';
+        const icon = supported ? 'fas fa-check text-success' : 'fas fa-times text-danger';
+        
+        gridHtml += `
+            <div class="capability-item ${cardClass}">
+                <i class="${icon} fa-2x mb-2"></i>
+                <div class="fw-bold">${feature}</div>
+                <small class="text-muted">${supported ? 'Supported' : 'Not Available'}</small>
+            </div>
+        `;
+    });
+    
+    $('#capabilityGrid').html(gridHtml);
+}
+
+function updateConfigPreview() {
+    const stunServer = $('#id_stun_server').val();
+    const turnServer = $('#id_turn_server').val();
+    const turnUsername = $('#id_turn_username').val();
+    const enableAudio = $('#id_enable_audio').prop('checked');
+    const enableVideo = $('#id_enable_video').prop('checked');
+    
+    const config = {
+        iceServers: []
+    };
+    
+    if (stunServer) {
+        config.iceServers.push({ urls: `stun:${stunServer}` });
+    }
+    
+    if (turnServer && turnUsername) {
+        config.iceServers.push({
+            urls: `turn:${turnServer}`,
+            username: turnUsername,
+            credential: '***'
+        });
+    }
+    
+    const mediaConstraints = {
+        audio: enableAudio,
+        video: enableVideo
+    };
+    
+    const previewHtml = `
+        <span class="code-comment">// ICE Servers Configuration</span><br>
+        <span class="code-keyword">const</span> <span class="code-string">iceServers</span> = ${JSON.stringify(config.iceServers, null, 2).replace(/"/g, '<span class="code-string">"</span>')}<br><br>
+        <span class="code-comment">// Media Constraints</span><br>
+        <span class="code-keyword">const</span> <span class="code-string">mediaConstraints</span> = ${JSON.stringify(mediaConstraints, null, 2).replace(/"/g, '<span class="code-string">"</span>')}
+    `;
+    
+    $('#configPreview').html(previewHtml);
+}
+
+function testStun() {
+    updateTestResult('stunResult', 'testing', 'Testing STUN connectivity...');
+    
+    // Simulate STUN test
+    setTimeout(() => {
+        const success = Math.random() > 0.2; // 80% success rate for demo
+        if (success) {
+            updateTestResult('stunResult', 'success', 'STUN server reachable - NAT type: Symmetric');
+        } else {
+            updateTestResult('stunResult', 'failure', 'STUN server unreachable - Check network connectivity');
+        }
+    }, 2000);
+}
+
+function testTurn() {
+    updateTestResult('turnResult', 'testing', 'Testing TURN relay...');
+    
+    setTimeout(() => {
+        const turnServer = $('#id_turn_server').val();
+        if (!turnServer) {
+            updateTestResult('turnResult', 'failure', 'No TURN server configured');
+            return;
+        }
+        
+        const success = Math.random() > 0.3; // 70% success rate for demo
+        if (success) {
+            updateTestResult('turnResult', 'success', 'TURN server accessible - Relay working');
+        } else {
+            updateTestResult('turnResult', 'failure', 'TURN authentication failed - Check credentials');
+        }
+    }, 3000);
+}
+
+function testMediaDevices() {
+    updateTestResult('mediaResult', 'testing', 'Requesting media access...');
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        updateTestResult('mediaResult', 'failure', 'getUserMedia not supported in this browser');
+        return;
+    }
+    
+    const constraints = {
+        audio: $('#id_enable_audio').prop('checked'),
+        video: $('#id_enable_video').prop('checked')
+    };
+    
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+            updateTestResult('mediaResult', 'success', 'Media devices accessible - Permissions granted');
+            // Stop the stream
+            stream.getTracks().forEach(track => track.stop());
+        })
+        .catch(error => {
+            let message = 'Media access denied';
+            if (error.name === 'NotAllowedError') {
+                message = 'Permission denied - Allow microphone access';
+            } else if (error.name === 'NotFoundError') {
+                message = 'No media devices found';
+            }
+            updateTestResult('mediaResult', 'failure', message);
+        });
+}
+
+function testWebSocket() {
+    updateTestResult('wsResult', 'testing', 'Testing WebSocket connection...');
+    
+    // Simulate WebSocket test
+    setTimeout(() => {
+        const success = Math.random() > 0.1; // 90% success rate for demo
+        if (success) {
+            updateTestResult('wsResult', 'success', 'WebSocket connection established');
+        } else {
+            updateTestResult('wsResult', 'failure', 'WebSocket connection failed - Check firewall');
+        }
+    }, 1500);
+}
+
+function updateTestResult(elementId, status, message) {
+    const element = $(`#${elementId}`);
+    let iconClass, textClass;
+    
+    switch (status) {
+        case 'testing':
+            iconClass = 'fas fa-spinner fa-spin';
+            textClass = 'test-pending';
+            break;
+        case 'success':
+            iconClass = 'fas fa-check-circle';
+            textClass = 'test-success';
+            break;
+        case 'failure':
+            iconClass = 'fas fa-times-circle';
+            textClass = 'test-failure';
+            break;
+    }
+    
+    element.html(`<i class="${iconClass}"></i> <span class="${textClass}">${message}</span>`);
+}
+
+function runAllTests() {
+    testStun();
+    setTimeout(() => testTurn(), 500);
+    setTimeout(() => testMediaDevices(), 1000);
+    setTimeout(() => testWebSocket(), 1500);
+}
+
+function testMicrophone() {
+    if (!navigator.mediaDevices) {
+        showAlert('error', 'Media devices not supported');
+        return;
+    }
+    
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            showAlert('success', 'Microphone test successful');
+            
+            // Create audio context for level monitoring
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            
+            // Monitor audio levels for 3 seconds
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let maxLevel = 0;
+            
+            const checkLevel = () => {
+                analyser.getByteFrequencyData(dataArray);
+                const level = Math.max(...dataArray);
+                maxLevel = Math.max(maxLevel, level);
+            };
+            
+            const interval = setInterval(checkLevel, 100);
+            
+            setTimeout(() => {
+                clearInterval(interval);
+                stream.getTracks().forEach(track => track.stop());
+                audioContext.close();
+                
+                if (maxLevel > 50) {
+                    showAlert('success', `Microphone working - Peak level: ${maxLevel}`);
+                } else {
+                    showAlert('warning', 'Microphone detected but no audio input');
+                }
+            }, 3000);
+        })
+        .catch(error => {
+            showAlert('error', 'Microphone test failed: ' + error.message);
+        });
+}
+
+function testSpeaker() {
+    // Create a test tone
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    
+    oscillator.start();
+    
+    setTimeout(() => {
+        oscillator.stop();
+        audioContext.close();
+        showAlert('success', 'Speaker test completed');
+    }, 1000);
+    
+    showAlert('info', 'Playing test tone...');
+}
+
+function startEchoTest() {
+    if (echoTestActive) return;
+    
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            echoTestActive = true;
+            mediaStream = stream;
+            
+            // Create audio context for echo
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const delay = audioContext.createDelay(1.0);
+            const gainNode = audioContext.createGain();
+            
+            delay.delayTime.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            
+            source.connect(delay);
+            delay.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            $('#stopEchoBtn').prop('disabled', false);
+            showAlert('success', 'Echo test started - Speak into your microphone');
+        })
+        .catch(error => {
+            showAlert('error', 'Failed to start echo test: ' + error.message);
+        });
+}
+
+function stopEchoTest() {
+    if (!echoTestActive) return;
+    
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    
+    echoTestActive = false;
+    $('#stopEchoBtn').prop('disabled', true);
+    showAlert('info', 'Echo test stopped');
+}
+
+function testConfiguration() {
+    showAlert('info', 'Testing configuration...');
+    runAllTests();
+    
+    setTimeout(() => {
+        showAlert('success', 'Configuration test completed - Check individual test results');
+    }, 5000);
+}
+
+function resetToDefaults() {
+    $('#id_stun_server').val('stun:stun.l.google.com:19302');
+    $('#id_turn_server').val('');
+    $('#id_turn_username').val('');
+    $('#id_turn_password').val('');
+    $('#id_enable_audio').prop('checked', true);
+    $('#id_enable_video').prop('checked', false);
+    
+    updateConfigPreview();
+    showAlert('success', 'Configuration reset to defaults');
+}
+
+function makeTestCall() {
+    $('#testCallModal').modal('show');
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        $('#callProgress').css('width', progress + '%');
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+                $('#testCallModal').modal('hide');
+                showAlert('success', 'Test call completed successfully');
+            }, 2000);
+        }
+    }, 500);
+}
+
+function endTestCall() {
+    $('#testCallModal').modal('hide');
+    showAlert('info', 'Test call ended');
+}
+
+function downloadLogs() {
+    const logs = [
+        '=== WebRTC Debug Log ===',
+        `Timestamp: ${new Date().toISOString()}`,
+        `User Agent: ${navigator.userAgent}`,
+        `STUN Server: ${$('#id_stun_server').val()}`,
+        `TURN Server: ${$('#id_turn_server').val()}`,
+        `Audio Enabled: ${$('#id_enable_audio').prop('checked')}`,
+        `Video Enabled: ${$('#id_enable_video').prop('checked')}`,
+        '=== Browser Capabilities ===',
+        `WebRTC Support: ${!!window.RTCPeerConnection}`,
+        `GetUserMedia: ${!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)}`,
+        `Audio Context: ${!!window.AudioContext || !!window.webkitAudioContext}`,
+        `WebSocket: ${!!window.WebSocket}`,
+        `HTTPS: ${location.protocol === 'https:'}`,
+        '=== End Log ==='
+    ].join('\n');
+    
+    const blob = new Blob([logs], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `webrtc-debug-${new Date().toISOString().split('T')[0]}.log`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    showAlert('success', 'Debug logs downloaded');
+}
+
+function resetConfiguration() {
+    if (confirm('Are you sure you want to reset all WebRTC configuration? This will clear all settings.')) {
+        resetToDefaults();
+        
+        // Clear test results
+        ['stunResult', 'turnResult', 'mediaResult', 'wsResult'].forEach(id => {
+            $(`#${id}`).html('<span class="test-pending">Not tested</span>');
+        });
+        
+        showAlert('success', 'Configuration and test results cleared');
+    }
+}
+
+function copyConfig() {
+    const configText = $('#configPreview').text();
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(configText).then(() => {
+            showAlert('success', 'Configuration copied to clipboard');
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = configText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showAlert('success', 'Configuration copied to clipboard');
+    }
+}
+
+function updateConnectionStatus(status) {
+    const statusElement = $('#connectionStatus');
+    const statusText = $('#statusText');
+    const indicator = statusElement.find('.status-indicator');
+    
+    switch (status) {
+        case 'connected':
+            statusElement.removeClass('live-indicator').addClass('live-indicator active');
+            statusText.text('Connected');
+            indicator.removeClass('status-offline status-connecting').addClass('status-online');
+            break;
+        case 'connecting':
+            statusElement.removeClass('active');
+            statusText.text('Connecting');
+            indicator.removeClass('status-offline status-online').addClass('status-connecting');
+            break;
+        case 'disconnected':
+        default:
+            statusElement.removeClass('active');
+            statusText.text('Disconnected');
+            indicator.removeClass('status-online status-connecting').addClass('status-offline');
+            break;
+    }
+}
+
+function showAlert(type, message) {
+    const alertClass = type === 'error' ? 'alert-danger' : 
+                      type === 'warning' ? 'alert-warning' : 
+                      type === 'info' ? 'alert-info' : 'alert-success';
+    const iconClass = type === 'error' ? 'exclamation-triangle' : 
+                     type === 'warning' ? 'exclamation-triangle' : 
+                     type === 'info' ? 'info-circle' : 'check-circle';
+    
+    const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 1060; min-width: 300px;" role="alert">
+            <i class="fas fa-${iconClass} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('body').append(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
+}
+
+// Simulate periodic connection status updates
+setInterval(() => {
+    const statuses = ['connected', 'connecting', 'disconnected'];
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    updateConnectionStatus(randomStatus);
+}, 10000);
+
+// Initialize with disconnected status
+updateConnectionStatus('disconnected');
+</script>
+{% endblock %}

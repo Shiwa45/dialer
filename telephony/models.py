@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from core.models import TimeStampedModel
 import uuid
+import secrets
+import string
 
 class AsteriskServer(TimeStampedModel):
     """
@@ -115,9 +117,6 @@ class Carrier(TimeStampedModel):
     def __str__(self):
         return f"{self.name} ({self.protocol.upper()})"
 
-from django.core.validators import RegexValidator
-from django.db import models
-
 class DID(TimeStampedModel):
     """
     Direct Inward Dialing numbers
@@ -170,10 +169,70 @@ class DID(TimeStampedModel):
 
     def __str__(self):
         return f"{self.phone_number} - {self.name}"
+
+# ============================================================================
+# ASTERISK REALTIME TABLES (For direct Asterisk integration)
+# ============================================================================
+
+class PsEndpoint(models.Model):
+    """PJSIP Endpoints - Asterisk Realtime Table"""
+    id = models.CharField(max_length=40, primary_key=True)  # Extension number
+    transport = models.CharField(max_length=40, default='transport-udp', blank=True)
+    aors = models.CharField(max_length=200)
+    auth = models.CharField(max_length=40)
+    context = models.CharField(max_length=40, default='agents')
+    disallow = models.CharField(max_length=200, default='all')
+    allow = models.CharField(max_length=200, default='ulaw,alaw,gsm')
+    direct_media = models.CharField(max_length=3, default='no')
+    dtls_auto_generate_cert = models.CharField(max_length=3, default='yes', blank=True)
+    
+    class Meta:
+        db_table = 'ps_endpoints'
+        managed = True  # Allow Django to manage this table
+
+class PsAuth(models.Model):
+    """PJSIP Authentication - Asterisk Realtime Table"""
+    id = models.CharField(max_length=40, primary_key=True)  # Extension number
+    auth_type = models.CharField(max_length=20, default='userpass')
+    password = models.CharField(max_length=80)
+    username = models.CharField(max_length=40)
+    realm = models.CharField(max_length=40, blank=True)
+    
+    class Meta:
+        db_table = 'ps_auths'
+        managed = True
+
+class PsAor(models.Model):
+    """PJSIP Address of Record - Asterisk Realtime Table"""
+    id = models.CharField(max_length=40, primary_key=True)  # Extension number
+    max_contacts = models.IntegerField(default=1)
+    remove_existing = models.CharField(max_length=3, default='yes')
+    qualify_frequency = models.IntegerField(default=0, blank=True)
+    
+    class Meta:
+        db_table = 'ps_aors'
+        managed = True
+
+class ExtensionsTable(models.Model):
+    """Dialplan Extensions - Asterisk Realtime Table"""
+    id = models.AutoField(primary_key=True)
+    context = models.CharField(max_length=40)
+    exten = models.CharField(max_length=40)
+    priority = models.IntegerField()
+    app = models.CharField(max_length=40)
+    appdata = models.CharField(max_length=256)
+    
+    class Meta:
+        db_table = 'extensions_table'
+        managed = True
+
+# ============================================================================
+# UPDATED PHONE MODEL WITH AUTO-SYNC
+# ============================================================================
     
 class Phone(TimeStampedModel):
     """
-    Phone/extension configuration for agents
+    Phone/extension configuration for agents with Asterisk auto-sync
     """
     PHONE_TYPES = [
         ('sip', 'SIP Phone'),
@@ -222,6 +281,116 @@ class Phone(TimeStampedModel):
     
     def __str__(self):
         return f"{self.extension} - {self.name}"
+    
+    def save(self, *args, **kwargs):
+        # Generate secret if not provided
+        if not self.secret:
+            self.secret = self.generate_secret()
+        
+        # Save the Django model first
+        super().save(*args, **kwargs)
+        
+        # Auto-sync to Asterisk realtime tables
+        self.sync_to_asterisk()
+    
+    def delete(self, *args, **kwargs):
+        # Remove from Asterisk first
+        self.remove_from_asterisk()
+        
+        # Then delete Django record
+        super().delete(*args, **kwargs)
+    
+    def generate_secret(self):
+        """Generate a random secret for the phone"""
+        return ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(12))
+    
+def sync_to_asterisk(self):
+    """Enhanced sync with proper PJSIP realtime configuration"""
+    try:
+        # Create/Update PJSIP Endpoint with explicit transport
+        PsEndpoint.objects.update_or_create(
+            id=self.extension,
+            defaults={
+                'transport': 'transport-udp',  # Explicit transport
+                'aors': self.extension,
+                'auth': self.extension,
+                'context': self.context,
+                'allow': self.codec.replace(' ', '').replace(',', ','),
+                'disallow': 'all',
+                'direct_media': 'no',
+                'force_rport': 'yes',
+                'rewrite_contact': 'yes',
+            }
+        )
+        
+        # Create/Update Authentication with realm
+        PsAuth.objects.update_or_create(
+            id=self.extension,
+            defaults={
+                'auth_type': 'userpass',
+                'username': self.extension,
+                'password': self.secret,
+                'realm': ''  # Empty realm allows any
+            }
+        )
+        
+        # Create/Update AOR with contact management
+        PsAor.objects.update_or_create(
+            id=self.extension,
+            defaults={
+                'max_contacts': 1,
+                'remove_existing': 'yes',
+                'qualify_frequency': 60 if self.qualify == 'yes' else 0
+            }
+        )
+        
+        print(f"✅ Phone {self.extension} synced to Asterisk PJSIP realtime")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to sync phone {self.extension}: {e}")
+        return False
+        
+    def remove_from_asterisk(self):
+        """Remove this phone from Asterisk realtime tables"""
+        try:
+            PsEndpoint.objects.filter(id=self.extension).delete()
+            PsAuth.objects.filter(id=self.extension).delete()
+            PsAor.objects.filter(id=self.extension).delete()
+            ExtensionsTable.objects.filter(
+                context=self.context,
+                exten=self.extension
+            ).delete()
+            
+            print(f"✅ Phone {self.extension} removed from Asterisk")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to remove phone {self.extension} from Asterisk: {e}")
+            return False
+    
+    def get_asterisk_status(self):
+        """Check if phone is registered in Asterisk"""
+        try:
+            # This would normally query Asterisk AMI/ARI
+            # For now, return based on active status
+            return {
+                'registered': self.is_active,
+                'status': 'OK' if self.is_active else 'UNAVAILABLE',
+                'ip_address': '192.168.1.100',  # Placeholder
+                'last_seen': self.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        except Exception:
+            return {
+                'registered': False,
+                'status': 'ERROR',
+                'ip_address': None,
+                'last_seen': None
+            }
+
+# ============================================================================
+# REST OF MODELS (Unchanged)
+# ============================================================================
 
 class IVR(TimeStampedModel):
     """
@@ -445,14 +614,3 @@ class DialplanExtension(TimeStampedModel):
     
     def __str__(self):
         return f"{self.context.name},{self.extension},{self.priority}"
-
-# telephony/apps.py
-from django.apps import AppConfig
-
-class TelephonyConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'telephony'
-    verbose_name = 'Telephony Management'
-
-# telephony/__init__.py
-default_app_config = 'telephony.apps.TelephonyConfig'

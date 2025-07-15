@@ -36,7 +36,7 @@ class AsteriskService:
         try:
             # Test ARI connection
             response = requests.get(
-                f"{self.ari_base_url}/asterisk/info",
+                f"{self.ari_base_url}/ari/applications",
                 auth=(self.ari_username, self.ari_password),
                 timeout=10
             )

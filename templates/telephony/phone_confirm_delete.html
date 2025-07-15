@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Phone {{ object.extension }} - Autodialer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:phones' %}">Phones</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:phone_detail' object.pk %}">{{ object.extension }}</a></li>
+                    <li class="breadcrumb-item active">Delete</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0 text-danger">
+                <i class="fas fa-exclamation-triangle"></i> Delete Phone Extension
+            </h2>
+            <p class="text-muted">Confirm deletion of phone extension {{ object.extension }}</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Warning Card -->
+            <div class="card border-danger shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Permanent Deletion Warning
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading">This action cannot be undone!</h6>
+                        <p class="mb-0">You are about to permanently delete the following phone extension and all associated data:</p>
+                    </div>
+
+                    <!-- Phone Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Extension:</td>
+                                    <td class="fw-bold">{{ object.extension }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Name:</td>
+                                    <td>{{ object.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Phone Type:</td>
+                                    <td>{{ object.get_phone_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Assigned User:</td>
+                                    <td>
+                                        {% if object.user %}
+                                            {{ object.user.get_full_name|default:object.user.username }}
+                                        {% else %}
+                                            <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Asterisk Server:</td>
+                                    <td>{{ object.asterisk_server.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Status:</td>
+                                    <td>
+                                        {% if object.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">WebRTC Enabled:</td>
+                                    <td>
+                                        {% if object.webrtc_enabled %}
+                                            <span class="badge bg-info">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Created:</td>
+                                    <td>{{ object.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Impact Analysis -->
+                    <div class="mb-4">
+                        <h6 class="text-danger">Deletion Impact Analysis:</h6>
+                        
+                        <!-- Queue Memberships -->
+                        {% if object.queuemember_set.exists %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-users"></i> Queue Memberships ({{ object.queuemember_set.count }})
+                                </h6>
+                                <p class="mb-2">This phone is a member of the following queues and will be removed:</p>
+                                <ul class="mb-0">
+                                    {% for membership in object.queuemember_set.all %}
+                                        <li>
+                                            <strong>{{ membership.queue.name }}</strong> ({{ membership.queue.extension }})
+                                            - Penalty: {{ membership.penalty }}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- Active Calls -->
+                        {% if active_calls_count > 0 %}
+                            <div class="alert alert-danger">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-phone"></i> Active Calls ({{ active_calls_count }})
+                                </h6>
+                                <p class="mb-0">This phone currently has active calls. Deleting it may disrupt ongoing conversations.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Call History -->
+                        {% if call_history_count > 0 %}
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-history"></i> Call History ({{ call_history_count }} calls)
+                                </h6>
+                                <p class="mb-0">Call logs associated with this phone will be preserved but marked as orphaned.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- No Impact -->
+                        {% if not object.queuemember_set.exists and active_calls_count == 0 and call_history_count == 0 %}
+                            <div class="alert alert-success">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-check-circle"></i> Safe to Delete
+                                </h6>
+                                <p class="mb-0">This phone has no active dependencies and can be safely deleted.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDeletion" required>
+                                <label class="form-check-label text-danger fw-bold" for="confirmDeletion">
+                                    I understand that this action cannot be undone and want to permanently delete this phone extension.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Optional: Reason for deletion -->
+                        <div class="mb-4">
+                            <label for="deletionReason" class="form-label">Reason for deletion (optional):</label>
+                            <textarea class="form-control" id="deletionReason" name="deletion_reason" rows="3" 
+                                      placeholder="Enter the reason for deleting this phone extension..."></textarea>
+                            <div class="form-text">This will be logged for audit purposes.</div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'telephony:phone_detail' object.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                <i class="fas fa-trash"></i> Delete Phone Extension
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alternative Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Alternative Actions</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Instead of deleting, consider these alternatives:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-warning text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-pause"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Deactivate Phone</h6>
+                                    <p class="small text-muted mb-2">Temporarily disable without losing configuration</p>
+                                    {% if object.is_active %}
+                                        <a href="{% url 'telephony:toggle_phone_status' object.pk %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-pause"></i> Deactivate
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Already Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-info text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-user-times"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Unassign User</h6>
+                                    <p class="small text-muted mb-2">Remove user assignment but keep phone available</p>
+                                    {% if object.user %}
+                                        <a href="{% url 'telephony:unassign_phone' object.pk %}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-user-times"></i> Unassign
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No User Assigned</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-success text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-download"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Export Configuration</h6>
+                                    <p class="small text-muted mb-2">Save configuration before deletion</p>
+                                    <a href="{% url 'telephony:export_phone_config' object.pk %}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-download"></i> Export
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-primary text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-copy"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Clone Phone</h6>
+                                    <p class="small text-muted mb-2">Create a copy with different extension</p>
+                                    <a href="{% url 'telephony:clone_phone' object.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-copy"></i> Clone
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Enable delete button only when confirmation is checked
+    $('#confirmDeletion').change(function() {
+        $('#deleteButton').prop('disabled', !$(this).is(':checked'));
+    });
+
+    // Add extra confirmation for phones with dependencies
+    {% if object.queuemember_set.exists or active_calls_count > 0 %}
+        $('form').on('submit', function(e) {
+            if (!confirm('This phone has active dependencies. Are you absolutely sure you want to delete it?')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    {% endif %}
+});
+</script>
+{% endblock %}

@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Queue Members - {{ queue.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/datatables.min.css' %}" rel="stylesheet">
+<style>
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .penalty-badge {
+        background: #6c757d;
+        color: white;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.75rem;
+    }
+    .member-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    .member-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .queue-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        border: 1px solid #e9ecef;
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #495057;
+    }
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dashboard' %}">Telephony</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:queues' %}">Call Queues</a></li>
+            <li class="breadcrumb-item active">{{ queue.name }} Members</li>
+        </ol>
+    </nav>
+
+    <!-- Queue Information Header -->
+    <div class="queue-info">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-users me-2"></i>{{ queue.name }} Members
+                </h1>
+                <p class="mb-1">Extension: <strong>{{ queue.extension }}</strong></p>
+                <p class="mb-0">Strategy: <strong>{{ queue.get_strategy_display }}</strong></p>
+            </div>
+            <div class="col-md-4">
+                <div class="text-end">
+                    <a href="{% url 'telephony:queue_detail' queue.pk %}" class="btn btn-outline-light btn-sm me-2">
+                        <i class="fas fa-eye me-1"></i>View Queue
+                    </a>
+                    <a href="{% url 'telephony:add_queue_member' queue.pk %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-plus me-1"></i>Add Member
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number text-primary">{{ total_members }}</div>
+                <div class="stat-label">Total Members</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number text-success">{{ active_members }}</div>
+                <div class="stat-label">Active Members</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number text-warning">{{ paused_members }}</div>
+                <div class="stat-label">Paused Members</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number text-info">{{ avg_penalty|floatformat:1 }}</div>
+                <div class="stat-label">Avg Penalty</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Members Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Queue Members
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="refreshMembers()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?status=all">All Members</a></li>
+                        <li><a class="dropdown-item" href="?status=active">Active Only</a></li>
+                        <li><a class="dropdown-item" href="?status=paused">Paused Only</a></li>
+                        <li><a class="dropdown-item" href="?status=inactive">Inactive Only</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if members %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="membersTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Extension</th>
+                                <th>Agent</th>
+                                <th>Phone Type</th>
+                                <th>Penalty</th>
+                                <th>Status</th>
+                                <th>WebRTC</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr id="member-{{ member.id }}">
+                                <td>
+                                    <strong>{{ member.phone.extension }}</strong>
+                                    {% if member.phone.name %}
+                                        <br><small class="text-muted">{{ member.phone.name }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if member.phone.user %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-2">
+                                                <span class="avatar-title bg-primary rounded-circle">
+                                                    {{ member.phone.user.first_name|first|default:member.phone.user.username|first }}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <strong>{{ member.phone.user.get_full_name|default:member.phone.user.username }}</strong>
+                                                <br><small class="text-muted">{{ member.phone.user.email }}</small>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ member.phone.get_phone_type_display }}</span>
+                                </td>
+                                <td>
+                                    <span class="penalty-badge">{{ member.penalty }}</span>
+                                </td>
+                                <td>
+                                    {% if member.is_active %}
+                                        {% if member.paused %}
+                                            <span class="badge bg-warning status-badge">Paused</span>
+                                        {% else %}
+                                            <span class="badge bg-success status-badge">Active</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger status-badge">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if member.phone.webrtc_enabled %}
+                                        <i class="fas fa-check text-success" title="WebRTC Enabled"></i>
+                                    {% else %}
+                                        <i class="fas fa-times text-muted" title="WebRTC Disabled"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'telephony:edit_queue_member' queue.pk member.pk %}" 
+                                           class="btn btn-outline-primary btn-sm" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if member.paused %}
+                                            <button onclick="unpauseMember({{ member.id }})" 
+                                                    class="btn btn-outline-success btn-sm" title="Unpause">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                        {% else %}
+                                            <button onclick="pauseMember({{ member.id }})" 
+                                                    class="btn btn-outline-warning btn-sm" title="Pause">
+                                                <i class="fas fa-pause"></i>
+                                            </button>
+                                        {% endif %}
+                                        <button onclick="removeMember({{ member.id }})" 
+                                                class="btn btn-outline-danger btn-sm" title="Remove">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <nav aria-label="Queue members pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">&laquo; First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Queue Members</h5>
+                    <p class="text-muted">This queue doesn't have any members assigned yet.</p>
+                    <a href="{% url 'telephony:add_queue_member' queue.pk %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add First Member
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Pause/Unpause Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalTitle">Change Member Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="statusModalBody"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusChange">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/datatables.min.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#membersTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[0, 'asc']],
+        columnDefs: [
+            { orderable: false, targets: [6] }
+        ],
+        language: {
+            search: "Search members:",
+            lengthMenu: "Show _MENU_ members per page",
+            info: "Showing _START_ to _END_ of _TOTAL_ members",
+            emptyTable: "No queue members found"
+        }
+    });
+});
+
+function refreshMembers() {
+    location.reload();
+}
+
+function pauseMember(memberId) {
+    $('#statusModalTitle').text('Pause Queue Member');
+    $('#statusModalBody').text('Are you sure you want to pause this queue member? They will stop receiving calls from this queue.');
+    $('#confirmStatusChange').off('click').on('click', function() {
+        updateMemberStatus(memberId, 'pause');
+    });
+    $('#statusModal').modal('show');
+}
+
+function unpauseMember(memberId) {
+    $('#statusModalTitle').text('Unpause Queue Member');
+    $('#statusModalBody').text('Are you sure you want to unpause this queue member? They will start receiving calls from this queue again.');
+    $('#confirmStatusChange').off('click').on('click', function() {
+        updateMemberStatus(memberId, 'unpause');
+    });
+    $('#statusModal').modal('show');
+}
+
+function removeMember(memberId) {
+    $('#statusModalTitle').text('Remove Queue Member');
+    $('#statusModalBody').text('Are you sure you want to remove this member from the queue? This action cannot be undone.');
+    $('#confirmStatusChange').off('click').on('click', function() {
+        updateMemberStatus(memberId, 'remove');
+    });
+    $('#statusModal').modal('show');
+}
+
+function updateMemberStatus(memberId, action) {
+    $.ajax({
+        url: '{% url "telephony:update_queue_member_status" queue.pk %}',
+        method: 'POST',
+        data: {
+            'member_id': memberId,
+            'action': action,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                $('#statusModal').modal('hide');
+                if (action === 'remove') {
+                    $('#member-' + memberId).fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                } else {
+                    location.reload();
+                }
+                
+                // Show success toast
+                showToast('success', 'Queue member status updated successfully');
+            } else {
+                showToast('error', response.message || 'Failed to update member status');
+            }
+        },
+        error: function() {
+            showToast('error', 'An error occurred while updating member status');
+        }
+    });
+}
+
+function showToast(type, message) {
+    const toast = $('<div class="toast align-items-center text-white bg-' + 
+                   (type === 'success' ? 'success' : 'danger') + 
+                   ' border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
+                   '<div class="d-flex"><div class="toast-body">' + message + '</div>' +
+                   '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>');
+    
+    $('#toast-container').append(toast);
+    toast.toast('show');
+    
+    setTimeout(function() {
+        toast.remove();
+    }, 5000);
+}
+
+// Create toast container if it doesn't exist
+if ($('#toast-container').length === 0) {
+    $('body').append('<div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>');
+}
+</script>
+{% endblock %}

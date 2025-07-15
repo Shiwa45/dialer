@@ -7,63 +7,87 @@ app_name = 'telephony'
 
 urlpatterns = [
     # Main dashboard
-    path('', views.telephony_dashboard, name=''),
+    path('', views.telephony_dashboard, name='dashboard'),
     
     # Asterisk Server Management
     path('servers/', views.AsteriskServerListView.as_view(), name='asterisk_servers'),
     path('servers/create/', views.AsteriskServerCreateView.as_view(), name='create_asterisk_server'),
     path('servers/<int:pk>/', views.AsteriskServerDetailView.as_view(), name='asterisk_server_detail'),
     path('servers/<int:pk>/edit/', views.AsteriskServerUpdateView.as_view(), name='update_asterisk_server'),
+    path('servers/<int:pk>/delete/', views.AsteriskServerDeleteView.as_view(), name='delete_asterisk_server'),
     path('servers/<int:pk>/test/', views.test_asterisk_connection, name='test_asterisk_connection'),
     
     # Carrier Management
     path('carriers/', views.CarrierListView.as_view(), name='carriers'),
     path('carriers/create/', views.CarrierCreateView.as_view(), name='create_carrier'),
+    path('carriers/<int:pk>/', views.CarrierDetailView.as_view(), name='carrier_detail'),
     path('carriers/<int:pk>/edit/', views.CarrierUpdateView.as_view(), name='update_carrier'),
+    path('carriers/<int:pk>/delete/', views.CarrierDeleteView.as_view(), name='delete_carrier'),
     
     # DID Management
     path('dids/', views.DIDListView.as_view(), name='dids'),
     path('dids/create/', views.DIDCreateView.as_view(), name='create_did'),
+    path('dids/<int:pk>/', views.DIDDetailView.as_view(), name='did_detail'),
     path('dids/<int:pk>/edit/', views.DIDUpdateView.as_view(), name='update_did'),
+    path('dids/<int:pk>/delete/', views.DIDDeleteView.as_view(), name='delete_did'),
     path('dids/bulk-import/', views.BulkDIDImportView.as_view(), name='bulk_import_dids'),
     
-    # Phone/Extension Management
+    # Phone/Extension Management (Enhanced with Asterisk Auto-Sync)
     path('phones/', views.PhoneListView.as_view(), name='phones'),
     path('phones/create/', views.PhoneCreateView.as_view(), name='create_phone'),
     path('phones/<int:pk>/', views.PhoneDetailView.as_view(), name='phone_detail'),
     path('phones/<int:pk>/edit/', views.PhoneUpdateView.as_view(), name='update_phone'),
+    path('phones/<int:pk>/delete/', views.PhoneDeleteView.as_view(), name='delete_phone'),
     path('phones/bulk-create/', views.BulkPhoneCreateView.as_view(), name='bulk_create_phones'),
+    
+    # Phone Status and Control
+    path('phones/<int:pk>/status/', views.phone_status, name='phone_status'),
+    path('phones/<int:pk>/config/', views.phone_config, name='phone_config'),
+    path('phones/<int:pk>/reset-secret/', views.reset_phone_secret, name='reset_phone_secret'),
+    path('phones/<int:pk>/toggle-status/', views.toggle_phone_status, name='toggle_phone_status'),
+    path('phones/<int:pk>/confirm-delete/', views.phone_confirm_delete, name='phone_confirm_delete'),
+    
+    # Asterisk Sync Management
+    path('phones/sync-all/', views.sync_all_phones_to_asterisk, name='sync_all_phones'),
+    path('phones/cleanup-orphans/', views.cleanup_asterisk_orphans, name='cleanup_orphans'),
     
     # IVR Management
     path('ivrs/', views.IVRListView.as_view(), name='ivrs'),
     path('ivrs/create/', views.IVRCreateView.as_view(), name='create_ivr'),
     path('ivrs/<int:pk>/', views.IVRDetailView.as_view(), name='ivr_detail'),
     path('ivrs/<int:pk>/edit/', views.IVRUpdateView.as_view(), name='update_ivr'),
+    path('ivrs/<int:pk>/delete/', views.IVRDeleteView.as_view(), name='delete_ivr'),
     path('ivrs/<int:pk>/options/', views.IVROptionManagementView.as_view(), name='ivr_options'),
     path('ivrs/<int:ivr_pk>/options/create/', views.IVROptionCreateView.as_view(), name='create_ivr_option'),
     path('ivr-options/<int:pk>/edit/', views.IVROptionUpdateView.as_view(), name='update_ivr_option'),
+    path('ivr-options/<int:pk>/delete/', views.IVROptionDeleteView.as_view(), name='delete_ivr_option'),
     
     # Call Queue Management
     path('queues/', views.CallQueueListView.as_view(), name='queues'),
     path('queues/create/', views.CallQueueCreateView.as_view(), name='create_queue'),
     path('queues/<int:pk>/', views.CallQueueDetailView.as_view(), name='queue_detail'),
     path('queues/<int:pk>/edit/', views.CallQueueUpdateView.as_view(), name='update_queue'),
+    path('queues/<int:pk>/delete/', views.CallQueueDeleteView.as_view(), name='delete_queue'),
     path('queues/<int:pk>/members/', views.QueueMemberManagementView.as_view(), name='queue_members'),
     path('queues/<int:queue_pk>/members/add/', views.QueueMemberAddView.as_view(), name='add_queue_member'),
+    path('queue-members/<int:pk>/delete/', views.QueueMemberDeleteView.as_view(), name='delete_queue_member'),
     
     # Recording Management
     path('recordings/', views.RecordingListView.as_view(), name='recordings'),
     path('recordings/<int:pk>/', views.RecordingDetailView.as_view(), name='recording_detail'),
     path('recordings/<int:pk>/download/', views.download_recording, name='download_recording'),
     path('recordings/<int:pk>/play/', views.play_recording, name='play_recording'),
+    path('recordings/<int:pk>/delete/', views.RecordingDeleteView.as_view(), name='delete_recording'),
     
     # Dialplan Management
     path('dialplan/contexts/', views.DialplanContextListView.as_view(), name='dialplan_contexts'),
     path('dialplan/contexts/create/', views.DialplanContextCreateView.as_view(), name='create_dialplan_context'),
     path('dialplan/contexts/<int:pk>/', views.DialplanContextDetailView.as_view(), name='dialplan_context_detail'),
     path('dialplan/contexts/<int:pk>/edit/', views.DialplanContextUpdateView.as_view(), name='update_dialplan_context'),
+    path('dialplan/contexts/<int:pk>/delete/', views.DialplanContextDeleteView.as_view(), name='delete_dialplan_context'),
     path('dialplan/contexts/<int:context_pk>/extensions/create/', views.DialplanExtensionCreateView.as_view(), name='create_dialplan_extension'),
     path('dialplan/extensions/<int:pk>/edit/', views.DialplanExtensionUpdateView.as_view(), name='update_dialplan_extension'),
+    path('dialplan/extensions/<int:pk>/delete/', views.DialplanExtensionDeleteView.as_view(), name='delete_dialplan_extension'),
     
     # WebRTC Management
     path('webrtc/config/', views.webrtc_config, name='webrtc_config'),

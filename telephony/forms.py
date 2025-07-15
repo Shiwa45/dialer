@@ -23,10 +23,10 @@ class AsteriskServerForm(forms.ModelForm):
             'max_calls', 'is_active', 'is_recording_server'
         ]
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
-            'ami_password': forms.PasswordInput(),
-            'ami_secret': forms.PasswordInput(),
-            'ari_password': forms.PasswordInput(),
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'ami_password': forms.PasswordInput(attrs={'class': 'form-control'}),
+            'ami_secret': forms.PasswordInput(attrs={'class': 'form-control'}),
+            'ari_password': forms.PasswordInput(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'server_ip': forms.TextInput(attrs={'class': 'form-control'}),
             'asterisk_version': forms.TextInput(attrs={'class': 'form-control'}),
@@ -141,7 +141,7 @@ class DIDForm(forms.ModelForm):
 
 class PhoneForm(forms.ModelForm):
     """
-    Form for creating/editing phones/extensions
+    Enhanced form for creating/editing phones/extensions with Asterisk auto-sync
     """
     class Meta:
         model = Phone
@@ -153,15 +153,15 @@ class PhoneForm(forms.ModelForm):
             'webrtc_enabled', 'ice_host'
         ]
         widgets = {
-            'secret': forms.PasswordInput(attrs={'class': 'form-control'}),
-            'extension': forms.TextInput(attrs={'class': 'form-control'}),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'secret': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Leave blank to auto-generate'}),
+            'extension': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 1001'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Agent 1001'}),
             'host': forms.TextInput(attrs={'class': 'form-control'}),
             'context': forms.TextInput(attrs={'class': 'form-control'}),
-            'codec': forms.TextInput(attrs={'class': 'form-control'}),
+            'codec': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ulaw,alaw,gsm'}),
             'qualify': forms.TextInput(attrs={'class': 'form-control'}),
             'nat': forms.TextInput(attrs={'class': 'form-control'}),
-            'ice_host': forms.TextInput(attrs={'class': 'form-control'}),
+            'ice_host': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Leave blank for auto-config'}),
             'phone_type': forms.Select(attrs={'class': 'form-control'}),
             'user': forms.Select(attrs={'class': 'form-control'}),
             'asterisk_server': forms.Select(attrs={'class': 'form-control'}),
@@ -172,6 +172,18 @@ class PhoneForm(forms.ModelForm):
         self.fields['asterisk_server'].queryset = AsteriskServer.objects.filter(is_active=True)
         self.fields['user'].queryset = User.objects.filter(is_active=True).order_by('username')
         self.fields['user'].required = False
+        self.fields['secret'].required = False  # Auto-generated if blank
+        
+        # Add help text for auto-sync
+        self.fields['extension'].help_text = "Phone will be automatically configured in Asterisk upon creation"
+        self.fields['secret'].help_text = "Leave blank to auto-generate a secure password"
+        
+        # Add asterisk sync notification
+        if self.instance and self.instance.pk:
+            from .models import PsEndpoint
+            synced = PsEndpoint.objects.filter(id=self.instance.extension).exists()
+            sync_status = "✅ Synced to Asterisk" if synced else "❌ Not synced"
+            self.fields['extension'].help_text += f" | Status: {sync_status}"
 
     def clean_extension(self):
         extension = self.cleaned_data['extension']
@@ -180,6 +192,86 @@ class PhoneForm(forms.ModelForm):
         if not re.match(r'^\d{3,10}$', extension):
             raise forms.ValidationError("Extension must be 3-10 digits")
         return extension
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Auto-generate secret if not provided
+        if not cleaned_data.get('secret'):
+            import secrets
+            import string
+            cleaned_data['secret'] = ''.join(
+                secrets.choice(string.ascii_letters + string.digits) for _ in range(12)
+            )
+        
+        return cleaned_data
+
+
+class BulkPhoneCreateForm(forms.Form):
+    """
+    Enhanced form for creating multiple phone extensions with Asterisk auto-sync
+    """
+    extension_start = forms.CharField(
+        max_length=10,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '1000'}),
+        help_text="Starting extension number"
+    )
+    extension_count = forms.IntegerField(
+        min_value=1,
+        max_value=100,
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        help_text="Number of extensions to create (max 100) - All will be auto-synced to Asterisk"
+    )
+    name_prefix = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Agent'}),
+        help_text="Name prefix for extensions (e.g., 'Agent' will create 'Agent 1001', 'Agent 1002', etc.)"
+    )
+    phone_type = forms.ChoiceField(
+        choices=Phone.PHONE_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    asterisk_server = forms.ModelChoiceField(
+        queryset=AsteriskServer.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Asterisk server for automatic configuration"
+    )
+    webrtc_enabled = forms.BooleanField(
+        required=False,
+        help_text="Enable WebRTC for all created extensions"
+    )
+    auto_generate_secrets = forms.BooleanField(
+        initial=True,
+        required=False,
+        help_text="Automatically generate secure passwords for all extensions"
+    )
+
+    def clean_extension_start(self):
+        extension = self.cleaned_data['extension_start']
+        import re
+        if not re.match(r'^\d{3,10}$', extension):
+            raise forms.ValidationError("Extension must be 3-10 digits")
+        return extension
+
+    def clean(self):
+        cleaned_data = super().clean()
+        extension_start = cleaned_data.get('extension_start')
+        extension_count = cleaned_data.get('extension_count')
+        
+        if extension_start and extension_count:
+            start_num = int(extension_start)
+            end_num = start_num + extension_count - 1
+            
+            # Check for existing extensions in range
+            existing = Phone.objects.filter(
+                extension__gte=str(start_num),
+                extension__lte=str(end_num)
+            ).exists()
+            
+            if existing:
+                raise forms.ValidationError("Some extensions in this range already exist")
+        
+        return cleaned_data
 
 
 class IVRForm(forms.ModelForm):
@@ -370,99 +462,6 @@ class BulkDIDImportForm(forms.Form):
         return file
 
 
-class BulkPhoneCreateForm(forms.Form):
-    """
-    Form for creating multiple phone extensions
-    """
-    extension_start = forms.CharField(
-        max_length=10,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '1000'}),
-        help_text="Starting extension number"
-    )
-    extension_count = forms.IntegerField(
-        min_value=1,
-        max_value=100,
-        widget=forms.NumberInput(attrs={'class': 'form-control'}),
-        help_text="Number of extensions to create (max 100)"
-    )
-    name_prefix = forms.CharField(
-        max_length=50,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Agent'}),
-        help_text="Name prefix for extensions (e.g., 'Agent' will create 'Agent 1001', 'Agent 1002', etc.)"
-    )
-    phone_type = forms.ChoiceField(
-        choices=Phone.PHONE_TYPES,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    asterisk_server = forms.ModelChoiceField(
-        queryset=AsteriskServer.objects.filter(is_active=True),
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    webrtc_enabled = forms.BooleanField(
-        required=False,
-        help_text="Enable WebRTC for all created extensions"
-    )
-
-    def clean_extension_start(self):
-        extension = self.cleaned_data['extension_start']
-        import re
-        if not re.match(r'^\d{3,10}$', extension):
-            raise forms.ValidationError("Extension must be 3-10 digits")
-        return extension
-
-    def clean(self):
-        cleaned_data = super().clean()
-        extension_start = cleaned_data.get('extension_start')
-        extension_count = cleaned_data.get('extension_count')
-        
-        if extension_start and extension_count:
-            start_num = int(extension_start)
-            end_num = start_num + extension_count - 1
-            
-            # Check for existing extensions in range
-            existing = Phone.objects.filter(
-                extension__gte=str(start_num),
-                extension__lte=str(end_num)
-            ).exists()
-            
-            if existing:
-                raise forms.ValidationError("Some extensions in this range already exist")
-        
-        return cleaned_data
-
-
-class RecordingForm(forms.ModelForm):
-    """
-    Form for managing recordings
-    """
-    class Meta:
-        model = Recording
-        fields = [
-            'filename', 'file_path', 'file_size', 'duration', 'call_id',
-            'channel', 'format', 'call_log', 'asterisk_server', 'is_available',
-            'recording_start', 'recording_end'
-        ]
-        widgets = {
-            'filename': forms.TextInput(attrs={'class': 'form-control'}),
-            'file_path': forms.TextInput(attrs={'class': 'form-control'}),
-            'file_size': forms.NumberInput(attrs={'class': 'form-control'}),
-            'duration': forms.NumberInput(attrs={'class': 'form-control'}),
-            'call_id': forms.TextInput(attrs={'class': 'form-control'}),
-            'channel': forms.TextInput(attrs={'class': 'form-control'}),
-            'format': forms.TextInput(attrs={'class': 'form-control'}),
-            'recording_start': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'recording_end': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'asterisk_server': forms.Select(attrs={'class': 'form-control'}),
-            'call_log': forms.Select(attrs={'class': 'form-control'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['asterisk_server'].queryset = AsteriskServer.objects.filter(is_active=True)
-        self.fields['call_log'].required = False
-        self.fields['recording_end'].required = False
-
-
 class WebRTCConfigForm(forms.Form):
     """
     Form for WebRTC phone configuration
@@ -499,38 +498,80 @@ class WebRTCConfigForm(forms.Form):
         required=False,
         help_text="Enable video for WebRTC calls"
     )
+
+
+# ============================================================================
+# ASTERISK SYNC MANAGEMENT FORMS
+# ============================================================================
+
+class AsteriskSyncForm(forms.Form):
     """
-    Form for WebRTC phone configuration
+    Form for manual Asterisk synchronization operations
     """
-    stun_server = forms.CharField(
-        max_length=200,
-        initial='stun:stun.l.google.com:19302',
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
-        help_text="STUN server for NAT traversal"
+    SYNC_OPTIONS = [
+        ('sync_all', 'Sync All Active Phones to Asterisk'),
+        ('cleanup_orphans', 'Remove Orphaned Asterisk Records'),
+        ('reset_all_secrets', 'Reset All Phone Secrets'),
+        ('verify_sync', 'Verify Asterisk Sync Status'),
+    ]
+    
+    operation = forms.ChoiceField(
+        choices=SYNC_OPTIONS,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select the synchronization operation to perform"
     )
-    turn_server = forms.CharField(
-        max_length=200,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
-        help_text="TURN server for firewall traversal (optional)"
+    
+    confirm_operation = forms.BooleanField(
+        required=True,
+        help_text="I understand this operation will modify Asterisk configuration"
     )
-    turn_username = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+
+
+class PhoneTestForm(forms.Form):
+    """
+    Form for testing phone connectivity and registration
+    """
+    extension = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter extension to test'}),
+        help_text="Extension number to test registration status"
     )
-    turn_password = forms.CharField(
-        max_length=100,
-        required=False,
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    
+    test_type = forms.ChoiceField(
+        choices=[
+            ('registration', 'Check Registration Status'),
+            ('ping', 'Ping Phone'),
+            ('call_test', 'Initiate Test Call'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Type of test to perform"
     )
-    enable_audio = forms.BooleanField(
-        initial=True,
-        required=False,
-        help_text="Enable audio for WebRTC calls"
+
+
+class AsteriskConfigExportForm(forms.Form):
+    """
+    Form for exporting Asterisk configuration
+    """
+    CONFIG_TYPES = [
+        ('pjsip_endpoints', 'PJSIP Endpoints Only'),
+        ('pjsip_complete', 'Complete PJSIP Configuration'),
+        ('dialplan', 'Dialplan Extensions'),
+        ('complete', 'Complete Configuration'),
+    ]
+    
+    config_type = forms.ChoiceField(
+        choices=CONFIG_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Type of configuration to export"
     )
-    enable_video = forms.BooleanField(
-        initial=False,
+    
+    asterisk_server = forms.ModelChoiceField(
+        queryset=AsteriskServer.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Asterisk server to export configuration for"
+    )
+    
+    include_secrets = forms.BooleanField(
         required=False,
-        help_text="Enable video for WebRTC calls"
+        help_text="Include phone secrets/passwords in export (use with caution)"
     )

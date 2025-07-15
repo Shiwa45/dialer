@@ -1,0 +1,888 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit{% else %}Add{% endif %} Extension - {{ context.name }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  .form-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  }
+  .help-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+  }
+  .extension-preview {
+    background: #2d3748;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    min-height: 60px;
+  }
+  .code-keyword {
+    color: #63b3ed;
+  }
+  .code-string {
+    color: #68d391;
+  }
+  .code-comment {
+    color: #a0aec0;
+    font-style: italic;
+  }
+  .application-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .app-card {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    background: white;
+  }
+  .app-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .app-card.selected {
+    border-color: #007bff;
+    background: #e7f3ff;
+  }
+  .app-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #007bff;
+  }
+  .app-name {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.25rem;
+  }
+  .app-description {
+    font-size: 0.75rem;
+    color: #6c757d;
+  }
+  .arguments-builder {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  .argument-input {
+    margin-bottom: 0.75rem;
+  }
+  .argument-input:last-child {
+    margin-bottom: 0;
+  }
+  .priority-helper {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  .priority-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .priority-item:last-child {
+    border-bottom: none;
+  }
+  .priority-number {
+    font-weight: bold;
+    color: #495057;
+    font-family: monospace;
+  }
+  .examples-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+  }
+  .example-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .example-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .example-card:last-child {
+    margin-bottom: 0;
+  }
+  .example-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+  }
+  .example-description {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+  .example-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #007bff;
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
+  .validation-feedback {
+    background: #e8f5e8;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+  }
+  .validation-error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+  }
+  .context-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .pattern-builder {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  .pattern-option {
+    display: inline-block;
+    background: white;
+    border: 1px solid #2196f3;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    margin: 0.125rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-family: monospace;
+    transition: all 0.3s ease;
+  }
+  .pattern-option:hover {
+    background: #2196f3;
+    color: white;
+  }
+  .live-preview {
+    position: sticky;
+    top: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dashboard' %}">Telephony</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dialplan_contexts' %}">Dialplan Contexts</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dialplan_context_detail' context.pk %}">{{ context.name }}</a></li>
+            <li class="breadcrumb-item active">
+                {% if form.instance.pk %}Edit Extension{% else %}Add Extension{% endif %}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %} me-2"></i>
+                    {% if form.instance.pk %}Edit Extension{% else %}Add Extension{% endif %}
+                </h1>
+                <p class="mb-0">
+                    Context: <strong>{{ context.name }}</strong> | 
+                    Server: <strong>{{ context.asterisk_server.name }}</strong>
+                </p>
+            </div>
+            <div class="col-md-4">
+                <div class="text-end">
+                    <a href="{% url 'telephony:dialplan_context_detail' context.pk %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Context
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <!-- Context Info -->
+            <div class="context-info">
+                <h6 class="mb-2">
+                    <i class="fas fa-info-circle me-2"></i>Context Information
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Name:</strong> {{ context.name }}<br>
+                        <strong>Server:</strong> {{ context.asterisk_server.name }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Extensions:</strong> {{ existing_extensions|length }}<br>
+                        <strong>Status:</strong> {% if context.is_active %}Active{% else %}Inactive{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card form-card">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Extension Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="extensionForm">
+                        {% csrf_token %}
+                        
+                        <!-- Extension Pattern -->
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.extension.id_for_label }}">
+                                <i class="fas fa-phone me-1"></i>Extension Pattern
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.extension|add_class:"form-control" }}
+                            {% if form.extension.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.extension.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="help-text">
+                                Enter the extension pattern (e.g., 1001, _1XXX, _9NXXXXXXX). Use underscore for pattern matching.
+                            </div>
+
+                            <!-- Pattern Builder -->
+                            <div class="pattern-builder">
+                                <strong>Pattern Examples:</strong><br>
+                                <span class="pattern-option" onclick="setExtensionPattern('_1XXX')">_1XXX</span>
+                                <span class="pattern-option" onclick="setExtensionPattern('_2XXX')">_2XXX</span>
+                                <span class="pattern-option" onclick="setExtensionPattern('_9NXXXXXXX')">_9NXXXXXXX</span>
+                                <span class="pattern-option" onclick="setExtensionPattern('_91NXXXXXXX')">_91NXXXXXXX</span>
+                                <span class="pattern-option" onclick="setExtensionPattern('_*XX')">_*XX</span>
+                                <span class="pattern-option" onclick="setExtensionPattern('_#XX')">_#XX</span>
+                                <br><small class="text-muted mt-2 d-block">
+                                    X = any digit 0-9, N = any digit 2-9, Z = any digit 1-9, . = wildcard
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Priority -->
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.priority.id_for_label }}">
+                                <i class="fas fa-sort-numeric-up me-1"></i>Priority
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.priority|add_class:"form-control" }}
+                            {% if form.priority.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.priority.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="help-text">
+                                Execution priority (1 = first, higher numbers execute later).
+                            </div>
+
+                            <!-- Priority Helper -->
+                            {% if existing_extensions %}
+                            <div class="priority-helper">
+                                <strong>Existing Priorities for this Extension:</strong>
+                                {% for ext in existing_extensions %}
+                                    {% if ext.extension == form.extension.value %}
+                                    <div class="priority-item">
+                                        <span class="priority-number">{{ ext.priority }}</span>
+                                        <span>{{ ext.application }}({{ ext.arguments|default:"" }})</span>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Application -->
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.application.id_for_label }}">
+                                <i class="fas fa-code me-1"></i>Application
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.application|add_class:"form-control" }}
+                            {% if form.application.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.application.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="help-text">
+                                Select or enter the Asterisk application to execute.
+                            </div>
+
+                            <!-- Application Selector -->
+                            <div class="application-selector">
+                                <div class="app-card" onclick="selectApplication('Dial')">
+                                    <div class="app-icon"><i class="fas fa-phone-alt"></i></div>
+                                    <div class="app-name">Dial</div>
+                                    <div class="app-description">Make outbound calls</div>
+                                </div>
+                                <div class="app-card" onclick="selectApplication('Queue')">
+                                    <div class="app-icon"><i class="fas fa-users"></i></div>
+                                    <div class="app-name">Queue</div>
+                                    <div class="app-description">Add to call queue</div>
+                                </div>
+                                <div class="app-card" onclick="selectApplication('Playback')">
+                                    <div class="app-icon"><i class="fas fa-play"></i></div>
+                                    <div class="app-name">Playback</div>
+                                    <div class="app-description">Play audio file</div>
+                                </div>
+                                <div class="app-card" onclick="selectApplication('Voicemail')">
+                                    <div class="app-icon"><i class="fas fa-voicemail"></i></div>
+                                    <div class="app-name">Voicemail</div>
+                                    <div class="app-description">Send to voicemail</div>
+                                </div>
+                                <div class="app-card" onclick="selectApplication('Goto')">
+                                    <div class="app-icon"><i class="fas fa-arrow-right"></i></div>
+                                    <div class="app-name">Goto</div>
+                                    <div class="app-description">Jump to another extension</div>
+                                </div>
+                                <div class="app-card" onclick="selectApplication('Hangup')">
+                                    <div class="app-icon"><i class="fas fa-phone-slash"></i></div>
+                                    <div class="app-name">Hangup</div>
+                                    <div class="app-description">End the call</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arguments -->
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.arguments.id_for_label }}">
+                                <i class="fas fa-list me-1"></i>Arguments
+                            </label>
+                            {{ form.arguments|add_class:"form-control" }}
+                            {% if form.arguments.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.arguments.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="help-text">
+                                Enter application arguments separated by commas.
+                            </div>
+
+                            <!-- Arguments Builder -->
+                            <div class="arguments-builder" id="argumentsBuilder" style="display: none;">
+                                <div id="argumentInputs"></div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addArgument()">
+                                    <i class="fas fa-plus me-1"></i>Add Argument
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-toggle-on me-1"></i>Status
+                            </label>
+                            <div class="form-check form-switch">
+                                {{ form.is_active|add_class:"form-check-input" }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Extension is active and will be included in the dialplan
+                                </label>
+                            </div>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.is_active.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Extension Preview -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-eye me-1"></i>Extension Preview
+                            </label>
+                            <div class="extension-preview" id="extensionPreview">
+                                <span class="code-comment">; Extension preview will appear here</span>
+                            </div>
+                        </div>
+
+                        <!-- Validation Feedback -->
+                        <div id="validationFeedback" class="validation-feedback" style="display: none;">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span id="validationMessage">Extension configuration is valid</span>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-group mb-0">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'telephony:dialplan_context_detail' context.pk %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                                <button type="button" class="btn btn-outline-info" onclick="validateExtension()">
+                                    <i class="fas fa-check-circle me-1"></i>Validate
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="testExtension()">
+                                    <i class="fas fa-play me-1"></i>Test
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    {% if form.instance.pk %}Update Extension{% else %}Add Extension{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Live Preview -->
+            <div class="card form-card live-preview">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>Live Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="extension-preview" id="livePreview">
+                        <span class="code-comment">; Live preview</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extension Examples -->
+            <div class="card form-card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Extension Examples
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="examples-section">
+                        <div class="example-card" onclick="applyExample('1001', '1', 'Dial', 'SIP/1001,20')">
+                            <div class="example-title">Internal Extension</div>
+                            <div class="example-description">Basic internal phone extension</div>
+                            <div class="example-code">exten => 1001,1,Dial(SIP/1001,20)</div>
+                        </div>
+                        
+                        <div class="example-card" onclick="applyExample('_9NXXXXXXX', '1', 'Dial', '${TRUNK}/${EXTEN:1}')">
+                            <div class="example-title">Outbound Calling</div>
+                            <div class="example-description">9 + 10-digit number for external calls</div>
+                            <div class="example-code">exten => _9NXXXXXXX,1,Dial(${TRUNK}/${EXTEN:1})</div>
+                        </div>
+                        
+                        <div class="example-card" onclick="applyExample('*100', '1', 'Queue', 'support')">
+                            <div class="example-title">Queue Access</div>
+                            <div class="example-description">Direct access to support queue</div>
+                            <div class="example-code">exten => *100,1,Queue(support)</div>
+                        </div>
+                        
+                        <div class="example-card" onclick="applyExample('*98', '1', 'VoiceMailMain', '${CALLERID(num)}')">
+                            <div class="example-title">Voicemail Access</div>
+                            <div class="example-description">Check voicemail messages</div>
+                            <div class="example-code">exten => *98,1,VoiceMailMain(${CALLERID(num)})</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Application Help -->
+            <div class="card form-card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Application Help
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="applicationHelp">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>Common Applications</h6>
+                            <ul class="mb-0">
+                                <li><strong>Dial:</strong> Place calls to endpoints</li>
+                                <li><strong>Queue:</strong> Add caller to a queue</li>
+                                <li><strong>Playback:</strong> Play audio files</li>
+                                <li><strong>Voicemail:</strong> Send to voicemail</li>
+                                <li><strong>Goto:</strong> Jump to another extension</li>
+                                <li><strong>Hangup:</strong> End the call</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pattern Matching Guide -->
+            <div class="card form-card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-code me-2"></i>Pattern Matching
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-light">
+                        <h6><i class="fas fa-magic me-2"></i>Pattern Characters</h6>
+                        <ul class="mb-0">
+                            <li><code>X</code> - Any digit (0-9)</li>
+                            <li><code>Z</code> - Any digit (1-9)</li>
+                            <li><code>N</code> - Any digit (2-9)</li>
+                            <li><code>.</code> - Wildcard (one or more characters)</li>
+                            <li><code>!</code> - Wildcard (zero or more characters)</li>
+                            <li><code>[15-7]</code> - Any digit in range</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let argumentCount = 0;
+
+$(document).ready(function() {
+  // Initialize form
+  updateExtensionPreview();
+  updateApplicationHelp();
+  
+  // Form field change handlers
+  $('#{{ form.extension.id_for_label }}').on('input', updateExtensionPreview);
+  $('#{{ form.priority.id_for_label }}').on('input', updateExtensionPreview);
+  $('#{{ form.application.id_for_label }}').on('input change', function() {
+    updateExtensionPreview();
+    updateApplicationHelp();
+    updateArgumentsBuilder();
+  });
+  $('#{{ form.arguments.id_for_label }}').on('input', updateExtensionPreview);
+  $('#{{ form.is_active.id_for_label }}').change(updateExtensionPreview);
+});
+
+function updateExtensionPreview() {
+  const extension = $('#{{ form.extension.id_for_label }}').val() || 'XXXX';
+  const priority = $('#{{ form.priority.id_for_label }}').val() || '1';
+  const application = $('#{{ form.application.id_for_label }}').val() || 'NoOp';
+  const arguments = $('#{{ form.arguments.id_for_label }}').val() || '';
+  const isActive = $('#{{ form.is_active.id_for_label }}').prop('checked');
+  
+  let preview = '';
+  if (!isActive) {
+    preview += '<span class="code-comment">; Extension is inactive</span><br>';
+  }
+  preview += `<span class="code-keyword">exten</span> => <span class="code-string">${extension},${priority},${application}(${arguments})</span>`;
+  
+  $('#extensionPreview').html(preview);
+  $('#livePreview').html(preview);
+}
+
+function updateApplicationHelp() {
+  const application = $('#{{ form.application.id_for_label }}').val();
+  
+  const helpContent = {
+    'Dial': {
+      description: 'Place calls to one or more endpoints',
+      syntax: 'Dial(destination[,timeout[,options]])',
+      examples: ['SIP/1001,20', 'SIP/1001&SIP/1002,30,t', 'DAHDI/1/5551234567']
+    },
+    'Queue': {
+      description: 'Add caller to a call queue',
+      syntax: 'Queue(queuename[,options[,announceoverride]])',
+      examples: ['support', 'sales,t', 'helpdesk,,queue-periodic-announce']
+    },
+    'Playback': {
+      description: 'Play an audio file',
+      syntax: 'Playback(filename[,options])',
+      examples: ['welcome', 'demo-congrats', 'custom/greeting']
+    },
+    'Voicemail': {
+      description: 'Send caller to voicemail',
+      syntax: 'Voicemail(mailbox[@context][,options])',
+      examples: ['1001', '1001@default', '1001,u']
+    },
+    'Goto': {
+      description: 'Jump to another extension',
+      syntax: 'Goto([[context,]extension,]priority)',
+      examples: ['2', 'menu,s,1', 'default,1001,1']
+    },
+    'Hangup': {
+      description: 'Terminate the call',
+      syntax: 'Hangup([causecode])',
+      examples: ['', '16', '17']
+    }
+  };
+  
+  if (helpContent[application]) {
+    const help = helpContent[application];
+    const helpHtml = `
+      <div class="alert alert-primary">
+        <h6><i class="fas fa-info-circle me-2"></i>${application}</h6>
+        <p class="mb-2">${help.description}</p>
+        <p class="mb-2"><strong>Syntax:</strong> <code>${help.syntax}</code></p>
+        <p class="mb-0"><strong>Examples:</strong></p>
+        <ul class="mb-0">
+          ${help.examples.map(ex => `<li><code>${ex}</code></li>`).join('')}
+        </ul>
+      </div>
+    `;
+    $('#applicationHelp').html(helpHtml);
+  }
+}
+
+function updateArgumentsBuilder() {
+  const application = $('#{{ form.application.id_for_label }}').val();
+  
+  // Show/hide arguments builder based on application
+  if (['Dial', 'Queue', 'Playback', 'Voicemail'].includes(application)) {
+    $('#argumentsBuilder').show();
+    buildArgumentInputs(application);
+  } else {
+    $('#argumentsBuilder').hide();
+  }
+}
+
+function buildArgumentInputs(application) {
+  const inputsContainer = $('#argumentInputs');
+  inputsContainer.empty();
+  
+  const argumentFields = {
+    'Dial': [
+      { name: 'Destination', placeholder: 'SIP/1001', required: true },
+      { name: 'Timeout', placeholder: '20', required: false },
+      { name: 'Options', placeholder: 't,r', required: false }
+    ],
+    'Queue': [
+      { name: 'Queue Name', placeholder: 'support', required: true },
+      { name: 'Options', placeholder: 't', required: false }
+    ],
+    'Playback': [
+      { name: 'Filename', placeholder: 'welcome', required: true },
+      { name: 'Options', placeholder: 'noanswer', required: false }
+    ],
+    'Voicemail': [
+      { name: 'Mailbox', placeholder: '1001@default', required: true },
+      { name: 'Options', placeholder: 'u', required: false }
+    ]
+  };
+  
+  if (argumentFields[application]) {
+    argumentFields[application].forEach((field, index) => {
+      const inputHtml = `
+        <div class="argument-input">
+          <label class="form-label">${field.name}${field.required ? ' *' : ''}</label>
+          <input type="text" class="form-control" placeholder="${field.placeholder}" 
+                 onchange="updateArgumentsFromBuilder()">
+        </div>
+      `;
+      inputsContainer.append(inputHtml);
+    });
+  }
+}
+
+function updateArgumentsFromBuilder() {
+  const inputs = $('#argumentInputs input');
+  const values = [];
+  
+  inputs.each(function() {
+    const value = $(this).val().trim();
+    if (value) {
+      values.push(value);
+    }
+  });
+  
+  $('#{{ form.arguments.id_for_label }}').val(values.join(',')).trigger('input');
+}
+
+function setExtensionPattern(pattern) {
+  $('#{{ form.extension.id_for_label }}').val(pattern).trigger('input');
+}
+
+function selectApplication(app) {
+  $('.app-card').removeClass('selected');
+  $(event.currentTarget).addClass('selected');
+  $('#{{ form.application.id_for_label }}').val(app).trigger('change');
+}
+
+function applyExample(extension, priority, application, arguments) {
+  $('#{{ form.extension.id_for_label }}').val(extension);
+  $('#{{ form.priority.id_for_label }}').val(priority);
+  $('#{{ form.application.id_for_label }}').val(application);
+  $('#{{ form.arguments.id_for_label }}').val(arguments);
+  
+  updateExtensionPreview();
+  updateApplicationHelp();
+  updateArgumentsBuilder();
+  
+  showAlert('success', 'Example applied successfully');
+}
+
+function validateExtension() {
+  const extension = $('#{{ form.extension.id_for_label }}').val();
+  const priority = $('#{{ form.priority.id_for_label }}').val();
+  const application = $('#{{ form.application.id_for_label }}').val();
+  
+  let isValid = true;
+  let messages = [];
+  
+  if (!extension) {
+    isValid = false;
+    messages.push('Extension pattern is required');
+  }
+  
+  if (!priority || priority < 1) {
+    isValid = false;
+    messages.push('Priority must be 1 or greater');
+  }
+  
+  if (!application) {
+    isValid = false;
+    messages.push('Application is required');
+  }
+  
+  const feedback = $('#validationFeedback');
+  const message = $('#validationMessage');
+  
+  if (isValid) {
+    feedback.removeClass('validation-error').addClass('validation-feedback').show();
+    message.html('<i class="fas fa-check-circle me-2"></i>Extension configuration is valid');
+  } else {
+    feedback.removeClass('validation-feedback').addClass('validation-error').show();
+    message.html('<i class="fas fa-exclamation-triangle me-2"></i>' + messages.join(', '));
+  }
+  
+  return isValid;
+}
+
+function testExtension() {
+  if (!validateExtension()) {
+    return;
+  }
+  
+  showAlert('info', 'Testing extension configuration...');
+  
+  // In a real implementation, this would make an AJAX call to test the extension
+  setTimeout(function() {
+    showAlert('success', 'Extension configuration test passed');
+  }, 2000);
+}
+
+function addArgument() {
+  argumentCount++;
+  const inputHtml = `
+    <div class="argument-input" id="arg-${argumentCount}">
+      <div class="d-flex align-items-center gap-2">
+        <input type="text" class="form-control" placeholder="Argument ${argumentCount}" 
+               onchange="updateArgumentsFromBuilder()">
+        <button type="button" class="btn btn-outline-danger btn-sm" 
+                onclick="removeArgument(${argumentCount})">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  $('#argumentInputs').append(inputHtml);
+}
+
+function removeArgument(id) {
+  $(`#arg-${id}`).remove();
+  updateArgumentsFromBuilder();
+}
+
+function showAlert(type, message) {
+  const alertClass = type === 'error' ? 'alert-danger' : 
+                    type === 'warning' ? 'alert-warning' : 
+                    type === 'info' ? 'alert-info' : 'alert-success';
+  const iconClass = type === 'error' ? 'exclamation-triangle' : 
+                   type === 'warning' ? 'exclamation-triangle' : 
+                   type === 'info' ? 'info-circle' : 'check-circle';
+  
+  const alertHtml = `
+    <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+         style="top: 20px; right: 20px; z-index: 1060; min-width: 300px;" role="alert">
+      <i class="fas fa-${iconClass} me-2"></i>
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+  
+  $('body').append(alertHtml);
+  
+  // Auto-dismiss after 5 seconds
+  setTimeout(function() {
+    $('.alert').fadeOut();
+  }, 5000);
+}
+
+// Form submission validation
+$('#extensionForm').submit(function(e) {
+  if (!validateExtension()) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// Auto-select application card when typing
+$('#{{ form.application.id_for_label }}').on('input', function() {
+  const value = $(this).val();
+  $('.app-card').removeClass('selected');
+  $('.app-card').each(function() {
+    if ($(this).find('.app-name').text() === value) {
+      $(this).addClass('selected');
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -260,7 +260,7 @@
                                 {% endif %}
                                 <button class="btn btn-sm btn-outline-danger" 
                                         data-toggle="tooltip" title="Delete"
-                                        onclick="confirmDelete('{{ phone.extension }}', '{% url 'telephony:delete_phone' phone.pk %}')">
+                                        onclick="confirmDelete('{{ phone.extension }}', '#')">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>

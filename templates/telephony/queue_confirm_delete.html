@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Queue {{ object.name }} - Autodialer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:queues' %}">Queues</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:queue_detail' object.pk %}">{{ object.name }}</a></li>
+                    <li class="breadcrumb-item active">Delete</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0 text-danger">
+                <i class="fas fa-exclamation-triangle"></i> Delete Call Queue
+            </h2>
+            <p class="text-muted">Confirm deletion of queue "{{ object.name }}"</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Warning Card -->
+            <div class="card border-danger shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Permanent Deletion Warning
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading">This action cannot be undone!</h6>
+                        <p class="mb-0">You are about to permanently delete the following call queue and all associated data:</p>
+                    </div>
+
+                    <!-- Queue Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Queue Name:</td>
+                                    <td class="fw-bold">{{ object.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Extension:</td>
+                                    <td><code>{{ object.extension }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Strategy:</td>
+                                    <td><span class="badge bg-info">{{ object.get_strategy_display }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Members:</td>
+                                    <td><span class="badge bg-primary">{{ object.members.count }}</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Asterisk Server:</td>
+                                    <td>{{ object.asterisk_server.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Status:</td>
+                                    <td>
+                                        {% if object.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Created:</td>
+                                    <td>{{ object.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Description:</td>
+                                    <td>{{ object.description|default:"No description"|truncatechars:50 }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Impact Analysis -->
+                    <div class="mb-4">
+                        <h6 class="text-danger">Deletion Impact Analysis:</h6>
+                        
+                        <!-- Queue Members -->
+                        {% if object.members.exists %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-users"></i> Queue Members ({{ object.members.count }})
+                                </h6>
+                                <p class="mb-2">The following agents will be removed from this queue:</p>
+                                <div class="row">
+                                    {% for member in object.queuemember_set.all %}
+                                        <div class="col-md-6">
+                                            <div class="small mb-1">
+                                                <strong>{{ member.phone.extension }}</strong> - {{ member.phone.name }}
+                                                {% if member.phone.user %}
+                                                    ({{ member.phone.user.get_full_name|default:member.phone.user.username }})
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Active Calls -->
+                        {% if active_calls_count > 0 %}
+                            <div class="alert alert-danger">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-phone"></i> Active Calls ({{ active_calls_count }})
+                                </h6>
+                                <p class="mb-2">This queue currently has active or waiting calls:</p>
+                                <ul class="mb-0">
+                                    <li>{{ waiting_calls_count|default:0 }} calls waiting in queue</li>
+                                    <li>{{ active_calls_count|default:0 }} total active calls</li>
+                                </ul>
+                                <p class="mt-2 mb-0 text-danger"><strong>Warning:</strong> Deleting this queue will disconnect waiting callers.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- IVR Usage -->
+                        {% if ivrs_using_queue %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-phone-volume"></i> IVR References ({{ ivrs_using_queue|length }})
+                                </h6>
+                                <p class="mb-2">This queue is referenced by the following IVR options:</p>
+                                <ul class="mb-0">
+                                    {% for ivr_option in ivrs_using_queue %}
+                                        <li>
+                                            <strong>{{ ivr_option.ivr.name }}</strong> - Option {{ ivr_option.digit }}: {{ ivr_option.description }}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                <p class="mt-2 mb-0 text-warning"><strong>Warning:</strong> These IVR options will become invalid.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- DID Routing -->
+                        {% if dids_routing_to_queue %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-phone-alt"></i> DID Routing ({{ dids_routing_to_queue|length }})
+                                </h6>
+                                <p class="mb-2">The following phone numbers route directly to this queue:</p>
+                                <ul class="mb-0">
+                                    {% for did in dids_routing_to_queue %}
+                                        <li><strong>{{ did.phone_number }}</strong> - {{ did.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <p class="mt-2 mb-0 text-warning"><strong>Warning:</strong> Incoming calls to these numbers may fail.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Call History -->
+                        {% if call_history_count > 0 %}
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-history"></i> Call History ({{ call_history_count }} calls)
+                                </h6>
+                                <p class="mb-2">Historical data for this queue:</p>
+                                <ul class="mb-0">
+                                    <li>{{ call_history_count }} total calls processed</li>
+                                    <li>Call logs and statistics will be preserved</li>
+                                    <li>Reports will show queue as "Deleted"</li>
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- No Dependencies -->
+                        {% if not object.members.exists and active_calls_count == 0 and not ivrs_using_queue and not dids_routing_to_queue %}
+                            <div class="alert alert-success">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-check-circle"></i> Safe to Delete
+                                </h6>
+                                <p class="mb-0">This queue has no active dependencies and can be safely deleted.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Current Queue Statistics -->
+                    {% if queue_stats %}
+                        <div class="mb-4">
+                            <h6 class="text-info">Current Queue Statistics:</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 border rounded">
+                                        <h5 class="text-primary mb-0">{{ queue_stats.waiting_calls|default:0 }}</h5>
+                                        <small class="text-muted">Waiting</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 border rounded">
+                                        <h5 class="text-success mb-0">{{ queue_stats.active_agents|default:0 }}</h5>
+                                        <small class="text-muted">Active Agents</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 border rounded">
+                                        <h5 class="text-info mb-0">{{ queue_stats.calls_today|default:0 }}</h5>
+                                        <small class="text-muted">Calls Today</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 border rounded">
+                                        <h5 class="text-warning mb-0">{{ queue_stats.avg_wait_time|default:0 }}s</h5>
+                                        <small class="text-muted">Avg Wait</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Force Deletion Options -->
+                        {% if active_calls_count > 0 or ivrs_using_queue or dids_routing_to_queue %}
+                            <div class="mb-4">
+                                <h6 class="text-warning">Deletion Options:</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="forceDelete">
+                                    <label class="form-check-label text-warning" for="forceDelete">
+                                        Force delete despite active dependencies
+                                    </label>
+                                    <div class="form-text">This will immediately disconnect calls and break IVR/DID routing</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="updateReferences">
+                                    <label class="form-check-label" for="updateReferences">
+                                        Attempt to update IVR and DID references
+                                    </label>
+                                    <div class="form-text">Try to redirect references to a default queue (if available)</div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDeletion" required>
+                                <label class="form-check-label text-danger fw-bold" for="confirmDeletion">
+                                    I understand that this action cannot be undone and want to permanently delete this call queue
+                                    {% if object.members.exists %}and remove all {{ object.members.count }} member assignments{% endif %}.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Optional: Reason for deletion -->
+                        <div class="mb-4">
+                            <label for="deletionReason" class="form-label">Reason for deletion (optional):</label>
+                            <textarea class="form-control" id="deletionReason" name="deletion_reason" rows="3" 
+                                      placeholder="Enter the reason for deleting this queue..."></textarea>
+                            <div class="form-text">This will be logged for audit purposes.</div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'telephony:queue_detail' object.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                <i class="fas fa-trash"></i> Delete Queue
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alternative Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Alternative Actions</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Instead of deleting, consider these alternatives:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-warning text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-pause"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Deactivate Queue</h6>
+                                    <p class="small text-muted mb-2">Temporarily disable without losing configuration</p>
+                                    {% if object.is_active %}
+                                        <a href="{% url 'telephony:toggle_queue_status' object.pk %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-pause"></i> Deactivate
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Already Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-info text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-users-slash"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Remove All Members</h6>
+                                    <p class="small text-muted mb-2">Clear queue but keep configuration</p>
+                                    {% if object.members.exists %}
+                                        <a href="{% url 'telephony:clear_queue_members' object.pk %}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-users-slash"></i> Clear Members
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No Members</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-success text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-download"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Export Configuration</h6>
+                                    <p class="small text-muted mb-2">Save configuration before deletion</p>
+                                    <a href="{% url 'telephony:export_queue_config' object.pk %}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-download"></i> Export
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-primary text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-copy"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Clone Queue</h6>
+                                    <p class="small text-muted mb-2">Create a backup copy with different extension</p>
+                                    <a href="{% url 'telephony:clone_queue' object.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-copy"></i> Clone
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Enable delete button only when confirmation is checked
+    $('#confirmDeletion').change(function() {
+        updateDeleteButton();
+    });
+
+    // Monitor other checkboxes too
+    $('#forceDelete, #updateReferences').change(function() {
+        updateDeleteButton();
+    });
+
+    function updateDeleteButton() {
+        const confirmed = $('#confirmDeletion').is(':checked');
+        $('#deleteButton').prop('disabled', !confirmed);
+    }
+
+    // Add extra confirmation for queues with active calls or dependencies
+    {% if active_calls_count > 0 or ivrs_using_queue or dids_routing_to_queue %}
+        $('form').on('submit', function(e) {
+            const forceDelete = $('#forceDelete').is(':checked');
+            if (!forceDelete) {
+                alert('This queue has active dependencies. Please check "Force delete" to proceed or use alternative actions.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!confirm('This will immediately affect active calls and break routing. Are you absolutely sure?')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    {% endif %}
+
+    // Show warning if user tries to leave page
+    let formSubmitted = false;
+    $('form').on('submit', function() {
+        formSubmitted = true;
+    });
+
+    $(window).on('beforeunload', function() {
+        if (!formSubmitted && $('#confirmDeletion').is(':checked')) {
+            return 'You have confirmed deletion but not submitted the form. Are you sure you want to leave?';
+        }
+    });
+});
+</script>
+{% endblock %}

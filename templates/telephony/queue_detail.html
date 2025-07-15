@@ -1,0 +1,764 @@
+<li>
+                        <a class="dropdown-item" href="#" onclick="cloneQueue()">
+                            <i class="fas fa-copy"></i> Clone Queue
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    {% if queue.is_active %}
+                        <li>
+                            <a class="dropdown-item text-warning" href="#" onclick="toggleStatus(false)">
+                                <i class="fas fa-pause"></i> Deactivate
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a class="dropdown-item text-success" href="#" onclick="toggleStatus(true)">
+                                <i class="fas fa-play"></i> Activate
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" onclick="confirmDelete()">
+                            <i class="fas fa-trash"></i> Delete Queue
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm queue-stats-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="bg-primary text-white rounded-circle p-3">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                    </div>
+                    <h4 class="mb-0" id="waitingCalls">{{ current_stats.waiting_calls|default:0 }}</h4>
+                    <p class="text-muted small mb-0">Calls Waiting</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm queue-stats-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="bg-success text-white rounded-circle p-3">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                    <h4 class="mb-0" id="activeAgents">{{ current_stats.active_agents|default:0 }}</h4>
+                    <p class="text-muted small mb-0">Active Agents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm queue-stats-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="bg-info text-white rounded-circle p-3">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <h4 class="mb-0" id="avgWaitTime">{{ current_stats.avg_wait_time|default:0 }}s</h4>
+                    <p class="text-muted small mb-0">Avg Wait Time</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm queue-stats-card">
+                <div class="card-body text-center">
+                    <div class="d-flex align-items-center justify-content-center mb-2">
+                        <div class="bg-warning text-white rounded-circle p-3">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                    <h4 class="mb-0" id="callsToday">{{ current_stats.calls_today|default:0 }}</h4>
+                    <p class="text-muted small mb-0">Calls Today</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Queue Configuration -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Queue Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Name:</td>
+                                    <td>{{ queue.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Extension:</td>
+                                    <td><code>{{ queue.extension }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Strategy:</td>
+                                    <td><span class="badge bg-info">{{ queue.get_strategy_display }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Timeout:</td>
+                                    <td>{{ queue.timeout }} seconds</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Max Waiting:</td>
+                                    <td>
+                                        {% if queue.max_waiting > 0 %}
+                                            {{ queue.max_waiting }} calls
+                                        {% else %}
+                                            Unlimited
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Asterisk Server:</td>
+                                    <td>{{ queue.asterisk_server.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Status:</td>
+                                    <td>
+                                        {% if queue.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Music on Hold:</td>
+                                    <td><code>{{ queue.music_on_hold|default:"default" }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Retry Interval:</td>
+                                    <td>{{ queue.retry_interval }} seconds</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Created:</td>
+                                    <td>{{ queue.created_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Configuration -->
+            {% if queue.join_announcement or queue.periodic_announcement %}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">Audio Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if queue.join_announcement %}
+                            <div class="mb-3">
+                                <h6 class="text-muted">Join Announcement:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <i class="fas fa-volume-up text-primary me-2"></i>
+                                    {{ queue.join_announcement }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if queue.periodic_announcement %}
+                            <div class="mb-3">
+                                <h6 class="text-muted">Periodic Announcement:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <i class="fas fa-volume-up text-info me-2"></i>
+                                    {{ queue.periodic_announcement }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" {% if queue.announce_position %}checked{% endif %} disabled>
+                                    <label class="form-check-label">Announce Position</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" {% if queue.announce_holdtime %}checked{% endif %} disabled>
+                                    <label class="form-check-label">Announce Hold Time</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Queue Members -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Queue Members ({{ members.count }})</h5>
+                    <a href="{% url 'telephony:queue_members' queue.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-users"></i> Manage Members
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if members %}
+                        <div class="row">
+                            {% for member in members %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    {% if member.phone.user %}
+                                                        <div class="bg-primary text-white rounded-circle p-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                                            <i class="fas fa-user"></i>
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="bg-secondary text-white rounded-circle p-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                                            <i class="fas fa-phone"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">
+                                                        <a href="{% url 'telephony:phone_detail' member.phone.pk %}" class="text-decoration-none">
+                                                            {{ member.phone.extension }}
+                                                        </a>
+                                                    </h6>
+                                                    <p class="text-muted small mb-1">{{ member.phone.name }}</p>
+                                                    {% if member.phone.user %}
+                                                        <p class="text-muted small mb-0">{{ member.phone.user.get_full_name|default:member.phone.user.username }}</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="text-end">
+                                                    {% if member.is_active and not member.paused %}
+                                                        <span class="badge bg-success">Active</span>
+                                                    {% elif member.paused %}
+                                                        <span class="badge bg-warning">Paused</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Inactive</span>
+                                                    {% endif %}
+                                                    <br><small class="text-muted">Penalty: {{ member.penalty }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h6>No members assigned</h6>
+                            <p class="text-muted">Add agents to this queue to start receiving calls.</p>
+                            <a href="{% url 'telephony:queue_members' queue.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Members
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Recent Call Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_calls %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Caller</th>
+                                        <th>Agent</th>
+                                        <th>Wait Time</th>
+                                        <th>Talk Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for call in recent_calls %}
+                                        <tr>
+                                            <td>{{ call.start_time|date:"H:i:s" }}</td>
+                                            <td>{{ call.caller_id|default:"Unknown" }}</td>
+                                            <td>
+                                                {% if call.agent %}
+                                                    {{ call.agent.get_full_name|default:call.agent.username }}
+                                                {% else %}
+                                                    <span class="text-muted">No agent</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ call.wait_time|default:0 }}s</td>
+                                            <td>{{ call.talk_time|default:0 }}s</td>
+                                            <td>
+                                                <span class="badge bg-{% if call.status == 'answered' %}success{% elif call.status == 'abandoned' %}warning{% else %}secondary{% endif %}">
+                                                    {{ call.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'telephony:queue_call_history' queue.pk %}" class="btn btn-sm btn-outline-primary">
+                                View All Activity
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small mb-0">No recent call activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="liveMonitor()">
+                            <i class="fas fa-eye"></i> Live Monitor
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="testQueue()">
+                            <i class="fas fa-phone"></i> Test Queue Call
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="queueReport()">
+                            <i class="fas fa-chart-line"></i> Generate Report
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="pauseAllMembers()">
+                            <i class="fas fa-pause"></i> Pause All Members
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="exportConfig()">
+                            <i class="fas fa-download"></i> Export Config
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Performance Metrics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="text-success mb-0">{{ performance_stats.answer_rate|default:0 }}%</h5>
+                            <small class="text-muted">Answer Rate</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="text-warning mb-0">{{ performance_stats.abandon_rate|default:0 }}%</h5>
+                            <small class="text-muted">Abandon Rate</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="text-info mb-0">{{ performance_stats.avg_talk_time|default:0 }}s</h5>
+                            <small class="text-muted">Avg Talk Time</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="text-primary mb-0">{{ performance_stats.service_level|default:0 }}%</h5>
+                            <small class="text-muted">Service Level</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Member Status Overview -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Member Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h5 class="text-success mb-0">{{ member_stats.active|default:0 }}</h5>
+                            <small class="text-muted">Active</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-warning mb-0">{{ member_stats.paused|default:0 }}</h5>
+                            <small class="text-muted">Paused</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-secondary mb-0">{{ member_stats.offline|default:0 }}</h5>
+                            <small class="text-muted">Offline</small>
+                        </div>
+                    </div>
+                    
+                    {% if member_stats.busy > 0 %}
+                        <hr>
+                        <div class="text-center">
+                            <h5 class="text-info mb-0">{{ member_stats.busy }}</h5>
+                            <small class="text-muted">On Call</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Waiting Calls -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Current Waiting Calls</h6>
+                </div>
+                <div class="card-body">
+                    <div id="waitingCallsList">
+                        {% if waiting_calls %}
+                            {% for call in waiting_calls %}
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <strong>{{ call.caller_id|default:"Unknown" }}</strong>
+                                        <br><small class="text-muted">Position: {{ call.position }}</small>
+                                    </div>
+                                    <span class="badge bg-primary">{{ call.wait_time }}s</span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="fas fa-phone-slash"></i>
+                                <p class="small mb-0 mt-2">No calls waiting</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Monitor Modal -->
+<div class="modal fade" id="liveMonitorModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Live Queue Monitor - {{ queue.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="liveMonitorContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading live data...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete queue <strong>{{ queue.name }}</strong>?</p>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    This will permanently delete the queue and remove all {{ members.count }} member assignments.
+                </div>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{% url 'telephony:queue_confirm_delete' queue.pk %}" class="btn btn-danger">Delete Queue</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let liveUpdateInterval;
+
+$(document).ready(function() {
+    // Start live updates every 10 seconds
+    liveUpdateInterval = setInterval(updateLiveStats, 10000);
+    
+    // Stop updates when page becomes hidden
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearInterval(liveUpdateInterval);
+        } else {
+            liveUpdateInterval = setInterval(updateLiveStats, 10000);
+        }
+    });
+});
+
+function updateLiveStats() {
+    $.get('{% url "telephony:queue_live_stats" queue.pk %}')
+        .done(function(data) {
+            // Update statistics
+            $('#waitingCalls').text(data.waiting_calls);
+            $('#activeAgents').text(data.active_agents);
+            $('#avgWaitTime').text(data.avg_wait_time + 's');
+            $('#callsToday').text(data.calls_today);
+            
+            // Update waiting calls list
+            updateWaitingCallsList(data.waiting_calls_detail);
+        })
+        .fail(function() {
+            console.log('Failed to update live stats');
+        });
+}
+
+function updateWaitingCallsList(calls) {
+    let html = '';
+    if (calls && calls.length > 0) {
+        calls.forEach(function(call) {
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>${call.caller_id || 'Unknown'}</strong>
+                        <br><small class="text-muted">Position: ${call.position}</small>
+                    </div>
+                    <span class="badge bg-primary">${call.wait_time}s</span>
+                </div>
+            `;
+        });
+    } else {
+        html = `
+            <div class="text-center text-muted">
+                <i class="fas fa-phone-slash"></i>
+                <p class="small mb-0 mt-2">No calls waiting</p>
+            </div>
+        `;
+    }
+    $('#waitingCallsList').html(html);
+}
+
+function liveMonitor() {
+    $('#liveMonitorModal').modal('show');
+    
+    $.get('{% url "telephony:queue_monitor_data" queue.pk %}')
+        .done(function(data) {
+            let monitorHTML = `
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Live monitoring data - updates every 5 seconds
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-primary">${data.waiting_calls}</h3>
+                                <p class="mb-0">Waiting</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-success">${data.active_agents}</h3>
+                                <p class="mb-0">Active</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-info">${data.avg_wait_time}s</h3>
+                                <p class="mb-0">Avg Wait</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-warning">${data.longest_wait}s</h3>
+                                <p class="mb-0">Longest Wait</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Waiting Calls</h6>
+                        <div style="max-height: 300px; overflow-y: auto;">
+            `;
+            
+            if (data.waiting_calls_detail && data.waiting_calls_detail.length > 0) {
+                data.waiting_calls_detail.forEach(function(call) {
+                    monitorHTML += `
+                        <div class="card mb-2">
+                            <div class="card-body p-2">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>${call.caller_id}</strong>
+                                        <br><small>Position: ${call.position}</small>
+                                    </div>
+                                    <span class="badge bg-primary">${call.wait_time}s</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                monitorHTML += '<p class="text-muted">No calls waiting</p>';
+            }
+            
+            monitorHTML += `
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Active Agents</h6>
+                        <div style="max-height: 300px; overflow-y: auto;">
+            `;
+            
+            if (data.active_agents_detail && data.active_agents_detail.length > 0) {
+                data.active_agents_detail.forEach(function(agent) {
+                    monitorHTML += `
+                        <div class="card mb-2">
+                            <div class="card-body p-2">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>${agent.name}</strong> (${agent.extension})
+                                        <br><small>Status: ${agent.status}</small>
+                                    </div>
+                                    <span class="badge bg-${agent.status === 'on_call' ? 'success' : 'secondary'}">${agent.call_time || 0}s</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                monitorHTML += '<p class="text-muted">No active agents</p>';
+            }
+            
+            monitorHTML += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#liveMonitorContent').html(monitorHTML);
+        })
+        .fail(function() {
+            $('#liveMonitorContent').html('<div class="alert alert-danger">Failed to load monitor data</div>');
+        });
+}
+
+function testQueue() {
+    // Implement queue testing
+    alert('Queue testing functionality would be implemented here.');
+}
+
+function queueReport() {
+    window.open('{% url "telephony:queue_report" queue.pk %}', '_blank');
+}
+
+function exportConfig() {
+    window.open('{% url "telephony:export_queue_config" queue.pk %}', '_blank');
+}
+
+function cloneQueue() {
+    if (confirm('Create a copy of this queue with a new name?')) {
+        $.post('{% url "telephony:clone_queue" queue.pk %}', {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        }){% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Queue {{ queue.name }} - Autodialer{% endblock %}
+
+{% block extra_css %}
+<style>
+.queue-stats-card {
+    transition: all 0.3s ease;
+}
+.queue-stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.member-status-online {
+    color: #28a745;
+}
+.member-status-offline {
+    color: #dc3545;
+}
+.member-status-paused {
+    color: #ffc107;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:queues' %}">Queues</a></li>
+                    <li class="breadcrumb-item active">{{ queue.name }}</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">Queue: {{ queue.name }} ({{ queue.extension }})</h2>
+            <p class="text-muted">{{ queue.description|default:"No description provided" }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'telephony:queue_members' queue.pk %}" class="btn btn-info">
+                <i class="fas fa-users"></i> Manage Members
+            </a>
+            <a href="{% url 'telephony:update_queue' queue.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Queue
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    More Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="liveMonitor()">
+                            <i class="fas fa-eye"></i> Live Monitor
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="queueReport()">
+                            <i class="fas fa-chart-line"></i> Generate Report
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="exportConfig()">
+                            <i class="fas fa-download"></i> Export Config
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="testQueue()">
+                            <i class="fas fa-phone"></i> Test Queue
+                        </a>
+                    </li>
+                    <li>

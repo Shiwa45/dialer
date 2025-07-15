@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete IVR {{ object.name }} - Autodialer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:ivrs' %}">IVRs</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:ivr_detail' object.pk %}">{{ object.name }}</a></li>
+                    <li class="breadcrumb-item active">Delete</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0 text-danger">
+                <i class="fas fa-exclamation-triangle"></i> Delete IVR Menu
+            </h2>
+            <p class="text-muted">Confirm deletion of IVR "{{ object.name }}"</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Warning Card -->
+            <div class="card border-danger shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Permanent Deletion Warning
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h6 class="alert-heading">This action cannot be undone!</h6>
+                        <p class="mb-0">You are about to permanently delete the following IVR menu and all associated data:</p>
+                    </div>
+
+                    <!-- IVR Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">IVR Name:</td>
+                                    <td class="fw-bold">{{ object.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">IVR ID:</td>
+                                    <td><code>{{ object.ivr_id }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Description:</td>
+                                    <td>{{ object.description|default:"No description" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Total Options:</td>
+                                    <td><span class="badge bg-primary">{{ object.options.count }}</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Asterisk Server:</td>
+                                    <td>{{ object.asterisk_server.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Status:</td>
+                                    <td>
+                                        {% if object.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Created By:</td>
+                                    <td>{{ object.created_by.get_full_name|default:object.created_by.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Created:</td>
+                                    <td>{{ object.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- IVR Options Summary -->
+                    {% if object.options.exists %}
+                        <div class="mb-4">
+                            <h6 class="text-danger">IVR Options to be Deleted:</h6>
+                            <div class="bg-light p-3 rounded">
+                                <div class="row">
+                                    {% for option in object.options.all %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">{{ option.digit }}</span>
+                                                <span class="small">{{ option.description }}</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Impact Analysis -->
+                    <div class="mb-4">
+                        <h6 class="text-danger">Deletion Impact Analysis:</h6>
+                        
+                        <!-- Campaign Usage -->
+                        {% if campaigns_using_ivr %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-bullhorn"></i> Campaign Usage ({{ campaigns_using_ivr|length }})
+                                </h6>
+                                <p class="mb-2">This IVR is currently used by the following campaigns:</p>
+                                <ul class="mb-0">
+                                    {% for campaign in campaigns_using_ivr %}
+                                        <li><strong>{{ campaign.name }}</strong> - {{ campaign.get_status_display }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <p class="mt-2 mb-0 text-warning"><strong>Warning:</strong> These campaigns may stop working properly without this IVR.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- DID Assignments -->
+                        {% if dids_using_ivr %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-phone"></i> DID Assignments ({{ dids_using_ivr|length }})
+                                </h6>
+                                <p class="mb-2">This IVR is assigned to the following phone numbers:</p>
+                                <ul class="mb-0">
+                                    {% for did in dids_using_ivr %}
+                                        <li><strong>{{ did.phone_number }}</strong> - {{ did.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <p class="mt-2 mb-0 text-warning"><strong>Warning:</strong> Incoming calls to these numbers may not route properly.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- Call History -->
+                        {% if call_history_count > 0 %}
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-history"></i> Call History ({{ call_history_count }} calls)
+                                </h6>
+                                <p class="mb-0">Call logs associated with this IVR will be preserved but marked as orphaned.</p>
+                            </div>
+                        {% endif %}
+
+                        <!-- No Dependencies -->
+                        {% if not campaigns_using_ivr and not dids_using_ivr and call_history_count == 0 %}
+                            <div class="alert alert-success">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-check-circle"></i> Safe to Delete
+                                </h6>
+                                <p class="mb-0">This IVR has no active dependencies and can be safely deleted.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Audio Messages Preview -->
+                    {% if object.welcome_message or object.invalid_message or object.timeout_message %}
+                        <div class="mb-4">
+                            <h6 class="text-info">Audio Messages to be Lost:</h6>
+                            <div class="bg-light p-3 rounded">
+                                {% if object.welcome_message %}
+                                    <div class="mb-2">
+                                        <strong>Welcome:</strong> {{ object.welcome_message|truncatechars:100 }}
+                                    </div>
+                                {% endif %}
+                                {% if object.invalid_message %}
+                                    <div class="mb-2">
+                                        <strong>Invalid:</strong> {{ object.invalid_message|truncatechars:100 }}
+                                    </div>
+                                {% endif %}
+                                {% if object.timeout_message %}
+                                    <div class="mb-2">
+                                        <strong>Timeout:</strong> {{ object.timeout_message|truncatechars:100 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDeletion" required>
+                                <label class="form-check-label text-danger fw-bold" for="confirmDeletion">
+                                    I understand that this action cannot be undone and want to permanently delete this IVR menu and all {{ object.options.count }} associated options.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Optional: Reason for deletion -->
+                        <div class="mb-4">
+                            <label for="deletionReason" class="form-label">Reason for deletion (optional):</label>
+                            <textarea class="form-control" id="deletionReason" name="deletion_reason" rows="3" 
+                                      placeholder="Enter the reason for deleting this IVR menu..."></textarea>
+                            <div class="form-text">This will be logged for audit purposes.</div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'telephony:ivr_detail' object.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                <i class="fas fa-trash"></i> Delete IVR Menu
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alternative Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Alternative Actions</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Instead of deleting, consider these alternatives:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-warning text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-pause"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Deactivate IVR</h6>
+                                    <p class="small text-muted mb-2">Temporarily disable without losing configuration</p>
+                                    {% if object.is_active %}
+                                        <a href="{% url 'telephony:toggle_ivr_status' object.pk %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-pause"></i> Deactivate
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Already Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-success text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-download"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Export Configuration</h6>
+                                    <p class="small text-muted mb-2">Save configuration before deletion</p>
+                                    <a href="{% url 'telephony:export_ivr_config' object.pk %}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-download"></i> Export
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-primary text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-copy"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Clone IVR</h6>
+                                    <p class="small text-muted mb-2">Create a backup copy with different name</p>
+                                    <a href="{% url 'telephony:clone_ivr' object.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-copy"></i> Clone
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="bg-info text-white rounded-circle p-2 me-3">
+                                    <i class="fas fa-edit"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Modify Instead</h6>
+                                    <p class="small text-muted mb-2">Edit the IVR to meet new requirements</p>
+                                    <a href="{% url 'telephony:update_ivr' object.pk %}" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Enable delete button only when confirmation is checked
+    $('#confirmDeletion').change(function() {
+        $('#deleteButton').prop('disabled', !$(this).is(':checked'));
+    });
+
+    // Add extra confirmation for IVRs with dependencies
+    {% if campaigns_using_ivr or dids_using_ivr %}
+        $('form').on('submit', function(e) {
+            if (!confirm('This IVR has active dependencies that may be affected. Are you absolutely sure you want to delete it?')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    {% endif %}
+
+    // Show warning if user tries to leave page
+    let formSubmitted = false;
+    $('form').on('submit', function() {
+        formSubmitted = true;
+    });
+
+    $(window).on('beforeunload', function() {
+        if (!formSubmitted && $('#confirmDeletion').is(':checked')) {
+            return 'You have confirmed deletion but not submitted the form. Are you sure you want to leave?';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player - {{ recording.filename }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .player-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .album-art {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .album-art i {
+            font-size: 4rem;
+            color: white;
+            opacity: 0.8;
+        }
+        
+        .track-info h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .track-info p {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .waveform-container {
+            height: 80px;
+            background: #f0f0f0;
+            border-radius: 40px;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .waveform-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.1s ease;
+            border-radius: 40px;
+            position: relative;
+        }
+        
+        .waveform-progress::after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: #f8f9fa;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .control-btn:hover {
+            background: #e9ecef;
+            transform: scale(1.1);
+        }
+        
+        .play-btn {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .play-btn:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6c4788 100%);
+            transform: scale(1.1);
+        }
+        
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .volume-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .volume-slider {
+            width: 150px;
+        }
+        
+        .metadata {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        .metadata-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .metadata-row:last-child {
+            border-bottom: none;
+        }
+        
+        .metadata-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .metadata-value {
+            color: #6c757d;
+        }
+        
+        .visualizer {
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 2px;
+            height: 40px;
+            margin: 1rem 0;
+        }
+        
+        .bar {
+            width: 3px;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 2px;
+            opacity: 0.3;
+            transition: all 0.1s ease;
+        }
+        
+        .bar.active {
+            opacity: 1;
+            transform: scaleY(1.2);
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: #666;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .keyboard-shortcuts {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: #495057;
+        }
+        
+        .shortcut {
+            display: inline-block;
+            background: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin: 0.125rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <!-- Album Art -->
+        <div class="album-art">
+            <i class="fas fa-microphone"></i>
+        </div>
+        
+        <!-- Track Information -->
+        <div class="track-info">
+            <h3>{{ recording.filename }}</h3>
+            <p>Call ID: {{ recording.call_id }}</p>
+        </div>
+        
+        {% if recording.is_available %}
+            <!-- Audio Visualizer -->
+            <div class="visualizer" id="visualizer">
+                <!-- Bars will be generated by JavaScript -->
+            </div>
+            
+            <!-- Waveform -->
+            <div class="waveform-container" onclick="seekToPosition(event)">
+                <div class="waveform-progress" id="waveformProgress"></div>
+            </div>
+            
+            <!-- Time Display -->
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="time-display" id="currentTime">00:00</span>
+                <span class="time-display" id="totalTime">
+                    {% if recording.duration %}
+                        {{ recording.duration|floatformat:0|time:"i:s" }}
+                    {% else %}
+                        --:--
+                    {% endif %}
+                </span>
+            </div>
+            
+            <!-- Controls -->
+            <div class="controls">
+                <button class="control-btn" onclick="skipBackward()" title="Skip 10s backward">
+                    <i class="fas fa-backward"></i>
+                </button>
+                
+                <button class="control-btn" onclick="decreaseSpeed()" title="Decrease speed">
+                    <i class="fas fa-minus"></i>
+                </button>
+                
+                <button class="play-btn control-btn" id="playPauseBtn" onclick="togglePlayPause()">
+                    <i class="fas fa-play"></i>
+                </button>
+                
+                <button class="control-btn" onclick="increaseSpeed()" title="Increase speed">
+                    <i class="fas fa-plus"></i>
+                </button>
+                
+                <button class="control-btn" onclick="skipForward()" title="Skip 10s forward">
+                    <i class="fas fa-forward"></i>
+                </button>
+            </div>
+            
+            <!-- Speed Display -->
+            <div class="text-center mb-2">
+                <span class="badge bg-secondary" id="speedDisplay">1.0x</span>
+            </div>
+            
+            <!-- Volume Control -->
+            <div class="volume-container">
+                <i class="fas fa-volume-down"></i>
+                <input type="range" class="form-range volume-slider" id="volumeSlider" 
+                       min="0" max="100" value="50">
+                <i class="fas fa-volume-up"></i>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <span>Loading audio...</span>
+            </div>
+            
+            <!-- Audio Element -->
+            <audio id="audioPlayer" preload="metadata" style="display: none;">
+                <source src="{% url 'telephony:stream_recording' recording.pk %}" type="audio/{{ recording.format }}">
+                Your browser does not support the audio element.
+            </audio>
+            
+        {% else %}
+            <!-- Error Message -->
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Audio Unavailable</strong><br>
+                This recording file is not available and cannot be played.
+            </div>
+        {% endif %}
+        
+        <!-- Metadata -->
+        <div class="metadata">
+            <h6 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>Recording Details
+            </h6>
+            <div class="metadata-row">
+                <span class="metadata-label">Duration:</span>
+                <span class="metadata-value">
+                    {% if recording.duration %}
+                        {{ recording.duration }} seconds
+                    {% else %}
+                        Unknown
+                    {% endif %}
+                </span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">File Size:</span>
+                <span class="metadata-value">{{ recording.file_size|filesizeformat }}</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Format:</span>
+                <span class="metadata-value">{{ recording.format|upper }}</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Recorded:</span>
+                <span class="metadata-value">{{ recording.recording_start|date:"M d, Y H:i" }}</span>
+            </div>
+            <div class="metadata-row">
+                <span class="metadata-label">Server:</span>
+                <span class="metadata-value">{{ recording.asterisk_server.name }}</span>
+            </div>
+        </div>
+        
+        <!-- Keyboard Shortcuts -->
+        <div class="keyboard-shortcuts">
+            <strong>Keyboard Shortcuts:</strong><br>
+            <span class="shortcut">Space</span> Play/Pause
+            <span class="shortcut">←</span> Skip back 10s
+            <span class="shortcut">→</span> Skip forward 10s
+            <span class="shortcut">↑</span> Volume up
+            <span class="shortcut">↓</span> Volume down
+            <span class="shortcut">+</span> Speed up
+            <span class="shortcut">-</span> Speed down
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-center gap-2 mt-3">
+            <a href="{% url 'telephony:recording_detail' recording.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-eye me-1"></i>View Details
+            </a>
+            {% if recording.is_available %}
+                <a href="{% url 'telephony:download_recording' recording.pk %}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-download me-1"></i>Download
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% if recording.is_available %}
+    <script>
+        let audioPlayer = document.getElementById('audioPlayer');
+        let playPauseBtn = document.getElementById('playPauseBtn');
+        let waveformProgress = document.getElementById('waveformProgress');
+        let currentTimeDisplay = document.getElementById('currentTime');
+        let totalTimeDisplay = document.getElementById('totalTime');
+        let volumeSlider = document.getElementById('volumeSlider');
+        let speedDisplay = document.getElementById('speedDisplay');
+        let loadingIndicator = document.getElementById('loadingIndicator');
+        let visualizer = document.getElementById('visualizer');
+        
+        let currentSpeed = 1.0;
+        let visualizerBars = [];
+        
+        // Initialize visualizer bars
+        function initializeVisualizer() {
+            for (let i = 0; i < 50; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = Math.random() * 20 + 5 + 'px';
+                visualizer.appendChild(bar);
+                visualizerBars.push(bar);
+            }
+        }
+        
+        // Animate visualizer
+        function animateVisualizer() {
+            if (!audioPlayer.paused) {
+                visualizerBars.forEach((bar, index) => {
+                    const isActive = Math.random() > 0.7;
+                    bar.classList.toggle('active', isActive);
+                    if (isActive) {
+                        bar.style.height = Math.random() * 30 + 10 + 'px';
+                    }
+                });
+            } else {
+                visualizerBars.forEach(bar => {
+                    bar.classList.remove('active');
+                });
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeVisualizer();
+            setInterval(animateVisualizer, 100);
+            
+            // Set initial volume
+            audioPlayer.volume = 0.5;
+            
+            // Hide loading indicator when audio is loaded
+            audioPlayer.addEventListener('loadeddata', function() {
+                loadingIndicator.style.display = 'none';
+            });
+            
+            audioPlayer.addEventListener('loadedmetadata', function() {
+                totalTimeDisplay.textContent = formatTime(audioPlayer.duration);
+                loadingIndicator.style.display = 'none';
+            });
+            
+            audioPlayer.addEventListener('timeupdate', function() {
+                const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                waveformProgress.style.width = progress + '%';
+                currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);
+            });
+            
+            audioPlayer.addEventListener('ended', function() {
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            });
+            
+            audioPlayer.addEventListener('error', function() {
+                loadingIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Error loading audio';
+            });
+            
+            // Volume control
+            volumeSlider.addEventListener('input', function() {
+                audioPlayer.volume = this.value / 100;
+            });
+        });
+        
+        function togglePlayPause() {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                audioPlayer.pause();
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        }
+        
+        function skipBackward() {
+            audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 10);
+        }
+        
+        function skipForward() {
+            audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 10);
+        }
+        
+        function decreaseSpeed() {
+            currentSpeed = Math.max(0.5, currentSpeed - 0.1);
+            audioPlayer.playbackRate = currentSpeed;
+            speedDisplay.textContent = currentSpeed.toFixed(1) + 'x';
+        }
+        
+        function increaseSpeed() {
+            currentSpeed = Math.min(2.0, currentSpeed + 0.1);
+            audioPlayer.playbackRate = currentSpeed;
+            speedDisplay.textContent = currentSpeed.toFixed(1) + 'x';
+        }
+        
+        function seekToPosition(event) {
+            const container = event.currentTarget;
+            const rect = container.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const percentage = x / rect.width;
+            
+            if (audioPlayer.duration) {
+                audioPlayer.currentTime = percentage * audioPlayer.duration;
+            }
+        }
+        
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlayPause();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    skipBackward();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    skipForward();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    volumeSlider.value = Math.min(100, parseInt(volumeSlider.value) + 10);
+                    audioPlayer.volume = volumeSlider.value / 100;
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    volumeSlider.value = Math.max(0, parseInt(volumeSlider.value) - 10);
+                    audioPlayer.volume = volumeSlider.value / 100;
+                    break;
+                case 'Equal':
+                case 'NumpadAdd':
+                    e.preventDefault();
+                    increaseSpeed();
+                    break;
+                case 'Minus':
+                case 'NumpadSubtract':
+                    e.preventDefault();
+                    decreaseSpeed();
+                    break;
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

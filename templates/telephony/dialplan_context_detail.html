@@ -1,0 +1,783 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Context Details - {{ context.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/datatables.min.css' %}" rel="stylesheet">
+<style>
+    .context-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .detail-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+    }
+    .status-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    .status-active {
+        background: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
+    }
+    .status-inactive {
+        background: #6c757d;
+        box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.3);
+    }
+    .extension-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    .extension-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+    .extension-card.inactive {
+        background: #f8f9fa;
+        opacity: 0.7;
+    }
+    .extension-number {
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #007bff;
+    }
+    .extension-app {
+        background: #e3f2fd;
+        color: #1565c0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .priority-badge {
+        background: #f3e5f5;
+        color: #7b1fa2;
+        padding: 0.125rem 0.375rem;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .arguments-code {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 0.5rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .info-item {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    .info-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+    .info-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .server-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    .empty-extensions {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .extension-flow {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+    }
+    .flow-arrow {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    .quick-actions {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .code-preview {
+        background: #2d3748;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        margin-top: 1rem;
+    }
+    .code-keyword {
+        color: #63b3ed;
+    }
+    .code-string {
+        color: #68d391;
+    }
+    .code-comment {
+        color: #a0aec0;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dashboard' %}">Telephony</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dialplan_contexts' %}">Dialplan Contexts</a></li>
+            <li class="breadcrumb-item active">{{ context.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Context Header -->
+    <div class="context-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <span class="status-indicator {% if context.is_active %}status-active{% else %}status-inactive{% endif %}"></span>
+                    {{ context.name }}
+                </h1>
+                <p class="mb-1">
+                    {% if context.description %}
+                        {{ context.description }}
+                    {% else %}
+                        No description provided
+                    {% endif %}
+                </p>
+                <p class="mb-0">
+                    Server: <strong>{{ context.asterisk_server.name }}</strong> | 
+                    Status: <strong>{% if context.is_active %}Active{% else %}Inactive{% endif %}</strong>
+                </p>
+            </div>
+            <div class="col-md-4">
+                <div class="text-end">
+                    <a href="{% url 'telephony:dialplan_contexts' %}" class="btn btn-outline-light me-2">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Contexts
+                    </a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'telephony:update_dialplan_context' context.pk %}">
+                                    <i class="fas fa-edit me-2"></i>Edit Context
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'telephony:create_dialplan_extension' context.pk %}">
+                                    <i class="fas fa-plus me-2"></i>Add Extension
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="exportContext()">
+                                    <i class="fas fa-file-export me-2"></i>Export Context
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="validateContext()">
+                                    <i class="fas fa-check-circle me-2"></i>Validate
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" onclick="deleteContext()">
+                                    <i class="fas fa-trash me-2"></i>Delete Context
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-1">
+                    <i class="fas fa-rocket me-2"></i>Quick Actions
+                </h6>
+                <p class="mb-0">Manage extensions and context settings</p>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'telephony:create_dialplan_extension' context.pk %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus me-1"></i>Add Extension
+                    </a>
+                    <button class="btn btn-outline-primary btn-sm" onclick="generateDialplan()">
+                        <i class="fas fa-code me-1"></i>Generate Code
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="testContext()">
+                        <i class="fas fa-play me-1"></i>Test
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Extensions List -->
+        <div class="col-lg-8">
+            <!-- Statistics -->
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-value text-primary">{{ extensions|length }}</div>
+                    <div class="info-label">Total Extensions</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value text-success">{{ active_extensions|default:0 }}</div>
+                    <div class="info-label">Active Extensions</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value text-info">{{ unique_applications|length|default:0 }}</div>
+                    <div class="info-label">Applications Used</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-value text-warning">{{ max_priority|default:0 }}</div>
+                    <div class="info-label">Max Priority</div>
+                </div>
+            </div>
+
+            <!-- Extensions -->
+            <div class="detail-card">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>Extensions
+                        {% if extensions %}
+                            <span class="badge bg-secondary ms-2">{{ extensions|length }}</span>
+                        {% endif %}
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="sortExtensions('extension')">
+                            <i class="fas fa-sort-numeric-down me-1"></i>Sort by Extension
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="sortExtensions('priority')">
+                            <i class="fas fa-sort-amount-down me-1"></i>Sort by Priority
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if extensions %}
+                        <div id="extensionsList">
+                            {% for extension in extensions %}
+                            <div class="extension-card {% if not extension.is_active %}inactive{% endif %}" data-extension="{{ extension.extension }}" data-priority="{{ extension.priority }}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-2">
+                                        <div class="extension-number">{{ extension.extension }}</div>
+                                        <div class="priority-badge">Priority {{ extension.priority }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="extension-flow">
+                                            <span class="extension-app">{{ extension.application }}</span>
+                                            {% if extension.arguments %}
+                                                <span class="flow-arrow">→</span>
+                                                <span class="text-muted">{{ extension.arguments|truncatechars:30 }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if extension.arguments %}
+                                            <div class="arguments-code mt-2">{{ extension.arguments }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        {% if extension.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'telephony:update_dialplan_extension' context.pk extension.pk %}" 
+                                               class="btn btn-outline-primary btn-sm" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-outline-success btn-sm" 
+                                                    onclick="testExtension('{{ extension.id }}')" title="Test">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" 
+                                                    onclick="deleteExtension('{{ extension.id }}', '{{ extension.extension }}', '{{ extension.priority }}')" 
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-extensions">
+                            <i class="fas fa-list-ol fa-3x mb-3"></i>
+                            <h5>No Extensions Defined</h5>
+                            <p>This context doesn't have any extensions yet.</p>
+                            <a href="{% url 'telephony:create_dialplan_extension' context.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add First Extension
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Information -->
+        <div class="col-lg-4">
+            <!-- Server Information -->
+            <div class="server-info detail-card">
+                <h6 class="mb-3">
+                    <i class="fas fa-server me-2"></i>Server Information
+                </h6>
+                <div class="row g-0">
+                    <div class="col-4">
+                        <div class="text-white-50">Name:</div>
+                        <div class="text-white"><strong>{{ context.asterisk_server.name }}</strong></div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-white-50">IP:</div>
+                        <div class="text-white">{{ context.asterisk_server.server_ip }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-white-50">Type:</div>
+                        <div class="text-white">{{ context.asterisk_server.get_server_type_display }}</div>
+                    </div>
+                </div>
+                <hr class="border-white-50">
+                <div class="row g-0">
+                    <div class="col-6">
+                        <div class="text-white-50">Status:</div>
+                        <div class="text-white">
+                            {% if context.asterisk_server.is_active %}
+                                <i class="fas fa-check-circle text-success me-1"></i>Active
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger me-1"></i>Inactive
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-white-50">Version:</div>
+                        <div class="text-white">{{ context.asterisk_server.asterisk_version|default:"Unknown" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Context Details -->
+            <div class="detail-card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Context Details
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Name:</strong><br>
+                        <code>{{ context.name }}</code>
+                    </div>
+                    
+                    {% if context.description %}
+                    <div class="mb-3">
+                        <strong>Description:</strong><br>
+                        {{ context.description }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <strong>Created:</strong><br>
+                        {{ context.created_at|date:"M d, Y H:i" }}
+                        <br><small class="text-muted">{{ context.created_at|timesince }} ago</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Last Updated:</strong><br>
+                        {{ context.updated_at|date:"M d, Y H:i" }}
+                        <br><small class="text-muted">{{ context.updated_at|timesince }} ago</small>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong>Status:</strong><br>
+                        {% if context.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Applications Used -->
+            {% if unique_applications %}
+            <div class="detail-card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-code me-2"></i>Applications Used
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% for app in unique_applications %}
+                        <span class="extension-app me-1 mb-1 d-inline-block">{{ app }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Generated Dialplan Preview -->
+            <div class="detail-card">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file-code me-2"></i>Dialplan Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-2">Generated dialplan configuration:</p>
+                    <div class="code-preview" id="dialplanPreview">
+                        <span class="code-comment">; Context: {{ context.name }}</span><br>
+                        {% if context.description %}
+                        <span class="code-comment">; {{ context.description }}</span><br>
+                        {% endif %}
+                        <span class="code-keyword">[{{ context.name }}]</span><br>
+                        {% for extension in extensions %}
+                        {% if extension.is_active %}
+                        <span class="code-keyword">exten</span> => <span class="code-string">{{ extension.extension }},{{ extension.priority }},{{ extension.application }}({{ extension.arguments|default:"" }})</span><br>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="copyDialplan()">
+                        <i class="fas fa-copy me-1"></i>Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Context Modal -->
+<div class="modal fade" id="deleteContextModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Delete Context
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the context <strong>{{ context.name }}</strong>?</p>
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> This will also delete all {{ extensions|length }} extension(s) within this context. This action cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteContext()">
+                    <i class="fas fa-trash me-1"></i>Delete Context
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Extension Modal -->
+<div class="modal fade" id="deleteExtensionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Delete Extension
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete extension <strong id="extensionToDelete"></strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteExtension">
+                    <i class="fas fa-trash me-1"></i>Delete Extension
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sortExtensions(sortBy) {
+    const extensionsList = document.getElementById('extensionsList');
+    const extensions = Array.from(extensionsList.children);
+    
+    extensions.sort((a, b) => {
+        if (sortBy === 'extension') {
+            const aExt = parseInt(a.dataset.extension) || 0;
+            const bExt = parseInt(b.dataset.extension) || 0;
+            return aExt - bExt;
+        } else if (sortBy === 'priority') {
+            const aPri = parseInt(a.dataset.priority) || 0;
+            const bPri = parseInt(b.dataset.priority) || 0;
+            return aPri - bPri;
+        }
+        return 0;
+    });
+    
+    extensions.forEach(extension => extensionsList.appendChild(extension));
+}
+
+function deleteContext() {
+    $('#deleteContextModal').modal('show');
+}
+
+function confirmDeleteContext() {
+    window.location.href = '{% url "telephony:delete_dialplan_context" context.pk %}';
+}
+
+function deleteExtension(extensionId, extension, priority) {
+    $('#extensionToDelete').text(`${extension}, priority ${priority}`);
+    $('#confirmDeleteExtension').off('click').on('click', function() {
+        performDeleteExtension(extensionId);
+    });
+    $('#deleteExtensionModal').modal('show');
+}
+
+function performDeleteExtension(extensionId) {
+    $('#deleteExtensionModal').modal('hide');
+    
+    $.ajax({
+        url: '{% url "telephony:delete_dialplan_extension" %}',
+        method: 'POST',
+        data: {
+            'extension_id': extensionId,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                showAlert('success', 'Extension deleted successfully');
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('error', response.message || 'Failed to delete extension');
+            }
+        },
+        error: function() {
+            showAlert('error', 'An error occurred while deleting the extension');
+        }
+    });
+}
+
+function testExtension(extensionId) {
+    showAlert('info', 'Testing extension functionality...');
+    
+    $.ajax({
+        url: '{% url "telephony:test_dialplan_extension" %}',
+        method: 'POST',
+        data: {
+            'extension_id': extensionId,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                showAlert('success', 'Extension test completed successfully');
+            } else {
+                showAlert('warning', 'Extension test found issues: ' + response.message);
+            }
+        },
+        error: function() {
+            showAlert('error', 'An error occurred during extension test');
+        }
+    });
+}
+
+function testContext() {
+    showAlert('info', 'Testing context configuration...');
+    
+    $.ajax({
+        url: '{% url "telephony:test_dialplan_context" context.pk %}',
+        method: 'POST',
+        data: {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                showAlert('success', 'Context test completed successfully');
+            } else {
+                showAlert('warning', 'Context test found issues: ' + response.message);
+            }
+        },
+        error: function() {
+            showAlert('error', 'An error occurred during context test');
+        }
+    });
+}
+
+function validateContext() {
+    showAlert('info', 'Validating context configuration...');
+    
+    $.ajax({
+        url: '{% url "telephony:validate_dialplan_context" context.pk %}',
+        method: 'POST',
+        data: {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                showAlert('success', 'Context validation completed successfully');
+            } else {
+                showAlert('warning', 'Context validation found issues: ' + response.message);
+            }
+        },
+        error: function() {
+            showAlert('error', 'An error occurred during validation');
+        }
+    });
+}
+
+function exportContext() {
+    window.location.href = '{% url "telephony:export_dialplan_context" context.pk %}';
+}
+
+function generateDialplan() {
+    const dialplanContent = document.getElementById('dialplanPreview').textContent;
+    
+    // Create a modal to show the generated dialplan
+    const modal = $(`
+        <div class="modal fade" id="dialplanModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-code me-2"></i>Generated Dialplan
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="code-preview" style="max-height: 400px; overflow-y: auto;">
+                            ${document.getElementById('dialplanPreview').innerHTML}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="copyDialplan()">
+                            <i class="fas fa-copy me-1"></i>Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    $('body').append(modal);
+    modal.modal('show');
+    
+    modal.on('hidden.bs.modal', function() {
+        modal.remove();
+    });
+}
+
+function copyDialplan() {
+    const dialplanText = document.getElementById('dialplanPreview').textContent;
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(dialplanText).then(function() {
+            showAlert('success', 'Dialplan copied to clipboard');
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = dialplanText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showAlert('success', 'Dialplan copied to clipboard');
+    }
+}
+
+function showAlert(type, message) {
+    const alertClass = type === 'error' ? 'alert-danger' : 
+                      type === 'warning' ? 'alert-warning' : 
+                      type === 'info' ? 'alert-info' : 'alert-success';
+    const iconClass = type === 'error' ? 'exclamation-triangle' : 
+                     type === 'warning' ? 'exclamation-triangle' : 
+                     type === 'info' ? 'info-circle' : 'check-circle';
+    
+    const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 1060; min-width: 300px;" role="alert">
+            <i class="fas fa-${iconClass} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    $('body').append(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
+}
+
+// Add CSRF token to all AJAX requests
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+        }
+    }
+});
+
+// Create CSRF token input if it doesn't exist
+if ($('[name=csrfmiddlewaretoken]').length === 0) {
+    $('body').append('<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">');
+}
+
+// Auto-sort extensions on page load
+$(document).ready(function() {
+    sortExtensions('extension');
+});
+</script>
+{% endblock %}

@@ -115,6 +115,17 @@ DATABASES = {
 }
 
 
+ASTERISK_SERVERS = {
+    'default': {
+        'HOST': '172.26.7.107',  # WSL accessible via localhost
+        'AMI_PORT': 5038,
+        'SIP_PORT': 5060,
+        'USERNAME': 'admin',
+        'PASSWORD': 'amp111'
+    }
+}
+
+
 # Cache Configuration
 CACHES = {
     'default': {

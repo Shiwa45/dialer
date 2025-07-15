@@ -1,0 +1,635 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}IVR {{ ivr.name }} - Autodialer{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'telephony:ivrs' %}">IVRs</a></li>
+                    <li class="breadcrumb-item active">{{ ivr.name }}</li>
+                </ol>
+            </nav>
+            <h2 class="h3 mb-0">IVR: {{ ivr.name }}</h2>
+            <p class="text-muted">{{ ivr.description|default:"No description provided" }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'telephony:ivr_options' ivr.pk %}" class="btn btn-info">
+                <i class="fas fa-list"></i> Manage Options
+            </a>
+            <a href="{% url 'telephony:update_ivr' ivr.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit IVR
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    More Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="testIVR()">
+                            <i class="fas fa-phone"></i> Test IVR
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="exportConfig()">
+                            <i class="fas fa-download"></i> Export Config
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="cloneIVR()">
+                            <i class="fas fa-copy"></i> Clone IVR
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" onclick="confirmDelete()">
+                            <i class="fas fa-trash"></i> Delete IVR
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Name:</td>
+                                    <td>{{ ivr.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">IVR ID:</td>
+                                    <td><code>{{ ivr.ivr_id }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Description:</td>
+                                    <td>{{ ivr.description|default:"No description" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Status:</td>
+                                    <td>
+                                        {% if ivr.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Asterisk Server:</td>
+                                    <td>{{ ivr.asterisk_server.name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold text-muted">Created By:</td>
+                                    <td>{{ ivr.created_by.get_full_name|default:ivr.created_by.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Created:</td>
+                                    <td>{{ ivr.created_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Last Updated:</td>
+                                    <td>{{ ivr.updated_at|date:"M d, Y g:i A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Total Options:</td>
+                                    <td><span class="badge bg-primary">{{ ivr.options.count }}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-muted">Direct Dial:</td>
+                                    <td>
+                                        {% if ivr.allow_direct_dial %}
+                                            <span class="badge bg-success">Enabled</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Disabled</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Messages -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Audio Messages</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Welcome Message:</label>
+                                <div class="mt-1">
+                                    {% if ivr.welcome_message %}
+                                        <div class="bg-light p-3 rounded">
+                                            <i class="fas fa-volume-up text-primary me-2"></i>
+                                            {{ ivr.welcome_message }}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">No welcome message configured</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Invalid Input Message:</label>
+                                <div class="mt-1">
+                                    {% if ivr.invalid_message %}
+                                        <div class="bg-light p-2 rounded small">
+                                            {{ ivr.invalid_message }}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Default message</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="fw-bold text-muted">Timeout Message:</label>
+                                <div class="mt-1">
+                                    {% if ivr.timeout_message %}
+                                        <div class="bg-light p-2 rounded small">
+                                            {{ ivr.timeout_message }}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Default message</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timing Configuration -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Timing Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-primary text-white rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <h6>Digit Timeout</h6>
+                                <p class="text-muted mb-0">{{ ivr.digit_timeout|floatformat:0 }}ms</p>
+                                <small class="text-muted">Time to wait for digit input</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-info text-white rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+                                <h6>Response Timeout</h6>
+                                <p class="text-muted mb-0">{{ ivr.response_timeout|floatformat:0 }}ms</p>
+                                <small class="text-muted">Total time to wait for input</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-warning text-white rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-redo"></i>
+                                </div>
+                                <h6>Max Retries</h6>
+                                <p class="text-muted mb-0">{{ ivr.max_retries }}</p>
+                                <small class="text-muted">Number of retry attempts</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IVR Options -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">IVR Options</h5>
+                    <a href="{% url 'telephony:ivr_options' ivr.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-cog"></i> Manage Options
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if ivr.options.exists %}
+                        <div class="row">
+                            {% for option in ivr.options.all %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-start">
+                                                <div class="bg-primary text-white rounded-circle p-2 me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                                    <strong>{{ option.digit }}</strong>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ option.description }}</h6>
+                                                    <p class="text-muted small mb-1">
+                                                        <strong>Action:</strong> {{ option.get_action_type_display }}
+                                                    </p>
+                                                    <p class="text-muted small mb-0">
+                                                        <strong>Value:</strong> <code>{{ option.action_value }}</code>
+                                                    </p>
+                                                    {% if not option.is_active %}
+                                                        <span class="badge bg-warning">Inactive</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-list fa-3x text-muted mb-3"></i>
+                            <h6>No options configured</h6>
+                            <p class="text-muted">Add options to make this IVR functional.</p>
+                            <a href="{% url 'telephony:ivr_options' ivr.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Options
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- IVR Flow Diagram -->
+            {% if ivr.options.exists %}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">Call Flow Diagram</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="flowDiagram" class="text-center">
+                            <div class="d-inline-block">
+                                <!-- Start Node -->
+                                <div class="bg-success text-white rounded p-3 mb-3 d-inline-block">
+                                    <i class="fas fa-play"></i> Caller Enters IVR
+                                </div>
+                                
+                                <!-- Welcome Message -->
+                                {% if ivr.welcome_message %}
+                                    <div class="mb-3">
+                                        <i class="fas fa-arrow-down text-muted"></i>
+                                    </div>
+                                    <div class="bg-info text-white rounded p-2 mb-3 d-inline-block">
+                                        <i class="fas fa-volume-up"></i> Welcome Message
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Options -->
+                                <div class="mb-3">
+                                    <i class="fas fa-arrow-down text-muted"></i>
+                                </div>
+                                <div class="d-flex justify-content-center flex-wrap gap-2">
+                                    {% for option in ivr.options.all %}
+                                        <div class="bg-primary text-white rounded p-2 text-center" style="min-width: 120px;">
+                                            <div class="fw-bold">Press {{ option.digit }}</div>
+                                            <small>{{ option.description|truncatechars:20 }}</small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="testIVR()">
+                            <i class="fas fa-phone"></i> Test IVR Call
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="exportConfig()">
+                            <i class="fas fa-download"></i> Export Configuration
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="cloneIVR()">
+                            <i class="fas fa-copy"></i> Clone IVR
+                        </button>
+                        {% if ivr.is_active %}
+                            <button type="button" class="btn btn-outline-warning" onclick="toggleStatus(false)">
+                                <i class="fas fa-pause"></i> Deactivate
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-outline-success" onclick="toggleStatus(true)">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Statistics -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Usage Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary mb-0">{{ usage_stats.total_calls|default:0 }}</h4>
+                            <small class="text-muted">Total Calls</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-0">{{ usage_stats.completed_calls|default:0 }}</h4>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-info mb-0">{{ usage_stats.avg_duration|default:0 }}s</h4>
+                            <small class="text-muted">Avg Duration</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning mb-0">{{ usage_stats.today_calls|default:0 }}</h4>
+                            <small class="text-muted">Today</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="card-title mb-0">Recent Activity</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_calls %}
+                        <div class="list-group list-group-flush">
+                            {% for call in recent_calls %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ call.caller_id|default:"Unknown" }}</h6>
+                                            <p class="mb-1 small text-muted">Option {{ call.selected_option|default:"None" }} selected</p>
+                                            <small class="text-muted">{{ call.start_time|date:"M d, g:i A" }}</small>
+                                        </div>
+                                        <span class="badge bg-{% if call.completed %}success{% else %}warning{% endif %}">
+                                            {% if call.completed %}Completed{% else %}Incomplete{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-sm btn-outline-primary">View All Activity</a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small mb-0">No recent activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test IVR Modal -->
+<div class="modal fade" id="testIVRModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test IVR: {{ ivr.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Enter a phone number to test the IVR menu:</p>
+                <div class="mb-3">
+                    <label for="testPhoneNumber" class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="testPhoneNumber" placeholder="+1234567890">
+                </div>
+                <div class="mb-3">
+                    <label for="testExtension" class="form-label">Calling From Extension</label>
+                    <select class="form-select" id="testExtension">
+                        <option value="">Select extension...</option>
+                    </select>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    The test call will route through this IVR menu. You can test the different options by pressing the corresponding digits.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeIVRTest()">
+                    <i class="fas fa-phone"></i> Start Test Call
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clone IVR Modal -->
+<div class="modal fade" id="cloneIVRModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Clone IVR</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="cloneName" class="form-label">New IVR Name</label>
+                    <input type="text" class="form-control" id="cloneName" value="{{ ivr.name }} (Copy)">
+                </div>
+                <div class="mb-3">
+                    <label for="cloneDescription" class="form-label">Description</label>
+                    <textarea class="form-control" id="cloneDescription" rows="3">{{ ivr.description }}</textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="cloneOptions" checked>
+                    <label class="form-check-label" for="cloneOptions">
+                        Include all IVR options
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeClone()">
+                    <i class="fas fa-copy"></i> Clone IVR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete IVR <strong>{{ ivr.name }}</strong>?</p>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    This will permanently delete the IVR and all {{ ivr.options.count }} associated options.
+                </div>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{% url 'telephony:ivr_confirm_delete' ivr.pk %}" class="btn btn-danger">Delete IVR</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load available extensions for testing
+    loadAvailableExtensions();
+});
+
+function loadAvailableExtensions() {
+    $.get('{% url "telephony:available_extensions" %}')
+        .done(function(data) {
+            const select = $('#testExtension');
+            select.empty().append('<option value="">Select extension...</option>');
+            data.extensions.forEach(function(ext) {
+                select.append(`<option value="${ext.extension}">${ext.extension} - ${ext.name}</option>`);
+            });
+        });
+}
+
+function testIVR() {
+    $('#testIVRModal').modal('show');
+}
+
+function executeIVRTest() {
+    const phoneNumber = $('#testPhoneNumber').val();
+    const extension = $('#testExtension').val();
+    
+    if (!phoneNumber || !extension) {
+        alert('Please enter both phone number and extension');
+        return;
+    }
+    
+    $.post('{% url "telephony:test_ivr_call" %}', {
+        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+        'ivr_id': '{{ ivr.pk }}',
+        'phone_number': phoneNumber,
+        'extension': extension
+    })
+    .done(function(data) {
+        if (data.success) {
+            alert('Test call initiated successfully. Check your phone.');
+            $('#testIVRModal').modal('hide');
+        } else {
+            alert('Failed to initiate test call: ' + data.error);
+        }
+    })
+    .fail(function() {
+        alert('Failed to initiate test call. Please try again.');
+    });
+}
+
+function exportConfig() {
+    window.open('{% url "telephony:export_ivr_config" ivr.pk %}', '_blank');
+}
+
+function cloneIVR() {
+    $('#cloneIVRModal').modal('show');
+}
+
+function executeClone() {
+    const name = $('#cloneName').val();
+    const description = $('#cloneDescription').val();
+    const includeOptions = $('#cloneOptions').is(':checked');
+    
+    if (!name.trim()) {
+        alert('Please enter a name for the cloned IVR');
+        return;
+    }
+    
+    $.post('{% url "telephony:clone_ivr" ivr.pk %}', {
+        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+        'name': name,
+        'description': description,
+        'include_options': includeOptions
+    })
+    .done(function(data) {
+        if (data.success) {
+            window.location.href = '{% url "telephony:ivr_detail" 0 %}'.replace('0', data.ivr_id);
+        } else {
+            alert('Failed to clone IVR: ' + data.error);
+        }
+    })
+    .fail(function() {
+        alert('Failed to clone IVR. Please try again.');
+    });
+}
+
+function toggleStatus(activate) {
+    const action = activate ? 'activate' : 'deactivate';
+    
+    if (confirm(`Are you sure you want to ${action} this IVR?`)) {
+        $.post('{% url "telephony:toggle_ivr_status" ivr.pk %}', {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+            'activate': activate
+        })
+        .done(function(data) {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(`Failed to ${action} IVR: ` + data.error);
+            }
+        })
+        .fail(function() {
+            alert(`Failed to ${action} IVR. Please try again.`);
+        });
+    }
+}
+
+function confirmDelete() {
+    $('#deleteModal').modal('show');
+}
+
+// Auto-refresh statistics every 60 seconds
+setInterval(function() {
+    $.get('{% url "telephony:ivr_stats" ivr.pk %}')
+        .done(function(data) {
+            // Update statistics without page reload
+            // This would update the usage stats section
+        });
+}, 60000);
+</script>
+{% endblock %}

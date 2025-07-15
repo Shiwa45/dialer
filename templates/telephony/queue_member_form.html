@@ -1,0 +1,426 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit{% else %}Add{% endif %} Queue Member - {{ queue.name }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .form-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .phone-preview {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .phone-info {
+        display: flex;
+        align-items-center;
+        gap: 0.75rem;
+    }
+    .phone-icon {
+        width: 40px;
+        height: 40px;
+        background: #007bff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    .penalty-slider {
+        background: linear-gradient(90deg, #28a745 0%, #ffc107 50%, #dc3545 100%);
+        height: 8px;
+        border-radius: 4px;
+        outline: none;
+        -webkit-appearance: none;
+    }
+    .penalty-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #495057;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    .penalty-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #495057;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+    }
+    .status-toggle {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .toggle-option {
+        flex: 1;
+        padding: 1rem;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .toggle-option.active {
+        border-color: #007bff;
+        background: #e7f3ff;
+    }
+    .toggle-option:hover {
+        border-color: #adb5bd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'telephony:dashboard' %}">Telephony</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:queues' %}">Call Queues</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:queue_detail' queue.pk %}">{{ queue.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'telephony:queue_members' queue.pk %}">Members</a></li>
+            <li class="breadcrumb-item active">
+                {% if form.instance.pk %}Edit Member{% else %}Add Member{% endif %}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-user-plus me-2"></i>
+                    {% if form.instance.pk %}Edit Queue Member{% else %}Add Queue Member{% endif %}
+                </h1>
+                <p class="mb-0">Queue: <strong>{{ queue.name }}</strong> ({{ queue.extension }})</p>
+            </div>
+            <div class="col-md-4">
+                <div class="text-end">
+                    <a href="{% url 'telephony:queue_members' queue.pk %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Members
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card form-card">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Member Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="queueMemberForm">
+                        {% csrf_token %}
+                        
+                        <!-- Phone Selection -->
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.phone.id_for_label }}">
+                                <i class="fas fa-phone me-1"></i>Phone/Extension
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.phone|add_class:"form-control" }}
+                            {% if form.phone.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.phone.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="help-text">
+                                Select the phone/extension to add to this queue
+                            </div>
+                            
+                            <!-- Phone Preview -->
+                            <div id="phonePreview" class="phone-preview" style="display: none;">
+                                <div class="phone-info">
+                                    <div class="phone-icon">
+                                        <i class="fas fa-phone"></i>
+                                    </div>
+                                    <div>
+                                        <strong id="phoneExtension"></strong>
+                                        <div id="phoneName" class="text-muted"></div>
+                                        <div id="phoneUser" class="text-muted"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Penalty Setting -->
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.penalty.id_for_label }}">
+                                <i class="fas fa-sort-numeric-up me-1"></i>Penalty Level
+                            </label>
+                            <div class="row align-items-center">
+                                <div class="col-10">
+                                    <input type="range" 
+                                           class="form-range penalty-slider" 
+                                           id="penaltyRange" 
+                                           min="0" 
+                                           max="10" 
+                                           value="{{ form.penalty.value|default:0 }}"
+                                           oninput="updatePenaltyValue(this.value)">
+                                </div>
+                                <div class="col-2">
+                                    {{ form.penalty|add_class:"form-control text-center" }}
+                                </div>
+                            </div>
+                            {% if form.penalty.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.penalty.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="help-text">
+                                <strong>Penalty determines call priority:</strong><br>
+                                <span class="text-success">0-3: High Priority</span> |
+                                <span class="text-warning">4-7: Medium Priority</span> |
+                                <span class="text-danger">8-10: Low Priority</span>
+                            </div>
+                        </div>
+
+                        <!-- Status Settings -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-toggle-on me-1"></i>Member Status
+                            </label>
+                            
+                            <div class="status-toggle">
+                                <div class="toggle-option {% if form.is_active.value %}active{% endif %}" 
+                                     data-field="is_active" data-value="true">
+                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                    <div><strong>Active</strong></div>
+                                    <small>Member receives calls</small>
+                                </div>
+                                <div class="toggle-option {% if not form.is_active.value %}active{% endif %}" 
+                                     data-field="is_active" data-value="false">
+                                    <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                                    <div><strong>Inactive</strong></div>
+                                    <small>Member disabled</small>
+                                </div>
+                            </div>
+                            {{ form.is_active|add_class:"d-none" }}
+
+                            <div class="status-toggle mt-3">
+                                <div class="toggle-option {% if not form.paused.value %}active{% endif %}" 
+                                     data-field="paused" data-value="false">
+                                    <i class="fas fa-play fa-2x text-success mb-2"></i>
+                                    <div><strong>Available</strong></div>
+                                    <small>Ready for calls</small>
+                                </div>
+                                <div class="toggle-option {% if form.paused.value %}active{% endif %}" 
+                                     data-field="paused" data-value="true">
+                                    <i class="fas fa-pause fa-2x text-warning mb-2"></i>
+                                    <div><strong>Paused</strong></div>
+                                    <small>Temporarily unavailable</small>
+                                </div>
+                            </div>
+                            {{ form.paused|add_class:"d-none" }}
+                        </div>
+
+                        <!-- Queue Information (Read-only) -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-info-circle me-1"></i>Queue Information
+                            </label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body p-3">
+                                            <small class="text-muted">Strategy</small>
+                                            <div><strong>{{ queue.get_strategy_display }}</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body p-3">
+                                            <small class="text-muted">Timeout</small>
+                                            <div><strong>{{ queue.timeout }}s</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-group mb-0">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a href="{% url 'telephony:queue_members' queue.pk %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    {% if form.instance.pk %}Update Member{% else %}Add Member{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize form
+    updatePhonePreview();
+    
+    // Phone selection change handler
+    $('#{{ form.phone.id_for_label }}').change(function() {
+        updatePhonePreview();
+    });
+
+    // Toggle option handlers
+    $('.toggle-option').click(function() {
+        const field = $(this).data('field');
+        const value = $(this).data('value');
+        
+        // Update visual state
+        $(this).siblings().removeClass('active');
+        $(this).addClass('active');
+        
+        // Update hidden form field
+        $('input[name="' + field + '"]').prop('checked', value === 'true');
+    });
+
+    // Form validation
+    $('#queueMemberForm').submit(function(e) {
+        let isValid = true;
+        
+        // Check if phone is selected
+        if (!$('#{{ form.phone.id_for_label }}').val()) {
+            showAlert('error', 'Please select a phone/extension');
+            isValid = false;
+        }
+        
+        // Check penalty range
+        const penalty = parseInt($('#{{ form.penalty.id_for_label }}').val());
+        if (penalty < 0 || penalty > 10) {
+            showAlert('error', 'Penalty must be between 0 and 10');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+});
+
+function updatePenaltyValue(value) {
+    $('#{{ form.penalty.id_for_label }}').val(value);
+    
+    // Update color based on value
+    const slider = $('#penaltyRange');
+    if (value <= 3) {
+        slider.css('background', 'linear-gradient(90deg, #28a745 0%, #28a745 ' + (value/10*100) + '%, #dee2e6 ' + (value/10*100) + '%, #dee2e6 100%)');
+    } else if (value <= 7) {
+        slider.css('background', 'linear-gradient(90deg, #ffc107 0%, #ffc107 ' + (value/10*100) + '%, #dee2e6 ' + (value/10*100) + '%, #dee2e6 100%)');
+    } else {
+        slider.css('background', 'linear-gradient(90deg, #dc3545 0%, #dc3545 ' + (value/10*100) + '%, #dee2e6 ' + (value/10*100) + '%, #dee2e6 100%)');
+    }
+}
+
+function updatePhonePreview() {
+    const phoneSelect = $('#{{ form.phone.id_for_label }}');
+    const selectedOption = phoneSelect.find('option:selected');
+    const phoneId = phoneSelect.val();
+    
+    if (phoneId) {
+        // Make AJAX call to get phone details
+        $.ajax({
+            url: '{% url "telephony:phone_detail_ajax" %}',
+            data: { 'phone_id': phoneId },
+            success: function(data) {
+                if (data.success) {
+                    $('#phoneExtension').text('Extension: ' + data.phone.extension);
+                    $('#phoneName').text(data.phone.name || 'No name set');
+                    $('#phoneUser').text(data.phone.user || 'Unassigned');
+                    $('#phonePreview').show();
+                } else {
+                    $('#phonePreview').hide();
+                }
+            },
+            error: function() {
+                $('#phonePreview').hide();
+            }
+        });
+    } else {
+        $('#phonePreview').hide();
+    }
+}
+
+function showAlert(type, message) {
+    const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+    const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Remove existing alerts
+    $('.alert').remove();
+    
+    // Add new alert at top of form
+    $('.card-body').prepend(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
+}
+
+// Initialize penalty slider on page load
+$(document).ready(function() {
+    const initialValue = $('#{{ form.penalty.id_for_label }}').val() || 0;
+    updatePenaltyValue(initialValue);
+    $('#penaltyRange').val(initialValue);
+});
+</script>
+{% endblock %}

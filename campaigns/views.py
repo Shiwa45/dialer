@@ -637,3 +637,54 @@ def clone_campaign(request, pk):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+
+
+
+
+# Create this file: core/management/commands/check_user_groups.py
+
+from django.core.management.base import BaseCommand
+from django.contrib.auth.models import User, Group
+from django.db import transaction
+
+class Command(BaseCommand):
+    help = 'Check and fix user groups for agent assignment'
+
+    def handle(self, *args, **options):
+        self.stdout.write('Checking user groups...')
+        
+        # Create groups if they don't exist
+        agent_group, created = Group.objects.get_or_create(name='Agent')
+        if created:
+            self.stdout.write(self.style.SUCCESS('Created Agent group'))
+        
+        supervisor_group, created = Group.objects.get_or_create(name='Supervisor')
+        if created:
+            self.stdout.write(self.style.SUCCESS('Created Supervisor group'))
+        
+        manager_group, created = Group.objects.get_or_create(name='Manager')
+        if created:
+            self.stdout.write(self.style.SUCCESS('Created Manager group'))
+        
+        # Check users and their groups
+        users = User.objects.all()
+        for user in users:
+            groups = user.groups.all()
+            self.stdout.write(f'User: {user.username}')
+            self.stdout.write(f'  Groups: {[g.name for g in groups]}')
+            self.stdout.write(f'  Staff: {user.is_staff}')
+            self.stdout.write(f'  Superuser: {user.is_superuser}')
+            self.stdout.write('---')
+        
+        # Add all users to Agent group if they're not staff/superuser
+        with transaction.atomic():
+            for user in users:
+                if not user.is_staff and not user.is_superuser:
+                    if not user.groups.filter(name='Agent').exists():
+                        user.groups.add(agent_group)
+                        self.stdout.write(f'Added {user.username} to Agent group')
+        
+        self.stdout.write(self.style.SUCCESS('User groups check completed'))

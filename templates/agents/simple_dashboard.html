@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Call Assistant</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- WebRTC SIP.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/sip.js@0.21.2/lib/platform/web/sip.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --secondary-color: #34a853;
+            --accent-color: #ea4335;
+            --light-gray: #f5f5f5;
+            --medium-gray: #e0e0e0;
+            --dark-gray: #757575;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+            --dark-bg: #0d1117;
+            --dark-card: #161b22;
+            --dark-text: #e6edf3;
+            --dark-border: #30363d;
+            --dark-accent: #58a6ff;
+        }
+
+        /* Phone Status Indicators */
+        .phone-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .phone-status.registered {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .phone-status.connecting {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .phone-status.offline {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Call Status Indicators */
+        .call-active {
+            animation: pulse 2s infinite;
+            background-color: #22c55e;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Rest of your existing styles... */
+        body.dark-mode {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        .dark-mode .navbar,
+        .dark-mode .left-panel,
+        .dark-mode .right-panel,
+        .dark-mode .modal-content {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+            border: 1px solid var(--dark-border);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 2rem;
+            background-color: #1D4ED8;
+            color: white;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
+        }
+
+        .sub-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: white;
+            padding: 0.8rem 2rem;
+            color: rgb(0, 0, 0);
+            box-shadow: var(--shadow);
+            height: 60px;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 9;
+        }
+
+        .dark-mode .sub-navbar {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        .agent-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .tab-menu {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-link {
+            background: #e0e7ff;
+            border: none;
+            color: #1d4ed8;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.4rem 1.2rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-link.active-tab {
+            background-color: #1d4ed8;
+            color: white;
+            font-weight: 600;
+        }
+
+        .tab-link:hover {
+            background-color: #c7d2fe;
+        }
+
+        .app-container {
+            display: flex;
+            height: calc(100vh - 120px);
+            margin-top: 120px;
+        }
+
+        .left-panel {
+            flex: 1;
+            background-color: white;
+            padding: 1.5rem;
+            overflow-y: auto;
+            border-right: 1px solid var(--medium-gray);
+        }
+
+        .right-panel {
+            width: 350px;
+            background-color: white;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--medium-gray);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .form-grid input, .form-grid select {
+            padding: 0.8rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .form-grid input:focus, .form-grid select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+
+        .comments-section textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            resize: none;
+            min-height: 200px;
+        }
+
+        .number-display {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background-color: var(--light-gray);
+            border-radius: 8px;
+            font-size: 1.5rem;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dialpad button {
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--light-gray);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dialpad button:hover {
+            background-color: var(--medium-gray);
+            transform: translateY(-2px);
+        }
+
+        .call-btn {
+            width: 100%;
+            background-color: var(--secondary-color);
+            color: white;
+            font-size: 1.1rem;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 0.5rem;
+        }
+
+        .call-btn:hover {
+            background-color: #2d9248;
+        }
+
+        .call-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .status {
+            padding: 0.8rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            color: white;
+        }
+
+        .status:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .break { background-color: #fbbc05; }
+        .lunch { background-color: #8e24aa; }
+        .coffee { background-color: #5c6bc0; }
+        .wc { background-color: #26c6da; }
+        .wrapup { 
+            grid-column: span 2;
+            background-color: var(--accent-color);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 1rem;
+            background-color: white;
+            color: black;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 0.5rem 0;
+            width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: var(--transition);
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--light-gray);
+        }
+
+        /* Status Modal */
+        .status-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .status-modal.show {
+            display: flex;
+        }
+
+        .status-modal-content {
+            background-color: white;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            width: 350px;
+        }
+
+        .dark-mode .status-modal-content {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        .status-timer {
+            font-family: monospace;
+            font-size: 2rem;
+            margin: 1rem 0;
+            color: var(--primary-color);
+        }
+
+        .resume-btn {
+            padding: 0.8rem 2rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .resume-btn:hover {
+            background-color: #3367d6;
+        }
+
+        .backspace-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--dark-gray);
+            font-size: 1.5rem;
+            padding: 0 10px;
+        }
+
+        @media (max-width: 992px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .left-panel, .right-panel {
+                width: 100%;
+                border: none;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="navbar">
+        <div class="flex items-center gap-2">
+            <h1 class="text-xl font-semibold">Agent Portal</h1>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button id="darkModeToggleBtn" aria-label="Toggle Dark Mode"
+                class="p-2 rounded-full hover:bg-blue-600 transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 0112.21 3a7 7 0 000 14 9 9 0 008.79-4.21z" />
+                </svg>
+            </button>
+            
+            <button id="menuBtn" aria-label="Menu"
+                class="p-2 rounded-full hover:bg-blue-600 text-white">
+                <span class="material-icons">more_vert</span>
+            </button>
+        </div>
+
+        <div class="dropdown-menu" id="dropdownMenu">
+            <div class="dropdown-item" onclick="logout()">
+                <i class="material-icons">logout</i><span>Sign Out</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Navbar -->
+    <div class="sub-navbar">
+        <div class="flex items-center gap-4">
+            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Agent" class="w-10 h-10 rounded-full" />
+            <div>
+                <h2 class="agent-title">{{ user.get_full_name|default:user.username }}</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">Status: <span id="currentStatus" class="font-medium">{{ agent_status.get_status_display }}</span></span>
+                    {% if webrtc_config.success %}
+                        <span class="phone-status registered" id="phoneStatus">
+                            <span class="material-icons text-sm">phone</span>
+                            Ext: {{ webrtc_config.extension }}
+                        </span>
+                    {% else %}
+                        <span class="phone-status offline" id="phoneStatus">
+                            <span class="material-icons text-sm">phone_disabled</span>
+                            Not Registered
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-menu">
+            <button class="tab-link active-tab" onclick="switchView('contact-info')">CONTACT INFO</button>
+            <button class="tab-link" onclick="switchView('callbacks')">CALLBACKS ({{ pending_callbacks.count }})</button>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div class="app-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <!-- Contact Info View -->
+            <div id="contact-info-view" class="view-content">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('contact')">Contact Info</button>
+                    <button class="tab" onclick="switchTab('comments')">Comments</button>
+                    <button class="tab" onclick="switchTab('script')">Script</button>
+                </div>
+
+                <div class="tab-content active" id="contact">
+                    <div class="form-grid">
+                        <input type="text" id="leadPhone" placeholder="Phone Number" />
+                        <input type="text" id="leadName" placeholder="Full Name" />
+                        <input type="text" id="leadEmail" placeholder="Email Address" />
+                        <input type="text" id="leadCompany" placeholder="Company" />
+                        <input type="text" id="leadAddress" placeholder="Address" />
+                        <input type="text" id="leadCity" placeholder="City" />
+                        <input type="text" id="leadState" placeholder="State" />
+                        <input type="text" id="leadZip" placeholder="Postal Code" />
+                        <select id="leadTitle">
+                            <option value="">Title (Mr/Ms)</option>
+                            <option value="Mr">Mr</option>
+                            <option value="Ms">Ms</option>
+                            <option value="Mrs">Mrs</option>
+                            <option value="Dr">Dr</option>
+                        </select>
+                        <input type="date" id="leadDob" placeholder="Date of Birth" />
+                    </div>
+                    
+                    <!-- Campaign Selection for Lead Retrieval -->
+                    {% if assigned_campaigns %}
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium mb-2">Get Next Lead from Campaign:</label>
+                        <div class="flex gap-2">
+                            <select id="campaignSelect" class="flex-1 p-2 border rounded">
+                                <option value="">Select Campaign</option>
+                                {% for campaign in assigned_campaigns %}
+                                <option value="{{ campaign.id }}">{{ campaign.name }} ({{ campaign.get_dial_method_display }})</option>
+                                {% endfor %}
+                            </select>
+                            <button onclick="getNextLead()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                Next Lead
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-content" id="comments">
+                    <div class="comments-section">
+                        <textarea id="leadComments" placeholder="Add comments about this lead..."></textarea>
+                        <button class="call-btn" onclick="saveComments()">Save Comments</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="script">
+                    <div class="comments-section">
+                        <textarea id="callScript" placeholder="Call script will appear here..." readonly>{{ script_content|default:"Hello, this is [Agent Name] calling from [Company]. How are you today?" }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Callbacks View -->
+            <div id="callbacks-view" class="view-content" style="display: none;">
+                <h3 class="text-lg font-semibold mb-4">My Callbacks</h3>
+                <div id="callbacksList">
+                    {% if pending_callbacks %}
+                        {% for callback in pending_callbacks %}
+                        <div class="callback-item p-4 bg-gray-50 rounded-lg mb-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium">{{ callback.lead.first_name }} {{ callback.lead.last_name }}</h4>
+                                    <p class="text-sm text-gray-600">{{ callback.lead.phone_number }}</p>
+                                    <p class="text-sm text-gray-500">{{ callback.scheduled_time|date:"M d, Y H:i" }}</p>
+                                    {% if callback.notes %}
+                                        <p class="text-sm mt-2">{{ callback.notes }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="bg-green-500 text-white px-3 py-1 rounded text-sm" onclick="callLead('{{ callback.lead.phone_number }}', '{{ callback.lead.id }}')">Call</button>
+                                    <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm" onclick="rescheduleCallback({{ callback.id }})">Reschedule</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-500">No pending callbacks</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <h3 class="text-lg font-semibold mb-4">Phone Control</h3>
+            
+            <!-- Phone Registration Status -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium">Phone Status:</span>
+                    <span id="phoneStatusText" class="text-sm">
+                        {% if webrtc_config.success %}Registered{% else %}Not Registered{% endif %}
+                    </span>
+                </div>
+                {% if not webrtc_config.success %}
+                <button onclick="registerPhone()" class="mt-2 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                    Register Phone
+                </button>
+                {% endif %}
+            </div>
+            
+            <!-- Current Call Display -->
+            <div id="currentCallDisplay" class="mb-4 p-3 bg-yellow-50 rounded-lg" style="display: none;">
+                <div class="text-sm font-medium">Current Call:</div>
+                <div id="currentCallNumber" class="text-lg font-bold"></div>
+                <div id="currentCallDuration" class="text-sm text-gray-600"></div>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="hangupCall()" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Hangup</button>
+                    <button onclick="holdCall()" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm">Hold</button>
+                    <button onclick="transferCall()" class="bg-blue-500 text-white px-3 py-1 rounded text-sm">Transfer</button>
+                </div>
+            </div>
+            
+            <div class="number-display">
+                <div class="flex items-center justify-between w-full">
+                    <span id="numberDisplay"></span>
+                    <button class="backspace-btn" onclick="backspace()">⌫</button>
+                </div>
+            </div>
+            
+            <div class="dialpad">
+                <button onclick="addDigit('1')">1</button>
+                <button onclick="addDigit('2')">2</button>
+                <button onclick="addDigit('3')">3</button>
+                <button onclick="addDigit('4')">4</button>
+                <button onclick="addDigit('5')">5</button>
+                <button onclick="addDigit('6')">6</button>
+                <button onclick="addDigit('7')">7</button>
+                <button onclick="addDigit('8')">8</button>
+                <button onclick="addDigit('9')">9</button>
+                <button onclick="addDigit('*')">*</button>
+                <button onclick="addDigit('0')">0</button>
+                <button onclick="addDigit('#')">#</button>
+            </div>
+            
+            <button id="callButton" class="call-btn" onclick="makeCall()">📞 Call</button>
+
+            <div class="status-buttons">
+                <button class="status break" onclick="setStatus('BREAK')">BREAK</button>
+                <button class="status lunch" onclick="setStatus('LUNCH')">LUNCH</button>
+                <button class="status coffee" onclick="setStatus('COFFEE')">COFFEE</button>
+                <button class="status wc" onclick="setStatus('WC')">WC</button>
+                <button class="status wrapup" onclick="setStatus('WRAPUP')">CALL WRAPUP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div class="status-modal" id="statusModal">
+        <div class="status-modal-content">
+            <h2 id="statusTitle">On Break</h2>
+            <div class="status-timer" id="statusTimer">00:00:00</div>
+            <button class="resume-btn" onclick="resumeWork()">Resume Work</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentNumber = '';
+        let currentStatus = '{{ agent_status.status }}';
+        let statusInterval;
+        let statusSeconds = 0;
+        let currentCallId = null;
+        let callDurationInterval = null;
+        let sipUA = null;
+
+        // WebRTC Configuration
+        const webrtcConfig = {{ webrtc_config|safe }};
+
+        // Initialize WebRTC if configured
+        if (webrtcConfig.success) {
+            initializeWebRTC();
+        }
+
+        function initializeWebRTC() {
+            try {
+                // SIP.js configuration would go here
+                console.log('WebRTC Config:', webrtcConfig);
+                // This would initialize the SIP.js user agent
+                // sipUA = new SIP.UserAgent(sipConfig);
+            } catch (error) {
+                console.error('WebRTC initialization failed:', error);
+            }
+        }
+
+        // Dark mode toggle
+        document.getElementById('darkModeToggleBtn').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        // Menu dropdown
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        });
+
+        // View switching
+        function switchView(view) {
+            document.querySelectorAll('.tab-link').forEach(tab => {
+                tab.classList.remove('active-tab');
+            });
+            event.target.classList.add('active-tab');
+
+            document.querySelectorAll('.view-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            if (view === 'contact-info') {
+                document.getElementById('contact-info-view').style.display = 'block';
+            } else if (view === 'callbacks') {
+                document.getElementById('callbacks-view').style.display = 'block';
+            }
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+
+        // Dialpad functions
+        function addDigit(digit) {
+            currentNumber += digit;
+            document.getElementById('numberDisplay').textContent = currentNumber;
+        }
+
+        function backspace() {
+            currentNumber = currentNumber.slice(0, -1);
+            document.getElementById('numberDisplay').textContent = currentNumber;
+        }
+
+        function registerPhone() {
+            fetch('{% url "agents:register_phone" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('phoneStatus').className = 'phone-status registered';
+                    document.getElementById('phoneStatus').innerHTML = '<span class="material-icons text-sm">phone</span> Ext: ' + data.extension;
+                    document.getElementById('phoneStatusText').textContent = 'Registered';
+                } else {
+                    alert('Phone registration failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Phone registration failed');
+            });
+        }
+
+        function makeCall() {
+            if (!currentNumber) {
+                alert('Please enter a phone number');
+                return;
+            }
+
+            const campaignId = document.getElementById('campaignSelect')?.value || null;
+            
+            fetch('{% url "agents:make_call" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `phone_number=${currentNumber}&campaign_id=${campaignId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentCallId = data.call_id;
+                    showCurrentCall(currentNumber);
+                    currentNumber = '';
+                    document.getElementById('numberDisplay').textContent = '';
+                } else {
+                    alert('Call failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Call failed');
+            });
+        }
+
+        function callLead(phoneNumber, leadId) {
+            currentNumber = phoneNumber;
+            document.getElementById('numberDisplay').textContent = currentNumber;
+            
+            const campaignId = document.getElementById('campaignSelect')?.value || null;
+            
+            fetch('{% url "agents:make_call" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `phone_number=${phoneNumber}&campaign_id=${campaignId}&lead_id=${leadId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentCallId = data.call_id;
+                    showCurrentCall(phoneNumber);
+                    // Load lead information
+                    loadLeadInfo(leadId);
+                } else {
+                    alert('Call failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Call failed');
+            });
+        }
+
+        function hangupCall() {
+            if (!currentCallId) return;
+
+            fetch('{% url "agents:hangup_call" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `call_id=${currentCallId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    hideCurrentCall();
+                    currentCallId = null;
+                } else {
+                    alert('Hangup failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Hangup failed');
+            });
+        }
+
+        function holdCall() {
+            if (!currentCallId) return;
+
+            fetch('{% url "agents:hold_call" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `call_id=${currentCallId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Call placed on hold');
+                } else {
+                    alert('Hold failed: ' + data.error);
+                }
+            });
+        }
+
+        function transferCall() {
+            const transferTo = prompt('Transfer to extension/number:');
+            if (!transferTo || !currentCallId) return;
+
+            fetch('{% url "agents:transfer_call" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `call_id=${currentCallId}&transfer_to=${transferTo}&transfer_type=warm`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Transfer initiated');
+                    hideCurrentCall();
+                    currentCallId = null;
+                } else {
+                    alert('Transfer failed: ' + data.error);
+                }
+            });
+        }
+
+        function showCurrentCall(number) {
+            document.getElementById('currentCallDisplay').style.display = 'block';
+            document.getElementById('currentCallNumber').textContent = number;
+            document.getElementById('callButton').disabled = true;
+            
+            // Start call duration timer
+            let callSeconds = 0;
+            callDurationInterval = setInterval(() => {
+                callSeconds++;
+                const minutes = Math.floor(callSeconds / 60);
+                const seconds = callSeconds % 60;
+                document.getElementById('currentCallDuration').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function hideCurrentCall() {
+            document.getElementById('currentCallDisplay').style.display = 'none';
+            document.getElementById('callButton').disabled = false;
+            
+            if (callDurationInterval) {
+                clearInterval(callDurationInterval);
+                callDurationInterval = null;
+            }
+        }
+
+        function getNextLead() {
+            const campaignId = document.getElementById('campaignSelect').value;
+            if (!campaignId) {
+                alert('Please select a campaign first');
+                return;
+            }
+
+            fetch(`{% url "agents:get_next_lead" %}?campaign_id=${campaignId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.lead) {
+                    const lead = data.lead;
+                    // Populate form with lead data
+                    document.getElementById('leadPhone').value = lead.phone_number || '';
+                    document.getElementById('leadName').value = `${lead.first_name} ${lead.last_name}`.trim();
+                    document.getElementById('leadEmail').value = lead.email || '';
+                    document.getElementById('leadCompany').value = lead.company || '';
+                    document.getElementById('leadComments').value = lead.comments || '';
+                    
+                    // Set dialpad number
+                    currentNumber = lead.phone_number || '';
+                    document.getElementById('numberDisplay').textContent = currentNumber;
+                    
+                    alert(`Next lead loaded: ${lead.first_name} ${lead.last_name}`);
+                } else {
+                    alert(data.error || 'No more leads available');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to get next lead');
+            });
+        }
+
+        function loadLeadInfo(leadId) {
+            fetch(`{% url "agents:get_lead_info" %}?lead_id=${leadId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.lead) {
+                    const lead = data.lead;
+                    // Populate form with lead data
+                    document.getElementById('leadPhone').value = lead.phone_number || '';
+                    document.getElementById('leadName').value = `${lead.first_name} ${lead.last_name}`.trim();
+                    document.getElementById('leadEmail').value = lead.email || '';
+                    document.getElementById('leadCompany').value = lead.company || '';
+                    document.getElementById('leadComments').value = lead.comments || '';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading lead info:', error);
+            });
+        }
+
+        // Status management
+        function setStatus(status) {
+            currentStatus = status;
+            document.getElementById('currentStatus').textContent = status;
+            document.getElementById('statusTitle').textContent = `On ${status}`;
+            document.getElementById('statusModal').classList.add('show');
+            startStatusTimer();
+
+            // Update status in backend
+            fetch('{% url "agents:update_status" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `status=${status.toLowerCase()}&break_reason=${status}`
+            });
+        }
+
+        function startStatusTimer() {
+            statusSeconds = 0;
+            statusInterval = setInterval(() => {
+                statusSeconds++;
+                const hours = String(Math.floor(statusSeconds / 3600)).padStart(2, '0');
+                const minutes = String(Math.floor((statusSeconds % 3600) / 60)).padStart(2, '0');
+                const seconds = String(statusSeconds % 60).padStart(2, '0');
+                document.getElementById('statusTimer').textContent = `${hours}:${minutes}:${seconds}`;
+            }, 1000);
+        }
+
+        function resumeWork() {
+            clearInterval(statusInterval);
+            document.getElementById('statusModal').classList.remove('show');
+            currentStatus = 'Available';
+            document.getElementById('currentStatus').textContent = 'Available';
+
+            // Update status in backend
+            fetch('{% url "agents:update_status" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: 'status=available'
+            });
+        }
+
+        function saveComments() {
+            const comments = document.getElementById('leadComments').value;
+            const phone = document.getElementById('leadPhone').value;
+            
+            if (comments.trim() && phone.trim()) {
+                fetch('{% url "agents:save_lead_info" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: `phone_number=${phone}&comments=${encodeURIComponent(comments)}&first_name=${document.getElementById('leadName').value}&email=${document.getElementById('leadEmail').value}&company=${document.getElementById('leadCompany').value}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Lead information saved!');
+                    } else {
+                        alert('Error saving: ' + data.error);
+                    }
+                });
+            } else {
+                alert('Please enter phone number and comments');
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to sign out?')) {
+                window.location.href = '{% url "admin:logout" %}';
+            }
+        }
+
+        function rescheduleCallback(callbackId) {
+            const newTime = prompt('Enter new callback time (YYYY-MM-DD HH:MM):');
+            if (!newTime) return;
+
+            fetch('{% url "agents:reschedule_callback" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `callback_id=${callbackId}&new_time=${newTime}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Callback rescheduled');
+                    location.reload(); // Reload to update callback list
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#menuBtn') && !e.target.closest('#dropdownMenu')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+        });
+
+        // Auto-refresh call status every 10 seconds
+        setInterval(() => {
+            fetch('{% url "agents:call_status" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update agent status
+                    document.getElementById('currentStatus').textContent = data.agent_status || 'Unknown';
+                    
+                    // Update phone registration status
+                    const phoneStatus = document.getElementById('phoneStatus');
+                    if (data.phone_registered) {
+                        phoneStatus.className = 'phone-status registered';
+                        phoneStatus.innerHTML = `<span class="material-icons text-sm">phone</span> Ext: ${data.extension}`;
+                    } else {
+                        phoneStatus.className = 'phone-status offline';
+                        phoneStatus.innerHTML = '<span class="material-icons text-sm">phone_disabled</span> Not Registered';
+                    }
+                    
+                    // Update current call info
+                    if (data.current_call && !currentCallId) {
+                        currentCallId = data.current_call.id;
+                        showCurrentCall(data.current_call.number);
+                    } else if (!data.current_call && currentCallId) {
+                        hideCurrentCall();
+                        currentCallId = null;
+                    }
+                }
+            })
+            .catch(error => console.error('Error updating status:', error));
+        }, 10000);
+
+        // Auto-refresh callbacks every 30 seconds
+        setInterval(() => {
+            fetch('{% url "agents:pending_callbacks" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.callbacks) {
+                    // Update callback count in tab
+                    const callbackTab = document.querySelector('[onclick="switchView(\'callbacks\')"]');
+                    if (callbackTab) {
+                        callbackTab.textContent = `CALLBACKS (${data.callbacks.length})`;
+                    }
+                }
+            })
+            .catch(error => console.error('Error updating callbacks:', error));
+        }, 30000);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Only handle shortcuts when not typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            // Dialpad shortcuts
+            if (e.key >= '0' && e.key <= '9') {
+                addDigit(e.key);
+                e.preventDefault();
+            } else if (e.key === '*') {
+                addDigit('*');
+                e.preventDefault();
+            } else if (e.key === '#') {
+                addDigit('#');
+                e.preventDefault();
+            } else if (e.key === 'Backspace') {
+                backspace();
+                e.preventDefault();
+            } else if (e.key === 'Enter' && currentNumber) {
+                makeCall();
+                e.preventDefault();
+            } else if (e.key === 'Escape' && currentCallId) {
+                hangupCall();
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
+            <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Call Assistant</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --secondary-color: #34a853;
+            --accent-color: #ea4335;
+            --light-gray: #f5f5f5;
+            --medium-gray: #e0e0e0;
+            --dark-gray: #757575;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+            --dark-bg: #0d1117;
+            --dark-card: #161b22;
+            --dark-text: #e6edf3;
+            --dark-border: #30363d;
+            --dark-accent: #58a6ff;
+            --dialpad-bg: #1f2937;
+            --dialpad-hover: #2d3748;
+            --display-bg: #21262d;
+        }
+
+        body.dark-mode {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        .dark-mode .navbar,
+        .dark-mode .left-panel,
+        .dark-mode .right-panel,
+        .dark-mode .modal-content {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+            border: 1px solid var(--dark-border);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 2rem;
+            background-color: #1D4ED8;
+            color: white;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
+        }
+
+        .sub-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: white;
+            padding: 0.8rem 2rem;
+            color: rgb(0, 0, 0);
+            box-shadow: var(--shadow);
+            height: 60px;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 9;
+        }
+
+        .dark-mode .sub-navbar {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        .agent-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .tab-menu {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-link {
+            background: #e0e7ff;
+            border: none;
+            color: #1d4ed8;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.4rem 1.2rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-link.active-tab {
+            background-color: #1d4ed8;
+            color: white;
+            font-weight: 600;
+        }
+
+        .tab-link:hover {
+            background-color: #c7d2fe;
+        }
+
+        .app-container {
+            display: flex;
+            height: calc(100vh - 120px);
+            margin-top: 120px;
+        }
+
+        .left-panel {
+            flex: 1;
+            background-color: white;
+            padding: 1.5rem;
+            overflow-y: auto;
+            border-right: 1px solid var(--medium-gray);
+        }
+
+        .right-panel {
+            width: 350px;
+            background-color: white;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--medium-gray);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .form-grid input, .form-grid select {
+            padding: 0.8rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .form-grid input:focus, .form-grid select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+
+        .comments-section textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            resize: none;
+            min-height: 200px;
+        }
+
+        .number-display {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background-color: var(--light-gray);
+            border-radius: 8px;
+            font-size: 1.5rem;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dialpad button {
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--light-gray);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dialpad button:hover {
+            background-color: var(--medium-gray);
+            transform: translateY(-2px);
+        }
+
+        .call-btn {
+            width: 100%;
+            background-color: var(--secondary-color);
+            color: white;
+            font-size: 1.1rem;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 0.5rem;
+        }
+
+        .call-btn:hover {
+            background-color: #2d9248;
+        }
+
+        .status-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .status {
+            padding: 0.8rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            color: white;
+        }
+
+        .status:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .break { background-color: #fbbc05; }
+        .smoke { background-color: #ff7043; }
+        .lunch { background-color: #8e24aa; }
+        .wc { background-color: #26c6da; }
+        .coffee { background-color: #5c6bc0; }
+        .wrapup { 
+            grid-column: span 2;
+            background-color: var(--accent-color);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 1rem;
+            background-color: white;
+            color: black;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 0.5rem 0;
+            width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: var(--transition);
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--light-gray);
+        }
+
+        .dark-mode .dropdown-item:hover {
+            background-color: #2a2a2a;
+        }
+
+        /* Status Modal */
+        .status-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .status-modal.show {
+            display: flex;
+        }
+
+        .status-modal-content {
+            background-color: white;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            width: 350px;
+        }
+
+        .dark-mode .status-modal-content {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        .status-timer {
+            font-family: monospace;
+            font-size: 2rem;
+            margin: 1rem 0;
+            color: var(--primary-color);
+        }
+
+        .resume-btn {
+            padding: 0.8rem 2rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .resume-btn:hover {
+            background-color: #3367d6;
+        }
+
+        .backspace-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--dark-gray);
+            font-size: 1.5rem;
+            padding: 0 10px;
+        }
+
+        @media (max-width: 992px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .left-panel, .right-panel {
+                width: 100%;
+                border: none;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="navbar">
+        <div class="flex items-center gap-2">
+            <h1 class="text-xl font-semibold">Agent Portal</h1>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button id="darkModeToggleBtn" aria-label="Toggle Dark Mode"
+                class="p-2 rounded-full hover:bg-blue-600 transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 0112.21 3a7 7 0 000 14 9 9 0 008.79-4.21z" />
+                </svg>
+            </button>
+            
+            <button id="menuBtn" aria-label="Menu"
+                class="p-2 rounded-full hover:bg-blue-600 text-white">
+                <span class="material-icons">more_vert</span>
+            </button>
+        </div>
+
+        <div class="dropdown-menu" id="dropdownMenu">
+            <div class="dropdown-item" onclick="logout()">
+                <i class="material-icons">logout</i><span>Sign Out</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Navbar -->
+    <div class="sub-navbar">
+        <div class="flex items-center gap-4">
+            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Agent" class="w-10 h-10 rounded-full" />
+            <div>
+                <h2 class="agent-title">{{ user.get_full_name|default:user.username }}</h2>
+                <span class="text-sm text-gray-600">Status: <span id="currentStatus" class="font-medium">Available</span></span>
+            </div>
+        </div>
+
+        <div class="tab-menu">
+            <button class="tab-link active-tab" onclick="switchView('contact-info')">CONTACT INFO</button>
+            <button class="tab-link" onclick="switchView('callbacks')">CALLBACKS</button>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div class="app-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <!-- Contact Info View -->
+            <div id="contact-info-view" class="view-content">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('contact')">Contact Info</button>
+                    <button class="tab" onclick="switchTab('comments')">Comments</button>
+                    <button class="tab" onclick="switchTab('script')">Script</button>
+                </div>
+
+                <div class="tab-content active" id="contact">
+                    <div class="form-grid">
+                        <input type="text" id="leadPhone" placeholder="Phone Number" />
+                        <input type="text" id="leadName" placeholder="Full Name" />
+                        <input type="text" id="leadEmail" placeholder="Email Address" />
+                        <input type="text" id="leadCompany" placeholder="Company" />
+                        <input type="text" id="leadAddress" placeholder="Address" />
+                        <input type="text" id="leadCity" placeholder="City" />
+                        <input type="text" id="leadState" placeholder="State" />
+                        <input type="text" id="leadZip" placeholder="Postal Code" />
+                        <select id="leadTitle">
+                            <option value="">Title (Mr/Ms)</option>
+                            <option value="Mr">Mr</option>
+                            <option value="Ms">Ms</option>
+                            <option value="Mrs">Mrs</option>
+                            <option value="Dr">Dr</option>
+                        </select>
+                        <input type="date" id="leadDob" placeholder="Date of Birth" />
+                    </div>
+                </div>
+
+                <div class="tab-content" id="comments">
+                    <div class="comments-section">
+                        <textarea id="leadComments" placeholder="Add comments about this lead..."></textarea>
+                        <button class="call-btn" onclick="saveComments()">Save Comments</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="script">
+                    <div class="comments-section">
+                        <textarea id="callScript" placeholder="Call script will appear here..." readonly>{{ script_content|default:"Hello, this is [Agent Name] calling from [Company]. How are you today?" }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Callbacks View -->
+            <div id="callbacks-view" class="view-content" style="display: none;">
+                <h3 class="text-lg font-semibold mb-4">My Callbacks</h3>
+                <div id="callbacksList">
+                    {% if pending_callbacks %}
+                        {% for callback in pending_callbacks %}
+                        <div class="callback-item p-4 bg-gray-50 rounded-lg mb-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium">{{ callback.lead.first_name }} {{ callback.lead.last_name }}</h4>
+                                    <p class="text-sm text-gray-600">{{ callback.lead.phone_number }}</p>
+                                    <p class="text-sm text-gray-500">{{ callback.scheduled_time|date:"M d, Y H:i" }}</p>
+                                    {% if callback.notes %}
+                                        <p class="text-sm mt-2">{{ callback.notes }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="bg-green-500 text-white px-3 py-1 rounded text-sm" onclick="callLead('{{ callback.lead.phone_number }}')">Call</button>
+                                    <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm" onclick="rescheduleCallback({{ callback.id }})">Reschedule</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-500">No pending callbacks</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <h3 class="text-lg font-semibold mb-4">Phone</h3>
+            
+            <div class="number-display">
+                <div class="flex items-center justify-between w-full">
+                    <span id="numberDisplay"></span>
+                    <button class="backspace-btn" onclick="backspace()">⌫</button>
+                </div>
+            </div>
+            
+            <div class="dialpad">
+                <button onclick="addDigit('1')">1</button>
+                <button onclick="addDigit('2')">2</button>
+                <button onclick="addDigit('3')">3</button>
+                <button onclick="addDigit('4')">4</button>
+                <button onclick="addDigit('5')">5</button>
+                <button onclick="addDigit('6')">6</button>
+                <button onclick="addDigit('7')">7</button>
+                <button onclick="addDigit('8')">8</button>
+                <button onclick="addDigit('9')">9</button>
+                <button onclick="addDigit('*')">*</button>
+                <button onclick="addDigit('0')">0</button>
+                <button onclick="addDigit('#')">#</button>
+            </div>
+            
+            <button class="call-btn" onclick="makeCall()">📞 Call</button>
+
+            <div class="status-buttons">
+                <button class="status break" onclick="setStatus('BREAK')">BREAK</button>
+                <button class="status lunch" onclick="setStatus('LUNCH')">LUNCH</button>
+                <button class="status coffee" onclick="setStatus('COFFEE')">COFFEE</button>
+                <button class="status wc" onclick="setStatus('WC')">WC</button>
+                <button class="status wrapup" onclick="setStatus('WRAPUP')">CALL WRAPUP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div class="status-modal" id="statusModal">
+        <div class="status-modal-content">
+            <h2 id="statusTitle">On Break</h2>
+            <div class="status-timer" id="statusTimer">00:00:00</div>
+            <button class="resume-btn" onclick="resumeWork()">Resume Work</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentNumber = '';
+        let currentStatus = 'Available';
+        let statusInterval;
+        let statusSeconds = 0;
+
+        // Dark mode toggle
+        document.getElementById('darkModeToggleBtn').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        // Menu dropdown
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        });
+
+        // View switching
+        function switchView(view) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-link').forEach(tab => {
+                tab.classList.remove('active-tab');
+            });
+            event.target.classList.add('active-tab');
+
+            // Switch views
+            document.querySelectorAll('.view-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            if (view === 'contact-info') {
+                document.getElementById('contact-info-view').style.display = 'block';
+            } else if (view === 'callbacks') {
+                document.getElementById('callbacks-view').style.display = 'block';
+            }
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        }
+
+        // Dialpad functions
+        function addDigit(digit) {
+            currentNumber += digit;
+            document.getElementById('numberDisplay').textContent = currentNumber;
+        }
+
+        function backspace() {
+            currentNumber = currentNumber.slice(0, -1);
+            document.getElementById('numberDisplay').textContent = currentNumber;
+        }
+
+        function makeCall() {
+            if (currentNumber) {
+                // Make AJAX call to Django backend
+                fetch('{% url "agents:make_call" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: `phone_number=${currentNumber}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Calling ${currentNumber}...`);
+                        currentNumber = '';
+                        document.getElementById('numberDisplay').textContent = '';
+                    } else {
+                        alert('Error making call: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error making call');
+                });
+            }
+        }
+
+        function callLead(phoneNumber) {
+            currentNumber = phoneNumber;
+            document.getElementById('numberDisplay').textContent = currentNumber;
+            makeCall();
+        }
+
+        // Status management
+        function setStatus(status) {
+            currentStatus = status;
+            document.getElementById('currentStatus').textContent = status;
+            document.getElementById('statusTitle').textContent = `On ${status}`;
+            document.getElementById('statusModal').classList.add('show');
+            startStatusTimer();
+
+            // Update status in backend
+            fetch('{% url "agents:update_status" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `status=${status.toLowerCase()}&break_reason=${status}`
+            });
+        }
+
+        function startStatusTimer() {
+            statusSeconds = 0;
+            statusInterval = setInterval(() => {
+                statusSeconds++;
+                const hours = String(Math.floor(statusSeconds / 3600)).padStart(2, '0');
+                const minutes = String(Math.floor((statusSeconds % 3600) / 60)).padStart(2, '0');
+                const seconds = String(statusSeconds % 60).padStart(2, '0');
+                document.getElementById('statusTimer').textContent = `${hours}:${minutes}:${seconds}`;
+            }, 1000);
+        }
+
+        function resumeWork() {
+            clearInterval(statusInterval);
+            document.getElementById('statusModal').classList.remove('show');
+            currentStatus = 'Available';
+            document.getElementById('currentStatus').textContent = 'Available';
+
+            // Update status in backend
+            fetch('{% url "agents:update_status" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: 'status=available'
+            });
+        }
+
+        function saveComments() {
+            const comments = document.getElementById('leadComments').value;
+            if (comments.trim()) {
+                alert('Comments saved!');
+                // TODO: Send to Django backend
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to sign out?')) {
+                window.location.href = '{% url "admin:logout" %}';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#menuBtn') && !e.target.closest('#dropdownMenu')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+        });
+
+        // Auto-refresh callbacks every 30 seconds
+        setInterval(() => {
+            fetch('{% url "agents:pending_callbacks" %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update callbacks list if needed
+                console.log('Updated callbacks:', data);
+            })
+            .catch(error => console.error('Error updating callbacks:', error));
+        }, 30000);
+    </script>
+</body>
+</html>

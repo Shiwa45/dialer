@@ -132,7 +132,7 @@
             <div class="card-body text-center">
                 <div class="h4 text-info mb-1">
                     {% for agent in assigned_agents %}
-                        {% if agent.user.agent_status.status == 'available' %}{{ forloop.counter0|add:1 }}{% endif %}
+                        {% if agent.user.agent_status.status == 'available' %}{{ forloop.counter }}{% endif %}
                     {% empty %}0{% endfor %}
                 </div>
                 <div class="text-muted">Online Now</div>
@@ -209,7 +209,7 @@
                                     <div class="col-6">
                                         <div class="text-success fw-semibold">
                                             {% if agent.profile.total_calls_made > 0 %}
-                                                {{ agent.profile.total_calls_answered|mul:100|div:agent.profile.total_calls_made|floatformat:1 }}%
+                                                {% widthratio agent.profile.total_calls_answered 1 agent.profile.total_calls_made %}%
                                             {% else %}
                                                 0%
                                             {% endif %}
@@ -314,7 +314,7 @@
                                 
                                 <!-- Performance Bar -->
                                 <div class="performance-meter mt-2">
-                                    <div class="performance-bar" style="width: {% if assignment.calls_made > 0 %}{{ assignment.calls_answered|mul:100|div:assignment.calls_made }}{% else %}0{% endif %}%"></div>
+                                    <div class="performance-bar" style="width: {% if assignment.calls_made > 0 %}{% widthratio assignment.calls_answered 1 assignment.calls_made %}{% else %}0{% endif %}%"></div>
                                 </div>
                             </div>
                             
@@ -382,6 +382,7 @@
             </div>
             <div class="modal-body">
                 <form id="assignmentForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Max Calls Per Day</label>
                         <input type="number" class="form-control" id="maxCallsPerDay" min="1" max="1000" placeholder="Leave empty for no limit">
@@ -410,6 +411,9 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden CSRF token for JavaScript -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
 {% endblock %}
 
@@ -445,16 +449,15 @@ function toggleAgentSelection(element) {
 
 function selectAllAvailable() {
     const availableCards = document.querySelectorAll('.agent-card[data-agent-id]');
+    selectedAgents = []; // Reset selection
     
     availableCards.forEach(card => {
         const checkbox = card.querySelector('input[type="checkbox"]');
         const agentId = card.dataset.agentId;
         
-        if (!checkbox.checked) {
-            checkbox.checked = true;
-            card.classList.add('selected');
-            selectedAgents.push(agentId);
-        }
+        checkbox.checked = true;
+        card.classList.add('selected');
+        selectedAgents.push(agentId);
     });
     
     updateAssignButton();
@@ -492,6 +495,11 @@ function saveAssignmentSettings() {
     const maxCalls = document.getElementById('maxCallsPerDay').value;
     const priority = document.getElementById('agentPriority').value;
     
+    console.log('Saving assignment settings...');
+    console.log('Selected agents:', selectedAgents);
+    console.log('Max calls:', maxCalls);
+    console.log('Priority:', priority);
+    
     const formData = new FormData();
     formData.append('action', 'assign');
     formData.append('max_calls_per_day', maxCalls);
@@ -501,6 +509,11 @@ function saveAssignmentSettings() {
         formData.append('user_ids', agentId);
     });
     
+    // Log form data for debugging
+    for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+    }
+    
     fetch(`/campaigns/{{ campaign.pk }}/agents/`, {
         method: 'POST',
         headers: {
@@ -509,21 +522,27 @@ function saveAssignmentSettings() {
         body: formData
     })
     .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response OK:', response.ok);
+        
         if (response.ok) {
             showNotification('Agents assigned successfully!', 'success');
+            // Hide modal first
+            const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentModal'));
+            modal.hide();
+            // Then reload page
             setTimeout(() => location.reload(), 1000);
         } else {
-            showNotification('Failed to assign agents.', 'error');
+            return response.text().then(text => {
+                console.error('Error response:', text);
+                showNotification('Failed to assign agents. Check console for details.', 'danger');
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showNotification('An error occurred while assigning agents.', 'error');
+        showNotification('An error occurred while assigning agents.', 'danger');
     });
-    
-    // Hide modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentModal'));
-    modal.hide();
 }
 
 function removeSelected() {
@@ -554,12 +573,12 @@ function removeSelected() {
                 showNotification('Agents removed successfully!', 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
-                showNotification('Failed to remove agents.', 'error');
+                showNotification('Failed to remove agents.', 'danger');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('An error occurred while removing agents.', 'error');
+            showNotification('An error occurred while removing agents.', 'danger');
         });
     }
 }
@@ -582,12 +601,12 @@ function removeAgent(assignmentId) {
                 showNotification('Agent removed successfully!', 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
-                showNotification('Failed to remove agent.', 'error');
+                showNotification('Failed to remove agent.', 'danger');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('An error occurred while removing the agent.', 'error');
+            showNotification('An error occurred while removing the agent.', 'danger');
         });
     }
 }
@@ -617,9 +636,20 @@ function bulkEditSettings() {
 
 // Utility function for notifications
 function showNotification(message, type = 'info') {
+    // Map types to Bootstrap classes
+    const typeMap = {
+        'info': 'info',
+        'success': 'success',
+        'warning': 'warning',
+        'error': 'danger',
+        'danger': 'danger'
+    };
+    
+    const alertClass = typeMap[type] || 'info';
+    
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px;';
+    alertDiv.className = `alert alert-${alertClass} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

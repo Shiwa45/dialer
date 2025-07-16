@@ -57,11 +57,11 @@
                                 <i class="fas fa-bullhorn"></i>
                                 <span>Campaigns</span>
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-list"></i> All Campaigns</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-plus"></i> Create Campaign</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar"></i> Campaign Reports</a></li>
-                            </ul>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'campaigns:list' %}"><i class="fas fa-list"></i> All Campaigns</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'campaigns:create' %}"><i class="fas fa-plus"></i> Create Campaign</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar"></i> Campaign Reports</a></li>
+                                </ul>
                         </li>
                         
                         <li class="nav-item dropdown">
@@ -69,11 +69,11 @@
                                 <i class="fas fa-users"></i>
                                 <span>Leads</span>
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-database"></i> All Leads</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-upload"></i> Import Leads</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-filter"></i> Lead Filters</a></li>
-                            </ul>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'leads:list' %}"><i class="fas fa-database"></i> All Leads</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'leads:import' %}"><i class="fas fa-upload"></i> Import Leads</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-filter"></i> Lead Filters</a></li>
+                                </ul>
                         </li>
                         
                         <li class="nav-item dropdown">
@@ -81,11 +81,11 @@
                                 <i class="fas fa-user-friends"></i>
                                 <span>Users</span>
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'users:list' %}"><i class="fas fa-list"></i> All Users</a></li>
-                                <li><a class="dropdown-item" href="{% url 'users:create' %}"><i class="fas fa-user-plus"></i> Add User</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-users-cog"></i> Roles & Permissions</a></li>
-                            </ul>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'users:list' %}"><i class="fas fa-list"></i> All Users</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'users:create' %}"><i class="fas fa-user-plus"></i> Add User</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-users-cog"></i> Roles & Permissions</a></li>
+                                </ul>
                         </li>
                         
                         <li class="nav-item dropdown">
@@ -93,11 +93,11 @@
                                 <i class="fas fa-chart-line"></i>
                                 <span>Reports</span>
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-chart-pie"></i> Call Analytics</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-clock"></i> Agent Performance</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-download"></i> Export Data</a></li>
-                            </ul>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-chart-pie"></i> Call Analytics</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-clock"></i> Agent Performance</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download"></i> Export Data</a></li>
+                                </ul>
                         </li>
                         {% endif %}
                         
@@ -250,12 +250,12 @@
                     <span>User Management</span>
                 </a>
                 
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="{% url 'campaigns:list' %}">
                     <i class="fas fa-bullhorn"></i>
                     <span>Campaigns</span>
                 </a>
                 
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="{% url 'leads:list' %}">
                     <i class="fas fa-database"></i>
                     <span>Lead Management</span>
                 </a>
@@ -269,7 +269,7 @@
                 {% if user.is_superuser %}
                 <div class="sidebar-heading">System</div>
                 
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="{% url 'telephony:dashboard' %}">
                     <i class="fas fa-server"></i>
                     <span>Telephony</span>
                 </a>

@@ -50,6 +50,7 @@ urlpatterns = [
     # Asterisk Sync Management
     path('phones/sync-all/', views.sync_all_phones_to_asterisk, name='sync_all_phones'),
     path('phones/cleanup-orphans/', views.cleanup_asterisk_orphans, name='cleanup_orphans'),
+    path('phones/regenerate-provisioning/', views.regenerate_all_provisioning, name='regenerate_provisioning'),
     
     # IVR Management
     path('ivrs/', views.IVRListView.as_view(), name='ivrs'),

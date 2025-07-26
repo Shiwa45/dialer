@@ -1400,9 +1400,18 @@ class WebRTCPhoneConfigView(LoginRequiredMixin, CreateView):
     template_name = 'telephony/webrtc_config.html'
     success_url = reverse_lazy('telephony:dashboard')
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Remove 'instance' if present because form is not a ModelForm
+        kwargs.pop('instance', None)
+        return kwargs
+
     def form_valid(self, form):
+        # Since WebRTCConfigForm is not a ModelForm, do not call form.save()
         messages.success(self.request, 'WebRTC configuration saved successfully!')
-        return super().form_valid(form)
+        # Instead of calling super().form_valid(form), redirect manually
+        from django.shortcuts import redirect
+        return redirect(self.success_url)
 
 
 @login_required
@@ -1760,3 +1769,133 @@ def telephony_stats_api(request):
     }
     
     return JsonResponse(stats)
+
+
+
+# Add these imports at the top of your existing views.py
+import subprocess
+import os
+
+# Add this function after your existing helper functions
+def generate_pjsip_wizard_config():
+    """
+    Generate pjsip_wizard.conf from all active phones for auto-provisioning
+    """
+    try:
+        phones = Phone.objects.filter(is_active=True)
+        
+        config_content = """[template_wizard](!)
+type = wizard
+transport = transport-udp
+accepts_registrations = yes
+accepts_auth = yes
+endpoint/context = agents
+endpoint/disallow = all
+endpoint/allow = ulaw,alaw
+endpoint/direct_media = no
+aor/max_contacts = 1
+aor/remove_existing = yes
+
+"""
+        
+        # Add each active phone
+        for phone in phones:
+            config_content += f"""[{phone.extension}](template_wizard)
+inbound_auth/username = {phone.extension}
+inbound_auth/password = {phone.secret}
+
+"""
+        
+        # Write to Asterisk configuration file
+        with open('/etc/asterisk/pjsip_wizard.conf', 'w') as f:
+            f.write(config_content)
+        
+        # Reload Asterisk PJSIP configuration
+        subprocess.run(['asterisk', '-rx', 'pjsip reload'], 
+                      capture_output=True, text=True, timeout=10)
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to generate PJSIP Wizard config: {e}")
+        return False
+
+# Replace your existing PhoneCreateView.form_valid method with this:
+def form_valid(self, form):
+    response = super().form_valid(form)
+    
+    # Auto-generate PJSIP Wizard configuration
+    if generate_pjsip_wizard_config():
+        messages.success(
+            self.request, 
+            f'Phone/Extension {self.object.extension} created and auto-provisioned! '
+            f'Ready for immediate registration.'
+        )
+    else:
+        messages.warning(
+            self.request,
+            f'Phone/Extension {self.object.extension} created but auto-provisioning failed.'
+        )
+    
+    return response
+
+# Replace your existing PhoneUpdateView.form_valid method with this:
+def form_valid(self, form):
+    response = super().form_valid(form)
+    
+    # Regenerate PJSIP Wizard configuration
+    if generate_pjsip_wizard_config():
+        messages.success(
+            self.request, 
+            f'Phone/Extension {self.object.extension} updated and auto-provisioned!'
+        )
+    else:
+        messages.warning(
+            self.request,
+            f'Phone/Extension {self.object.extension} updated but auto-provisioning failed.'
+        )
+    
+    return response
+
+# Replace your existing PhoneDeleteView.delete method with this:
+def delete(self, request, *args, **kwargs):
+    phone = self.get_object()
+    extension = phone.extension
+    
+    # Delete phone first
+    response = super().delete(request, *args, **kwargs)
+    
+    # Regenerate PJSIP Wizard configuration without this phone
+    if generate_pjsip_wizard_config():
+        messages.success(
+            request, 
+            f'Phone extension {extension} deleted and removed from auto-provisioning!'
+        )
+    else:
+        messages.warning(
+            request,
+            f'Phone extension {extension} deleted but auto-provisioning cleanup failed.'
+        )
+    
+    return response
+
+# Add this new view function for manual regeneration:
+@login_required
+@user_passes_test(is_manager_or_admin)
+def regenerate_all_provisioning(request):
+    """
+    Manually regenerate PJSIP Wizard configuration for all phones
+    """
+    try:
+        if generate_pjsip_wizard_config():
+            active_phones = Phone.objects.filter(is_active=True).count()
+            messages.success(
+                request, 
+                f'Successfully auto-provisioned {active_phones} phones! All ready for registration.'
+            )
+        else:
+            messages.error(request, 'Auto-provisioning failed.')
+    except Exception as e:
+        messages.error(request, f'Auto-provisioning failed: {str(e)}')
+    
+    return redirect('telephony:phones')

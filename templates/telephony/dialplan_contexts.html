@@ -348,11 +348,13 @@
                                             </a>
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
+                                        <!--
                                         <li>
                                             <a class="dropdown-item" href="#" onclick="exportContext('{{ context.id }}')">
                                                 <i class="fas fa-file-export me-2"></i>Export
                                             </a>
                                         </li>
+                                        -->
                                         <li>
                                             <a class="dropdown-item text-danger" href="#" 
                                                onclick="deleteContext('{{ context.id }}', '{{ context.name }}')">
@@ -624,35 +626,36 @@ function deleteContext(contextId, contextName) {
     $('#deleteModal').modal('show');
 }
 
-function performDelete(contextId) {
-    $('#deleteModal').modal('hide');
-    $('#progressText').text('Deleting context...');
-    $('#progressModal').modal('show');
-    
-    $.ajax({
-        url: '{% url "telephony:delete_dialplan_context" %}',
-        method: 'POST',
-        data: {
-            'context_id': contextId,
-            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        },
-        success: function(response) {
-            $('#progressModal').modal('hide');
-            if (response.success) {
-                showAlert('success', 'Context deleted successfully');
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
-            } else {
-                showAlert('error', response.message || 'Failed to delete context');
+    function performDelete(contextId) {
+        $('#deleteModal').modal('hide');
+        $('#progressText').text('Deleting context...');
+        $('#progressModal').modal('show');
+        
+        $.ajax({
+            url: '{% url "telephony:delete_dialplan_context" 0 %}'.replace('0', contextId),
+            method: 'POST',
+            data: {
+                'context_id': contextId,
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                $('#progressModal').modal('hide');
+                if (response.success) {
+                    showAlert('success', 'Context deleted successfully');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('error', response.message || 'Failed to delete context');
+                }
+            },
+            error: function() {
+                $('#progressModal').modal('hide');
+                showAlert('error', 'An error occurred while deleting the context');
             }
-        },
-        error: function() {
-            $('#progressModal').modal('hide');
-            showAlert('error', 'An error occurred while deleting the context');
-        }
-    });
-}
+        });
+    }
+
 
 function exportContext(contextId) {
     $('#progressText').text('Exporting context...');
@@ -664,6 +667,7 @@ function exportContext(contextId) {
         $('#progressModal').modal('hide');
     }, 2000);
 }
+
 
 function exportDialplan() {
     $('#progressText').text('Exporting dialplan...');

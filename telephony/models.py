@@ -185,6 +185,8 @@ class PsEndpoint(models.Model):
     allow = models.CharField(max_length=200, default='ulaw,alaw,gsm')
     direct_media = models.CharField(max_length=3, default='no')
     dtls_auto_generate_cert = models.CharField(max_length=3, default='yes', blank=True)
+    force_rport = models.CharField(max_length=3, default='yes', blank=True)
+    rewrite_contact = models.CharField(max_length=3, default='yes', blank=True)
     
     class Meta:
         db_table = 'ps_endpoints'
@@ -227,7 +229,7 @@ class ExtensionsTable(models.Model):
         managed = True
 
 # ============================================================================
-# UPDATED PHONE MODEL WITH AUTO-SYNC
+# UPDATED PHONE MODEL WITH AUTO-SYNC (CORRECTED INDENTATION)
 # ============================================================================
     
 class Phone(TimeStampedModel):
@@ -251,7 +253,7 @@ class Phone(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='phones')
     
     # SIP/IAX Settings
-    secret = models.CharField(max_length=100)
+    secret = models.CharField(max_length=100, blank=True)
     host = models.CharField(max_length=100, default='dynamic')
     context = models.CharField(max_length=100, default='agents')
     
@@ -304,53 +306,54 @@ class Phone(TimeStampedModel):
         """Generate a random secret for the phone"""
         return ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(12))
     
-def sync_to_asterisk(self):
-    """Enhanced sync with proper PJSIP realtime configuration"""
-    try:
-        # Create/Update PJSIP Endpoint with explicit transport
-        PsEndpoint.objects.update_or_create(
-            id=self.extension,
-            defaults={
-                'transport': 'transport-udp',  # Explicit transport
-                'aors': self.extension,
-                'auth': self.extension,
-                'context': self.context,
-                'allow': self.codec.replace(' ', '').replace(',', ','),
-                'disallow': 'all',
-                'direct_media': 'no',
-                'force_rport': 'yes',
-                'rewrite_contact': 'yes',
-            }
-        )
-        
-        # Create/Update Authentication with realm
-        PsAuth.objects.update_or_create(
-            id=self.extension,
-            defaults={
-                'auth_type': 'userpass',
-                'username': self.extension,
-                'password': self.secret,
-                'realm': ''  # Empty realm allows any
-            }
-        )
-        
-        # Create/Update AOR with contact management
-        PsAor.objects.update_or_create(
-            id=self.extension,
-            defaults={
-                'max_contacts': 1,
-                'remove_existing': 'yes',
-                'qualify_frequency': 60 if self.qualify == 'yes' else 0
-            }
-        )
-        
-        print(f"✅ Phone {self.extension} synced to Asterisk PJSIP realtime")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Failed to sync phone {self.extension}: {e}")
-        return False
-        
+    def sync_to_asterisk(self):
+        """Enhanced sync with proper PJSIP realtime configuration"""
+        try:
+            # Create/Update PJSIP Endpoint with explicit transport
+            PsEndpoint.objects.update_or_create(
+                id=self.extension,
+                defaults={
+                    'transport': 'transport-udp',  # Explicit transport
+                    'aors': self.extension,
+                    'auth': self.extension,
+                    'context': self.context,
+                    'allow': self.codec.replace(' ', ''),
+                    'disallow': 'all',
+                    'direct_media': 'no',
+                    'force_rport': 'yes',
+                    'rewrite_contact': 'yes',
+                    'dtls_auto_generate_cert': 'yes',
+                }
+            )
+            
+            # Create/Update Authentication with realm
+            PsAuth.objects.update_or_create(
+                id=self.extension,
+                defaults={
+                    'auth_type': 'userpass',
+                    'username': self.extension,
+                    'password': self.secret,
+                    'realm': ''  # Empty realm allows any
+                }
+            )
+            
+            # Create/Update AOR with contact management
+            PsAor.objects.update_or_create(
+                id=self.extension,
+                defaults={
+                    'max_contacts': 1,
+                    'remove_existing': 'yes',
+                    'qualify_frequency': 60 if self.qualify == 'yes' else 0
+                }
+            )
+            
+            print(f"✅ Phone {self.extension} synced to Asterisk PJSIP realtime")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to sync phone {self.extension}: {e}")
+            return False
+            
     def remove_from_asterisk(self):
         """Remove this phone from Asterisk realtime tables"""
         try:
@@ -614,3 +617,60 @@ class DialplanExtension(TimeStampedModel):
     
     def __str__(self):
         return f"{self.context.name},{self.extension},{self.priority}"
+    
+
+
+
+
+# Add this model to your Django telephony/models.py
+
+class SipBuddy(models.Model):
+    """SIP Buddies table for chan_sip realtime"""
+    name = models.CharField(max_length=40, primary_key=True)  # Extension
+    username = models.CharField(max_length=40)
+    secret = models.CharField(max_length=40)
+    host = models.CharField(max_length=31, default='dynamic')
+    context = models.CharField(max_length=40, default='agents')
+    type = models.CharField(max_length=6, default='friend')
+    nat = models.CharField(max_length=20, default='force_rport,comedia')
+    qualify = models.CharField(max_length=7, default='yes')
+    canreinvite = models.CharField(max_length=3, default='no')
+    disallow = models.CharField(max_length=200, default='all')
+    allow = models.CharField(max_length=200, default='ulaw,alaw')
+    
+    class Meta:
+        db_table = 'sip_buddies'
+        managed = True
+
+# Update your Phone model to also sync to SIP
+def sync_to_sip(self):
+    """Sync phone to chan_sip realtime table"""
+    try:
+        SipBuddy.objects.update_or_create(
+            name=self.extension,
+            defaults={
+                'username': self.extension,
+                'secret': self.secret,
+                'host': 'dynamic',
+                'context': self.context,
+                'type': 'friend',
+                'nat': 'force_rport,comedia',
+                'qualify': 'yes',
+                'disallow': 'all',
+                'allow': self.codec.replace(' ', ''),
+            }
+        )
+        print(f"✅ Phone {self.extension} synced to chan_sip")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to sync phone {self.extension} to SIP: {e}")
+        return False
+
+# Add this to your Phone.save() method
+def save(self, *args, **kwargs):
+    if not self.secret:
+        self.secret = self.generate_secret()
+    super().save(*args, **kwargs)
+    # Sync to both PJSIP and chan_sip
+    self.sync_to_asterisk()  # Your existing PJSIP sync
+    self.sync_to_sip()       # New chan_sip sync

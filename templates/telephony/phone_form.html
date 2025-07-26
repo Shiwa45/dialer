@@ -16,6 +16,24 @@
     color: #007bff;
     margin-bottom: 1rem;
 }
+.auto-provision-badge {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.auto-provision-info {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border-left: 4px solid #2196f3;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+}
 </style>
 {% endblock %}
 
@@ -41,13 +59,34 @@
                 {% else %}
                     Create New Phone Extension
                 {% endif %}
+                <span class="auto-provision-badge">
+                    <i class="fas fa-magic"></i>
+                    Auto-Provisioning Enabled
+                </span>
             </h2>
-            <p class="text-muted">Configure phone/extension settings for agents</p>
+            <p class="text-muted">Configure phone/extension settings for agents - automatic Asterisk provisioning included!</p>
         </div>
         <div>
             <a href="{% if object %}{% url 'telephony:phone_detail' object.pk %}{% else %}{% url 'telephony:phones' %}{% endif %}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back
             </a>
+        </div>
+    </div>
+
+    <!-- Auto-Provisioning Info -->
+    <div class="auto-provision-info">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle text-primary me-3" style="font-size: 1.5rem;"></i>
+            <div>
+                <h6 class="mb-1 text-primary">🚀 Auto-Provisioning Active</h6>
+                <p class="mb-0 small">
+                    {% if object %}
+                        When you save changes, this phone will be automatically updated in Asterisk. No manual configuration needed!
+                    {% else %}
+                        When you create this phone, it will be automatically provisioned in Asterisk and ready for immediate registration in MicroSIP or any SIP client!
+                    {% endif %}
+                </p>
+            </div>
         </div>
     </div>
 
@@ -67,6 +106,7 @@
                                     <div class="mb-3">
                                         <label for="{{ form.extension.id_for_label }}" class="form-label">
                                             Extension <span class="text-danger">*</span>
+                                            <span class="badge bg-success ms-2">Auto-Provisioned</span>
                                         </label>
                                         {{ form.extension }}
                                         {% if form.extension.errors %}
@@ -74,7 +114,7 @@
                                                 {{ form.extension.errors.0 }}
                                             </div>
                                         {% endif %}
-                                        <div class="form-text">3-10 digit extension number</div>
+                                        <div class="form-text">3-10 digit extension number - will be auto-configured in Asterisk</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -138,13 +178,16 @@
 
                         <!-- SIP Configuration Section -->
                         <div class="form-section">
-                            <h5><i class="fas fa-network-wired"></i> SIP Configuration</h5>
+                            <h5><i class="fas fa-network-wired"></i> SIP Configuration 
+                                <span class="badge bg-success ms-2">Auto-Generated</span>
+                            </h5>
                             
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="{{ form.secret.id_for_label }}" class="form-label">
                                             Secret/Password <span class="text-danger">*</span>
+                                            <span class="badge bg-info ms-2">Auto-Sync</span>
                                         </label>
                                         <div class="input-group">
                                             {{ form.secret }}
@@ -157,7 +200,10 @@
                                                 {{ form.secret.errors.0 }}
                                             </div>
                                         {% endif %}
-                                        <div class="form-text">SIP authentication password</div>
+                                        <div class="form-text">
+                                            SIP authentication password - leave blank to auto-generate. 
+                                            <strong>Will be automatically configured in Asterisk!</strong>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -310,9 +356,12 @@
                             <div class="form-check mb-3">
                                 {{ form.is_active }}
                                 <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                    Active
+                                    Active <span class="badge bg-warning text-dark ms-2">Auto-Provision Control</span>
                                 </label>
-                                <div class="form-text">Phone is enabled and can be used</div>
+                                <div class="form-text">
+                                    Phone is enabled and can be used. 
+                                    <strong>Only active phones are auto-provisioned in Asterisk.</strong>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -331,9 +380,9 @@
                                         <i class="fas fa-save"></i> Save & Continue Editing
                                     </button>
                                 {% endif %}
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> 
-                                    {% if object %}Update Phone{% else %}Create Phone{% endif %}
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-magic"></i> 
+                                    {% if object %}Update & Auto-Provision{% else %}Create & Auto-Provision{% endif %}
                                 </button>
                             </div>
                         </div>
@@ -344,6 +393,37 @@
 
         <!-- Right Sidebar -->
         <div class="col-lg-4">
+            <!-- Auto-Provisioning Status Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0"><i class="fas fa-magic"></i> Auto-Provisioning Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <span class="small">PJSIP Wizard Enabled</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <span class="small">Automatic Asterisk Sync</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <span class="small">Immediate Registration Ready</span>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="small mb-2">After saving, you can register with:</h6>
+                    <div class="bg-light p-2 rounded small">
+                        <strong>Server:</strong> {{ form.instance.asterisk_server.server_ip|default:"172.26.7.107" }}:5060<br>
+                        <strong>Username:</strong> <span id="username-preview">{{ form.instance.extension|default:"[Extension]" }}</span><br>
+                        <strong>Password:</strong> <span id="password-preview">{{ form.instance.secret|default:"[Auto-Generated]" }}</span><br>
+                        <strong>Domain:</strong> {{ form.instance.asterisk_server.server_ip|default:"172.26.7.107" }}
+                    </div>
+                </div>
+            </div>
+
             <!-- Help Card -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
@@ -357,13 +437,12 @@
                         <li>Consider numbering schemes (e.g., 1000-1999 for agents)</li>
                     </ul>
 
-                    <h6>Phone Types:</h6>
+                    <h6>Auto-Provisioning Benefits:</h6>
                     <ul class="small text-muted">
-                        <li><strong>SIP:</strong> Standard IP phones</li>
-                        <li><strong>WebRTC:</strong> Browser-based phones</li>
-                        <li><strong>IAX2:</strong> Asterisk native protocol</li>
-                        <li><strong>DAHDI:</strong> Digital/analog hardware</li>
-                        <li><strong>Virtual:</strong> Software-only phones</li>
+                        <li><strong>Instant Setup:</strong> No manual Asterisk config</li>
+                        <li><strong>Immediate Registration:</strong> Ready for MicroSIP/softphones</li>
+                        <li><strong>Automatic Updates:</strong> Changes sync instantly</li>
+                        <li><strong>GOautoDial Style:</strong> True auto-provisioning</li>
                     </ul>
 
                     <h6>Security Tips:</h6>
@@ -390,7 +469,7 @@
                             <i class="fas fa-check"></i> Check Extension Availability
                         </button>
                         <button type="button" class="btn btn-outline-success" onclick="previewConfig()">
-                            <i class="fas fa-eye"></i> Preview Configuration
+                            <i class="fas fa-eye"></i> Preview PJSIP Wizard Config
                         </button>
                     </div>
                 </div>
@@ -404,10 +483,14 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Configuration Preview</h5>
+                <h5 class="modal-title">PJSIP Wizard Configuration Preview</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    This configuration will be automatically generated and applied to Asterisk when you save the phone.
+                </div>
                 <pre id="configPreview" class="bg-light p-3"></pre>
             </div>
             <div class="modal-footer">
@@ -444,6 +527,15 @@ $(document).ready(function() {
     $('#{{ form.extension.id_for_label }}').on('blur', function() {
         validateExtension();
     });
+
+    // Update preview when extension or secret changes
+    $('#{{ form.extension.id_for_label }}').on('input', function() {
+        $('#username-preview').text($(this).val() || '[Extension]');
+    });
+
+    $('#{{ form.secret.id_for_label }}').on('input', function() {
+        $('#password-preview').text($(this).val() || '[Password]');
+    });
 });
 
 function generateSecret() {
@@ -453,6 +545,7 @@ function generateSecret() {
         password += charset.charAt(Math.floor(Math.random() * charset.length));
     }
     $('#{{ form.secret.id_for_label }}').val(password);
+    $('#password-preview').text(password);
 }
 
 function fillSampleData() {
@@ -475,17 +568,17 @@ function fillSampleData() {
 function validateExtension() {
     var extension = $('#{{ form.extension.id_for_label }}').val();
     if (extension.length >= 3) {
-    $.get('{% url "telephony:validate_extension_api" %}', {extension: extension})
-        .done(function(data) {
+        $.get('{% url "telephony:validate_extension_api" %}', {extension: extension})
+            .done(function(data) {
                 var feedback = $('#{{ form.extension.id_for_label }}').siblings('.invalid-feedback, .valid-feedback');
                 feedback.remove();
                 
                 if (data.available) {
                     $('#{{ form.extension.id_for_label }}').removeClass('is-invalid').addClass('is-valid');
-                    $('#{{ form.extension.id_for_label }}').after('<div class="valid-feedback">Extension is available</div>');
+                    $('#{{ form.extension.id_for_label }}').after('<div class="valid-feedback">✅ Extension is available and will be auto-provisioned!</div>');
                 } else {
                     $('#{{ form.extension.id_for_label }}').removeClass('is-valid').addClass('is-invalid');
-                    $('#{{ form.extension.id_for_label }}').after('<div class="invalid-feedback">Extension is already in use</div>');
+                    $('#{{ form.extension.id_for_label }}').after('<div class="invalid-feedback">❌ Extension is already in use</div>');
                 }
             })
             .fail(function() {
@@ -497,56 +590,31 @@ function validateExtension() {
 function previewConfig() {
     var extension = $('#{{ form.extension.id_for_label }}').val();
     var secret = $('#{{ form.secret.id_for_label }}').val();
-    var context = $('#{{ form.context.id_for_label }}').val();
-    var codec = $('#{{ form.codec.id_for_label }}').val();
-    var qualify = $('#{{ form.qualify.id_for_label }}').val();
-    var nat = $('#{{ form.nat.id_for_label }}').val();
-    var webrtc = $('#{{ form.webrtc_enabled.id_for_label }}').is(':checked');
     
-    var config = '';
-    
-    if (webrtc) {
-        config = `; WebRTC Configuration for ${extension}
-[${extension}]
-type=aor
-contact=sip:${extension}@\${ASTERISK_SERVER_IP}
-max_contacts=1
+    var config = `; PJSIP Wizard Configuration (Auto-Generated)
+; This will be automatically created when you save
 
-[${extension}]
-type=auth
-auth_type=userpass
-username=${extension}
-password=${secret}
+[template_wizard](!)
+type = wizard
+transport = transport-udp
+accepts_registrations = yes
+accepts_auth = yes
+endpoint/context = agents
+endpoint/disallow = all
+endpoint/allow = ulaw,alaw
+endpoint/direct_media = no
+aor/max_contacts = 1
+aor/remove_existing = yes
 
-[${extension}]
-type=endpoint
-context=${context}
-disallow=all
-allow=${codec}
-webrtc=yes
-use_ptime=yes
-media_encryption=dtls
-dtls_verify=fingerprint
-dtls_setup=actpass
-ice_support=yes
-media_use_received_transport=yes
-rtcp_mux=yes
-auth=${extension}
-aors=${extension}`;
-    } else {
-        config = `; SIP Configuration for ${extension}
-[${extension}]
-type=friend
-host=dynamic
-secret=${secret}
-context=${context}
-disallow=all
-allow=${codec}
-qualify=${qualify}
-nat=${nat}
-canreinvite=no
-dtmfmode=rfc2833`;
-    }
+[${extension || 'EXTENSION'}](template_wizard)
+inbound_auth/username = ${extension || 'EXTENSION'}
+inbound_auth/password = ${secret || 'AUTO_GENERATED_PASSWORD'}
+
+; MicroSIP Registration Settings:
+; Server: 172.26.7.107:5060
+; Username: ${extension || 'EXTENSION'}
+; Password: ${secret || 'AUTO_GENERATED_PASSWORD'}
+; Domain: 172.26.7.107`;
     
     $('#configPreview').text(config);
     $('#configPreviewModal').modal('show');

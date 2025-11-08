@@ -6,6 +6,9 @@ app_name = 'agents'
 urlpatterns = [
     # Main agent dashboard - integrated with telephony
     path('', views.agent_dashboard, name='dashboard'),
+
+    # Simplified dialing (on-demand); removed persistent session routes
+    path('dial/manual/', views.manual_dial, name='manual_dial'),
     
     # Phone registration and setup
     path('phone/register/', views.register_phone, name='register_phone'),

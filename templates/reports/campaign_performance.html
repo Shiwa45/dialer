@@ -1,0 +1,47 @@
+{% extends 'reports/base.html' %}
+
+{% block page_title %}<i class="fas fa-bullhorn text-primary"></i> Campaign Performance{% endblock %}
+{% block page_description %}Compare campaign KPIs and efficiency{% endblock %}
+{% block export_links %}
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'reports:export' 'campaign' 'csv' %}?{{ request.GET.urlencode }}"><i class="fas fa-file-csv"></i> CSV</a>
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'reports:export' 'campaign' 'xlsx' %}?{{ request.GET.urlencode }}"><i class="fas fa-file-excel"></i> Excel</a>
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'reports:export' 'campaign' 'pdf' %}?{{ request.GET.urlencode }}"><i class="fas fa-file-pdf"></i> PDF</a>
+{% endblock %}
+
+{% block reports_content %}
+{% include 'reports/_filters.html' %}
+
+<div class="table-responsive">
+  <table class="table table-striped table-report align-middle">
+    <thead>
+      <tr>
+        <th>Campaign</th>
+        <th class="text-end">Calls</th>
+        <th class="text-end">Answered</th>
+        <th class="text-end">Sales</th>
+        <th class="text-end">Avg Talk (s)</th>
+        <th class="text-end">Total Talk (s)</th>
+        <th class="text-end">Contact %</th>
+        <th class="text-end">Conversion %</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.campaign_name }}</td>
+          <td class="text-end">{{ r.calls }}</td>
+          <td class="text-end">{{ r.answered }}</td>
+          <td class="text-end">{{ r.sales }}</td>
+          <td class="text-end">{{ r.avg_talk }}</td>
+          <td class="text-end">{{ r.total_talk }}</td>
+          <td class="text-end">{{ r.contact_rate }}%</td>
+          <td class="text-end">{{ r.conversion_rate }}%</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-center text-muted">No results for selected filters</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endblock %}
+

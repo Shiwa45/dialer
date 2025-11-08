@@ -16,6 +16,7 @@ from leads.models import Lead, LeadList
 from calls.models import CallLog
 from users.models import UserProfile, AgentStatus
 from telephony.models import AsteriskServer, Phone
+from agents.models import AgentCallbackTask
 
 
 @login_required
@@ -227,13 +228,12 @@ def get_agent_dashboard_data(user, today):
         'lead', 'campaign', 'disposition'
     ).order_by('-start_time')[:10]
     
-    # Next callbacks
-    next_callbacks = CallLog.objects.filter(
+    # Next callbacks (use AgentCallbackTask instead of CallLog fields)
+    next_callbacks = AgentCallbackTask.objects.filter(
         agent=user,
-        disposition__requires_callback=True,
-        callback_datetime__gte=timezone.now(),
-        callback_completed=False
-    ).order_by('callback_datetime')[:5]
+        status__in=['pending', 'scheduled'],
+        scheduled_time__gte=timezone.now()
+    ).order_by('scheduled_time')[:5]
     
     # Agent status
     agent_status = getattr(user.profile, 'agent_status', None)

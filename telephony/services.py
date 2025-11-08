@@ -35,8 +35,9 @@ class AsteriskService:
         """
         try:
             # Test ARI connection
+            # ARI base already ends with /ari; do not repeat it
             response = requests.get(
-                f"{self.ari_base_url}/ari/applications",
+                f"{self.ari_base_url}/applications",
                 auth=(self.ari_username, self.ari_password),
                 timeout=10
             )
@@ -115,8 +116,9 @@ class AsteriskService:
         Originate a call from agent extension to phone number
         """
         try:
+            # Use PJSIP endpoint as we provision PJSIP in realtime
             call_data = {
-                'endpoint': f'SIP/{extension}',
+                'endpoint': f'PJSIP/{extension}',
                 'extension': phone_number,
                 'context': context,
                 'priority': 1,
@@ -125,7 +127,7 @@ class AsteriskService:
                 'variables': {
                     'CAMPAIGN_ID': str(campaign.id) if campaign else '',
                     'AGENT_EXTENSION': extension,
-                    'CALL_DIRECTION': 'outbound'
+                    'CALL_TYPE': 'outbound'
                 }
             }
             
@@ -141,13 +143,14 @@ class AsteriskService:
                 
                 # Log the call
                 call_log = CallLog.objects.create(
-                    channel_id=channel_data.get('id'),
-                    caller_id=extension,
+                    caller_id=str(extension),
                     called_number=phone_number,
                     campaign=campaign,
                     asterisk_server=self.server,
-                    call_direction='outbound',
-                    call_status='initiated'
+                    call_type='outbound',
+                    call_status='initiated',
+                    start_time=timezone.now(),
+                    channel=channel_data.get('id') or ''
                 )
                 
                 return {
@@ -167,6 +170,130 @@ class AsteriskService:
                 'success': False,
                 'error': str(e)
             }
+
+    # =====================
+    # ARI Bridge Utilities
+    # =====================
+    def _ari_post(self, path, json_body=None, timeout=10):
+        return requests.post(
+            f"{self.ari_base_url}{path}",
+            auth=(self.ari_username, self.ari_password),
+            json=json_body or {},
+            timeout=timeout
+        )
+
+    def _ari_delete(self, path, timeout=10):
+        return requests.delete(
+            f"{self.ari_base_url}{path}",
+            auth=(self.ari_username, self.ari_password),
+            timeout=timeout
+        )
+
+    def create_bridge(self, bridge_type='mixing'):  # returns bridge_id
+        try:
+            r = self._ari_post("/bridges", json_body={"type": bridge_type})
+            if r.status_code in (200, 201):
+                return {"success": True, "bridge_id": r.json().get('id')}
+            return {"success": False, "error": f"Bridge create failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def add_channel_to_bridge(self, bridge_id, channel_id):
+        try:
+            r = self._ari_post(f"/bridges/{bridge_id}/addChannel", json_body={"channel": channel_id})
+            if r.status_code in (200, 204):
+                return {"success": True}
+            return {"success": False, "error": f"Add channel failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def originate_pjsip_channel(self, endpoint, app='autodialer', callerid=None, variables=None, timeout=30):
+        try:
+            payload = {
+                'endpoint': f'PJSIP/{endpoint}',
+                'app': app,
+                'callerId': callerid or endpoint,
+                'timeout': timeout,
+            }
+            if variables:
+                payload['variables'] = variables
+                # Also pass critical routing info in appArgs so StasisStart args are populated
+                args = []
+                if 'CALL_TYPE' in variables:
+                    args.append(f"CALL_TYPE={variables['CALL_TYPE']}")
+                if 'BRIDGE_ID' in variables:
+                    args.append(f"BRIDGE_ID={variables['BRIDGE_ID']}")
+                if args:
+                    payload['appArgs'] = ','.join(args)
+            r = self._ari_post("/channels", json_body=payload, timeout=timeout+5)
+            if r.status_code in (200, 201):
+                return {"success": True, "channel_id": r.json().get('id')}
+            return {"success": False, "error": f"Originate failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def originate_local_channel(self, number, context='from-campaign', app='autodialer', callerid=None, variables=None, timeout=45):
+        """
+        Originate using Local/number@context so PBX dialplan handles routing.
+        Use this for prefix-based routing to GSM gateways (Dinstar/OpenVox).
+        """
+        try:
+            payload = {
+                'endpoint': f'Local/{number}@{context}',
+                'app': app,
+                'callerId': callerid or number,
+                'timeout': timeout,
+            }
+            if variables:
+                payload['variables'] = variables
+                args = []
+                if 'CALL_TYPE' in variables:
+                    args.append(f"CALL_TYPE={variables['CALL_TYPE']}")
+                if 'BRIDGE_ID' in variables:
+                    args.append(f"BRIDGE_ID={variables['BRIDGE_ID']}")
+                if args:
+                    payload['appArgs'] = ','.join(args)
+
+            r = self._ari_post("/channels", json_body=payload, timeout=timeout+5)
+            if r.status_code in (200, 201):
+                return {"success": True, "channel_id": r.json().get('id')}
+            return {"success": False, "error": f"Originate Local failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def hangup_channel(self, channel_id):
+        try:
+            r = self._ari_delete(f"/channels/{channel_id}")
+            if r.status_code in (200, 204):
+                return {"success": True}
+            return {"success": False, "error": f"Hangup failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    # =====================
+    # ARI Helpers for polling
+    # =====================
+    def get_channel(self, channel_id):
+        try:
+            resp = requests.get(f"{self.ari_base_url}/channels/{channel_id}", auth=(self.ari_username, self.ari_password), timeout=5)
+            if resp.status_code == 200:
+                return {"success": True, "data": resp.json()}
+            return {"success": False, "error": f"{resp.status_code}: {resp.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def wait_for_channel_up(self, channel_id, timeout_sec=30, interval=0.5):
+        import time
+        end = time.time() + timeout_sec
+        while time.time() < end:
+            info = self.get_channel(channel_id)
+            if info.get('success'):
+                state = (info['data'] or {}).get('state')
+                if state == 'Up':
+                    return {"success": True}
+            time.sleep(interval)
+        return {"success": False, "error": "Timeout waiting for channel Up"}
+
     
     def hangup_call(self, channel_id):
         """

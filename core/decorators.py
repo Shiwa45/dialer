@@ -455,7 +455,7 @@ def phone_session_required(view_func):
         
         if not webrtc_session:
             messages.warning(request, 'You need to connect your phone first.')
-            return redirect('agents:phone_interface')
+            return redirect('agents:dashboard')
         
         return view_func(request, *args, **kwargs)
     

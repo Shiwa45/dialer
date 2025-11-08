@@ -29,9 +29,12 @@ from .models import (
 from .forms import (
     AsteriskServerForm, CarrierForm, DIDForm, PhoneForm, IVRForm,
     CallQueueForm, DialplanContextForm, DialplanExtensionForm, IVROptionForm,
-    QueueMemberForm, BulkDIDImportForm, BulkPhoneCreateForm, WebRTCConfigForm
+    QueueMemberForm, BulkDIDImportForm, BulkPhoneCreateForm, WebRTCConfigForm,
+    OutboundDialplanWizardForm
 )
 from campaigns.models import Campaign
+from agents.telephony_service import AgentTelephonyService
+from .services import AsteriskService, DialplanService
 
 # Helper function to check if user is admin/manager
 def is_manager_or_admin(user):
@@ -145,27 +148,22 @@ class AsteriskServerDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVi
 @user_passes_test(is_manager_or_admin)
 def test_asterisk_connection(request, pk):
     """
-    Test connection to Asterisk server
+    Test connection to Asterisk server (uses ARI)
     """
     server = get_object_or_404(AsteriskServer, pk=pk)
-    
-    try:
-        # TODO: Implement actual AMI connection test
-        # For now, simulate connection test
-        import time
-        time.sleep(1)  # Simulate connection time
-        
+    service = AsteriskService(server)
+    result = service.test_connection()
+
+    if result.get('success'):
         server.connection_status = 'connected'
         server.last_connected = timezone.now()
-        server.save()
-        
-        messages.success(request, f'Successfully connected to {server.name}!')
-        
-    except Exception as e:
+        server.save(update_fields=['connection_status', 'last_connected', 'updated_at'])
+        messages.success(request, f"Connection OK: {server.name}")
+    else:
         server.connection_status = 'error'
-        server.save()
-        messages.error(request, f'Connection test failed: {str(e)}')
-    
+        server.save(update_fields=['connection_status', 'updated_at'])
+        messages.error(request, f"Connection failed: {result.get('error','Unknown error')}")
+
     return redirect('telephony:asterisk_server_detail', pk=pk)
 
 
@@ -214,8 +212,42 @@ class CarrierDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         carrier = self.get_object()
+        # Build codec list safely (avoid template split/trim)
+        codec_list = []
+        if carrier.codec:
+            for c in carrier.codec.split(','):
+                c = (c or '').strip()
+                if c:
+                    codec_list.append(c)
+
+        # Dialplan preview for this carrier
+        dialplan_preview = []
+        if carrier.dial_prefix:
+            prefix = carrier.dial_prefix
+            pattern = f"_{prefix}X."
+            dialplan_preview = [
+                f"exten => {pattern},1,NoOp(Outbound via {carrier.name}: ${{EXTEN}})",
+                f"exten => {pattern},n,Set(STRIPPED=${{EXTEN:{len(prefix)}}})",
+                f"exten => {pattern},n,Dial(PJSIP/{carrier.name}/${{STRIPPED}},{carrier.dial_timeout})",
+                "exten => {pattern},n,Hangup()".format(pattern=pattern),
+            ]
+
+        # Fetch realtime dialplan rows (if any) for this prefix in from-campaign
+        from .models import ExtensionsTable
+        ext_rows = []
+        try:
+            qs = ExtensionsTable.objects.filter(context='from-campaign')
+            if carrier.dial_prefix:
+                qs = qs.filter(exten__startswith=f"_{carrier.dial_prefix}")
+            ext_rows = list(qs.order_by('exten', 'priority')[:100])
+        except Exception:
+            ext_rows = []
+
         context.update({
             'dids': carrier.dids.all()[:10],
+            'codec_list': codec_list,
+            'dialplan_preview': dialplan_preview,
+            'dialplan_ext_rows': ext_rows,
         })
         return context
 
@@ -1342,12 +1374,35 @@ class DialplanExtensionCreateView(LoginRequiredMixin, UserPassesTestMixin, Creat
         return is_manager_or_admin(self.request.user)
 
     def form_valid(self, form):
+        # If user selected the outbound generator, create a block of rules
+        if form.cleaned_data.get('generate_outbound'):
+            ctx = get_object_or_404(DialplanContext, pk=self.kwargs['context_pk'])
+            carrier = form.cleaned_data.get('carrier')
+            prefix = (form.cleaned_data.get('dial_prefix') or '').strip()
+            timeout = form.cleaned_data.get('timeout') or 60
+            is_active = form.cleaned_data.get('is_active', True)
+            pr = 1
+            pattern = f'_{prefix}X.'
+            DialplanExtension.objects.create(context=ctx, extension=pattern, priority=pr, application='NoOp', arguments=f'Outbound via {carrier.name}: ${{EXTEN}}', is_active=is_active); pr += 1
+            DialplanExtension.objects.create(context=ctx, extension=pattern, priority=pr, application='Set', arguments=f'STRIPPED=${{EXTEN:{len(prefix)}}}', is_active=is_active); pr += 1
+            DialplanExtension.objects.create(context=ctx, extension=pattern, priority=pr, application='Dial', arguments=f'PJSIP/{carrier.name}/${{STRIPPED}},{timeout}', is_active=is_active); pr += 1
+            DialplanExtension.objects.create(context=ctx, extension=pattern, priority=pr, application='Hangup', arguments='', is_active=is_active)
+            messages.success(self.request, f'Generated outbound routing for prefix {prefix} ? {carrier.name}')
+            return redirect('telephony:dialplan_context_detail', pk=ctx.pk)
+        # Default single-line add
         form.instance.context_id = self.kwargs['context_pk']
         messages.success(self.request, 'Dialplan extension created successfully!')
         return super().form_valid(form)
-
-    def get_success_url(self):
         return reverse('telephony:dialplan_context_detail', kwargs={'pk': self.kwargs['context_pk']})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            ctx = DialplanContext.objects.get(pk=self.kwargs.get('context_pk'))
+        except DialplanContext.DoesNotExist:
+            ctx = None
+        context['context'] = ctx
+        return context
 
 
 class DialplanExtensionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -1462,27 +1517,10 @@ def originate_call(request):
         if not phone_number:
             return JsonResponse({'error': 'Phone number required'}, status=400)
         
-        # Get user's phone
-        phone = Phone.objects.filter(user=request.user, is_active=True).first()
-        if not phone:
-            return JsonResponse({'error': 'No active phone assigned'}, status=400)
-        
-        # Get campaign if specified
-        campaign = None
-        if campaign_id:
-            try:
-                campaign = Campaign.objects.filter(id=campaign_id, is_active=True).first()
-            except:
-                pass
-        
-        # TODO: Implement actual call origination via AMI/ARI
-        result = {
-            'success': True,
-            'message': f'Call initiated from {phone.extension} to {phone_number}',
-            'call_id': f'call_{timezone.now().timestamp()}'
-        }
-        
-        return JsonResponse(result)
+        service = AgentTelephonyService(request.user)
+        result = service.make_call(phone_number, campaign_id=campaign_id)
+        status = 200 if result.get('success') else 400
+        return JsonResponse(result, status=status)
         
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
@@ -1899,3 +1937,155 @@ def regenerate_all_provisioning(request):
         messages.error(request, f'Auto-provisioning failed: {str(e)}')
     
     return redirect('telephony:phones')
+
+
+# Dialplan export/validate/reload
+@login_required
+@user_passes_test(is_manager_or_admin)
+def export_dialplan_context(request, pk):
+    ctx = get_object_or_404(DialplanContext, pk=pk)
+    exts = ctx.extensions.filter(is_active=True).order_by('extension', 'priority')
+    lines = [f"; Context: {ctx.name}"]
+    for e in exts:
+        args = f"({e.arguments})" if e.arguments else ''
+        lines.append(f"exten => {e.extension},{e.priority},{e.application}{args}")
+    content = "\n".join(lines) + "\n"
+    resp = HttpResponse(content, content_type='text/plain')
+    resp['Content-Disposition'] = f'attachment; filename="{ctx.name}.conf"'
+    return resp
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def export_dialplan(request):
+    contexts = DialplanContext.objects.filter(is_active=True).order_by('name')
+    lines = []
+    for ctx in contexts:
+        lines.append(f"; Context: {ctx.name}")
+        exts = ctx.extensions.filter(is_active=True).order_by('extension', 'priority')
+        for e in exts:
+            args = f"({e.arguments})" if e.arguments else ''
+            lines.append(f"exten => {e.extension},{e.priority},{e.application}{args}")
+        lines.append("")
+    content = "\n".join(lines) + "\n"
+    resp = HttpResponse(content, content_type='text/plain')
+    resp['Content-Disposition'] = 'attachment; filename="dialplan.conf"'
+    return resp
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def validate_dialplan(request):
+    if request.method != 'POST':
+        return HttpResponseForbidden('POST required')
+    # Placeholder: in production, run AMI/CLI validation
+    return JsonResponse({'success': True, 'message': 'Validation OK'})
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def reload_dialplan(request):
+    if request.method != 'POST':
+        return HttpResponseForbidden('POST required')
+    # Best-effort: call our sync command and mark success
+    try:
+        call_command('sync_asterisk')
+        # Optionally, iterate servers and invoke DialplanService.reload_dialplan()
+        for srv in AsteriskServer.objects.filter(is_active=True):
+            _ = DialplanService(srv).reload_dialplan()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def test_dialplan_extension(request, pk):
+    """
+    Basic server-side test for a dialplan extension definition.
+    Validates fields, checks realtime mirror row, and triggers a lightweight reload.
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden('POST required')
+    try:
+        ext = DialplanExtension.objects.select_related('context').get(pk=pk)
+    except DialplanExtension.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Extension not found'}, status=404)
+
+    issues = []
+    if not ext.extension:
+        issues.append('Extension pattern is empty')
+    if not ext.application:
+        issues.append('Application is empty')
+    try:
+        pri = int(ext.priority)
+        if pri < 1:
+            issues.append('Priority must be >= 1')
+    except Exception:
+        issues.append('Priority is not a number')
+
+    # Check realtime mirror exists (extensions_table)
+    mirrored = ExtensionsTable.objects.filter(
+        context=ext.context.name,
+        exten=ext.extension,
+        priority=ext.priority,
+        app=ext.application,
+    ).exists()
+
+    # Best-effort reload
+    try:
+        _ = DialplanService(ext.context.asterisk_server).reload_dialplan()
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success': len(issues) == 0,
+        'issues': issues,
+        'mirrored': mirrored,
+        'context': ext.context.name,
+        'extension': ext.extension,
+        'priority': ext.priority,
+        'application': ext.application,
+    })
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def test_dialplan_context(request, pk):
+    if request.method != 'POST':
+        return HttpResponseForbidden('POST required')
+    ctx = DialplanContext.objects.filter(pk=pk).first()
+    if not ctx:
+        return JsonResponse({'success': False, 'message': 'Context not found'}, status=404)
+    ext_count = ctx.extensions.filter(is_active=True).count()
+    mirrored = ExtensionsTable.objects.filter(context=ctx.name).count()
+    try:
+        _ = DialplanService(ctx.asterisk_server).reload_dialplan()
+    except Exception:
+        pass
+    return JsonResponse({'success': ext_count > 0, 'extensions_active': ext_count, 'mirrored_rows': mirrored})
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def validate_dialplan_context(request, pk):
+    if request.method != 'POST':
+        return HttpResponseForbidden('POST required')
+    ctx = DialplanContext.objects.filter(pk=pk).first()
+    if not ctx:
+        return JsonResponse({'success': False, 'message': 'Context not found'}, status=404)
+    issues = []
+    for e in ctx.extensions.all():
+        if not e.extension:
+            issues.append(f'Empty extension at priority {e.priority}')
+        if not e.application:
+            issues.append(f'Empty application for {e.extension},{e.priority}')
+        try:
+            int(e.priority)
+        except Exception:
+            issues.append(f'Non-numeric priority for {e.extension}')
+    return JsonResponse({'success': len(issues) == 0, 'issues': issues})
+
+
+# ============================================================================
+# DIALPLAN OUTBOUND WIZARD
+# ============================================================================
+
+

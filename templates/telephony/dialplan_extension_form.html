@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load widget_tweaks %}
+{# widget_tweaks removed: forms already include Bootstrap classes #}
 
 {% block title %}
     {% if form.instance.pk %}Edit{% else %}Add{% endif %} Extension - {{ context.name }}
@@ -290,7 +290,7 @@
                                 <i class="fas fa-phone me-1"></i>Extension Pattern
                                 <span class="text-danger">*</span>
                             </label>
-                            {{ form.extension|add_class:"form-control" }}
+                            {{ form.extension }}
                             {% if form.extension.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.extension.errors %}
@@ -323,7 +323,7 @@
                                 <i class="fas fa-sort-numeric-up me-1"></i>Priority
                                 <span class="text-danger">*</span>
                             </label>
-                            {{ form.priority|add_class:"form-control" }}
+                            {{ form.priority }}
                             {% if form.priority.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.priority.errors %}
@@ -357,7 +357,7 @@
                                 <i class="fas fa-code me-1"></i>Application
                                 <span class="text-danger">*</span>
                             </label>
-                            {{ form.application|add_class:"form-control" }}
+                            {{ form.application }}
                             {% if form.application.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.application.errors %}
@@ -409,7 +409,7 @@
                             <label class="form-label" for="{{ form.arguments.id_for_label }}">
                                 <i class="fas fa-list me-1"></i>Arguments
                             </label>
-                            {{ form.arguments|add_class:"form-control" }}
+                            {{ form.arguments }}
                             {% if form.arguments.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.arguments.errors %}
@@ -436,7 +436,7 @@
                                 <i class="fas fa-toggle-on me-1"></i>Status
                             </label>
                             <div class="form-check form-switch">
-                                {{ form.is_active|add_class:"form-check-input" }}
+                            {{ form.is_active }}
                                 <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
                                     Extension is active and will be included in the dialplan
                                 </label>
@@ -484,7 +484,31 @@
                                 </button>
                             </div>
                         </div>
-                    </form>
+                    <div class="detail-card mt-4">
+  <div class="card-header bg-white border-bottom"><h6 class="mb-0"><i class="fas fa-magic me-2"></i>Outbound Routing Generator</h6></div>
+  <div class="card-body">
+    <div class="form-check form-switch mb-3">
+      {{ form.generate_outbound }}
+      <label class="form-check-label" for="{{ form.generate_outbound.id_for_label }}">Generate outbound routing from prefix</label>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.carrier.id_for_label }}">Carrier</label>
+        {{ form.carrier }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.dial_prefix.id_for_label }}">Dial Prefix</label>
+        {{ form.dial_prefix }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.timeout.id_for_label }}">Timeout (sec)</label>
+        {{ form.timeout }}
+      </div>
+    </div>
+    <div class="text-muted small mt-2">When enabled, the single-line fields above are ignored and a full rule block is generated.</div>
+  </div>
+</div>
+
                 </div>
             </div>
         </div>
@@ -583,12 +607,31 @@
                             <li><code>!</code> - Wildcard (zero or more characters)</li>
                             <li><code>[15-7]</code> - Any digit in range</li>
                         </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    <div class="detail-card mt-4">
+  <div class="card-header bg-white border-bottom"><h6 class="mb-0"><i class="fas fa-magic me-2"></i>Outbound Routing Generator</h6></div>
+  <div class="card-body">
+    <div class="form-check form-switch mb-3">
+      {{ form.generate_outbound }}
+      <label class="form-check-label" for="{{ form.generate_outbound.id_for_label }}">Generate outbound routing from prefix</label>
     </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.carrier.id_for_label }}">Carrier</label>
+        {{ form.carrier }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.dial_prefix.id_for_label }}">Dial Prefix</label>
+        {{ form.dial_prefix }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.timeout.id_for_label }}">Timeout (sec)</label>
+        {{ form.timeout }}
+      </div>
+    </div>
+    <div class="text-muted small mt-2">When enabled, the single-line fields above are ignored and a full rule block is generated.</div>
+  </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -886,3 +929,24 @@ $('#{{ form.application.id_for_label }}').on('input', function() {
 });
 </script>
 {% endblock %}
+
+<script>
+  function toggleGenerator() {
+    const gen = document.getElementById('id_generate_outbound');
+    const on = gen && (gen.checked || gen.value === 'on');
+    const singleIds = ['id_extension','id_priority','id_application','id_arguments'];
+    singleIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.closest('.form-group') ? el.closest('.form-group').style.display = on ? 'none' : '' : el.style.display = on ? 'none' : ''; el.disabled = !!on; }
+    });
+    const genIds = ['id_carrier','id_dial_prefix','id_timeout'];
+    genIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.closest('.form-group') ? el.closest('.form-group').style.display = on ? '' : 'none' : el.style.display = on ? '' : 'none'; el.disabled = !on; }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const gen = document.getElementById('id_generate_outbound');
+    if (gen) { gen.addEventListener('change', toggleGenerator); toggleGenerator(); }
+  });
+</script>

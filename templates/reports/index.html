@@ -1,0 +1,64 @@
+{% extends 'reports/base.html' %}
+
+{% block page_title %}<i class="fas fa-compass text-primary"></i> Reports Overview{% endblock %}
+{% block page_description %}Quick access to key analytics and exports{% endblock %}
+
+{% block reports_content %}
+<div class="row g-4">
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-report h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-chart-pie text-primary"></i> Summary</h5>
+        <p class="text-muted">High-level KPIs across calls, contact rate, conversion.</p>
+        <a href="{% url 'reports:summary' %}" class="btn btn-report">View Summary</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-report h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-bullhorn text-primary"></i> Campaign Performance</h5>
+        <p class="text-muted">Compare campaigns by calls, contacts, sales and talk time.</p>
+        <a href="{% url 'reports:campaign_performance' %}" class="btn btn-report">View Campaigns</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-report h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-user-clock text-primary"></i> Agent Performance</h5>
+        <p class="text-muted">Agent calls, contacts, sales and efficiency metrics.</p>
+        <a href="{% url 'reports:agent_performance' %}" class="btn btn-report">View Agents</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-report h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-phone text-primary"></i> Call Analytics</h5>
+        <p class="text-muted">Trends over time: calls, answered and sales per day.</p>
+        <a href="{% url 'reports:call_analytics' %}" class="btn btn-report">View Analytics</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-report h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-filter text-primary"></i> Lead Dispositions</h5>
+        <p class="text-muted">Distribution of outcomes to optimize conversions.</p>
+        <a href="{% url 'reports:lead_dispositions' %}" class="btn btn-report">View Dispositions</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-4">
+    <div class="card card-report h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="fas fa-calendar-alt text-primary"></i> Schedules</h5>
+        <p class="text-muted">Manage scheduled report deliveries and recipients.</p>
+        <a href="{% url 'reports:schedules' %}" class="btn btn-report">Manage Schedules</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

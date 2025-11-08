@@ -282,7 +282,68 @@
                     </div>
                 </div>
 
-                <!-- Step 3: Schedule & Timing -->
+                
+                    <div class="form-grid cols-2 mb-3">
+                        <div class="form-floating">
+                            {{ form.outbound_carrier }}
+                            <label for="{{ form.outbound_carrier.id_for_label }}">
+                                <i class="fas fa-network-wired me-2"></i>Outbound Carrier
+                            </label>
+                        </div>
+                        <div class="form-floating">
+                            {{ form.dial_prefix }}
+                            <label for="{{ form.dial_prefix.id_for_label }}">
+                                <i class="fas fa-hashtag me-2"></i>Dial Prefix
+                            </label>
+                        </div>
+                    </div>
+                        <div class="form-floating">
+                            {{ form.dial_speed }}
+                            <label for="{{ form.dial_speed.id_for_label }}">
+                                <i class="fas fa-gauge me-2"></i>Dialing Speed
+                            </label>
+                            <small class="text-muted">Use "Custom" to specify dials/agent</small>
+                            {% if form.dial_speed.errors %}
+                                <div class="invalid-feedback d-block">{{ form.dial_speed.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-floating">
+                            {{ form.custom_dials_per_agent }}
+                            <label for="{{ form.custom_dials_per_agent.id_for_label }}">
+                                <i class="fas fa-user-clock me-2"></i>Custom Dials per Agent
+                            </label>
+                            {% if form.custom_dials_per_agent.errors %}
+                                <div class="invalid-feedback d-block">{{ form.custom_dials_per_agent.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form-grid cols-2">
+                        <div class="form-floating">
+                            {{ form.dial_prefix }}
+                            <label for="{{ form.dial_prefix.id_for_label }}">
+                                <i class="fas fa-hashtag me-2"></i>Dial Prefix (optional)
+                            </label>
+                            {% if form.dial_prefix.errors %}
+                                <div class="invalid-feedback d-block">{{ form.dial_prefix.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-floating">
+                                                        {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-network-wired me-2"></i>Outbound Trunks
+                        </label>
+                                                {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Step 4: Schedule & Timing -->
                 <div class="form-section" id="step3">
                     <div class="section-header">
                         <h4 class="mb-2">
@@ -674,3 +735,5 @@
     });
 </script>
 {% endblock %}
+
+

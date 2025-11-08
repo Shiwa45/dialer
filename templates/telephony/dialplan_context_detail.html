@@ -332,7 +332,7 @@
                                     </div>
                                     <div class="col-md-2">
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'telephony:update_dialplan_extension' context.pk extension.pk %}" 
+                                            <a href="{% url 'telephony:update_dialplan_extension' extension.pk %}" 
                                                class="btn btn-outline-primary btn-sm" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
@@ -586,7 +586,7 @@ function performDeleteExtension(extensionId) {
     $('#deleteExtensionModal').modal('hide');
     
     $.ajax({
-        url: '{% url "telephony:delete_dialplan_extension" %}',
+        url: `/telephony/dialplan/extensions/${extensionId}/delete/`,
         method: 'POST',
         data: {
             'extension_id': extensionId,
@@ -609,15 +609,26 @@ function performDeleteExtension(extensionId) {
 }
 
 function testExtension(extensionId) {
-    showAlert('info', 'Testing extension functionality...');
-    
+    showAlert('info', 'Testing extension...');
     $.ajax({
-        url: '{% url "telephony:test_dialplan_extension" %}',
+        url: `/telephony/dialplan/extensions/${extensionId}/test/`,
         method: 'POST',
         data: {
-            'extension_id': extensionId,
             'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
         },
+        success: function(resp) {
+            if (resp.success) {
+                showAlert('success', `Extension OK (context=${resp.context}, exten=${resp.extension}, pri=${resp.priority})`);
+            } else {
+                const msg = resp.issues && resp.issues.length ? resp.issues.join(', ') : (resp.message || 'Test failed');
+                showAlert('warning', msg);
+            }
+        },
+        error: function() {
+            showAlert('error', 'Server error while testing extension');
+        }
+    });
+},
         success: function(response) {
             if (response.success) {
                 showAlert('success', 'Extension test completed successfully');
@@ -781,3 +792,6 @@ $(document).ready(function() {
 });
 </script>
 {% endblock %}
+
+
+

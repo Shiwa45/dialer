@@ -150,8 +150,10 @@
                                 <tr>
                                     <td class="font-weight-bold">Codec:</td>
                                     <td>
-                                        {% for codec in carrier.codec|split:"," %}
-                                            <span class="badge badge-light mr-1">{{ codec|trim }}</span>
+                                        {% for codec in codec_list %}
+                                            <span class="badge badge-light mr-1">{{ codec }}</span>
+                                        {% empty %}
+                                            <span class="text-muted">None</span>
                                         {% endfor %}
                                     </td>
                                 </tr>
@@ -299,6 +301,103 @@
 
         <!-- Sidebar -->
         <div class="col-lg-4">
+            <!-- Dialplan Preview -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-project-diagram"></i> Dialplan Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if dialplan_preview %}
+                        <div class="mb-2">
+                            <small class="text-muted">Context:</small>
+                            <code>from-campaign</code>
+                        </div>
+                        <pre class="bg-light p-3 rounded" style="white-space: pre-wrap; font-size: 0.9rem;">{% for line in dialplan_preview %}{{ line }}
+{% endfor %}</pre>
+                        <div class="mt-2 d-flex gap-2">
+                            <a href="{% url 'telephony:export_dialplan' %}" class="btn btn-sm btn-outline-secondary mr-2">
+                                <i class="fas fa-download"></i> Export Dialplan
+                            </a>
+                            <form method="post" action="{% url 'telephony:validate_dialplan' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-check"></i> Validate
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'telephony:reload_dialplan' %}" class="d-inline ml-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-sync"></i> Reload
+                                </button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No dial prefix configured for this carrier. Add a Dial Prefix in Edit to generate routing rules.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Present in Asterisk (Realtime) -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-database"></i> Realtime Dialplan Entries
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if dialplan_ext_rows %}
+                        <div class="table-responsive" style="max-height: 220px;">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>exten</th>
+                                        <th>prio</th>
+                                        <th>app</th>
+                                        <th>data</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in dialplan_ext_rows %}
+                                    <tr>
+                                        <td><code>{{ row.exten }}</code></td>
+                                        <td>{{ row.priority }}</td>
+                                        <td>{{ row.app }}</td>
+                                        <td class="text-truncate" style="max-width:220px;" title="{{ row.appdata }}">{{ row.appdata }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No matching rows found in <code>extensions_table</code> for <code>from-campaign</code>.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- How to Verify in Asterisk -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-secondary">
+                        <i class="fas fa-terminal"></i> Verify in Asterisk
+                    </h6>
+                </div>
+                <div class="card-body">
+<pre class="bg-light p-3 rounded" style="white-space: pre-wrap; font-size: 0.85rem;">
+asterisk -rvvvvv
+odbc show                            ; check ODBC connected
+dialplan show from-campaign          ; list context rules
+database show                        ; optional debug
+
+; If using Postgres realtime tables
+; SELECT context,exten,priority,app,appdata
+; FROM extensions_table
+; WHERE context='from-campaign' AND exten LIKE '_{{ carrier.dial_prefix|default:"" }}%';
+</pre>
+                    <small class="text-muted">If rules are missing, click Reload above and ensure your Asterisk realtime (extconfig.conf) points to <code>extensions_table</code>.</small>
+                </div>
+            </div>
             <!-- Quick Actions -->
             <div class="card shadow mb-4">
                 <div class="card-header py-3">

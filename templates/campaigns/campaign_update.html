@@ -21,6 +21,15 @@
         {% endfor %}
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-secondary">Cancel</a>
-    </form>
+            <div class="mb-3">
+            <label class="form-label"><i class="fas fa-network-wired me-2"></i>Outbound Carrier</label>
+            {{ form.outbound_carrier }}
+        </div>
+        <div class="mb-3">
+            <label class="form-label"><i class="fas fa-hashtag me-2"></i>Dial Prefix</label>
+            {{ form.dial_prefix }}
+        </div>
+
 </div>
 {% endblock %}
+

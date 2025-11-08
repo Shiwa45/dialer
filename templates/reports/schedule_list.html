@@ -1,0 +1,31 @@
+{% extends 'reports/base.html' %}
+
+{% block page_title %}<i class="fas fa-calendar-alt text-primary"></i> Report Schedules{% endblock %}
+{% block page_description %}Scheduled report generation and delivery{% endblock %}
+
+{% block reports_content %}
+<div class="table-responsive">
+  <table class="table table-striped table-report">
+    <thead>
+      <tr>
+        <th>Name</th><th>Report</th><th>Frequency</th><th>Next Run</th><th>Status</th><th>Recipients</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in schedules %}
+      <tr>
+        <td>{{ s.name }}</td>
+        <td>{{ s.report.name }}</td>
+        <td>{{ s.get_frequency_display }}</td>
+        <td>{{ s.next_run }}</td>
+        <td><span class="badge bg-{% if s.status == 'active' %}success{% elif s.status == 'paused' %}warning{% elif s.status == 'failed' %}danger{% else %}secondary{% endif %}">{{ s.get_status_display }}</span></td>
+        <td>{{ s.email_recipients|join:', ' }}</td>
+      </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted">No schedules configured</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endblock %}
+

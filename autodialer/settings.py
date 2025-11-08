@@ -83,16 +83,17 @@ WSGI_APPLICATION = 'autodialer.wsgi.application'
 ASGI_APPLICATION = 'autodialer.asgi.application'
 
 # Database
-'''DATABASES = {
+# Switch to PostgreSQL (uses env vars with safe defaults for local dev)
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='autodialer_db'),
-        'USER': config('DB_USER', default='autodialer_user'),
-        'PASSWORD': config('DB_PASSWORD', default='password'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='Shiwansh@123'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
     }
-}'''
+}
 
 # Redis Configuration
 REDIS_URL = config('REDIS_URL', default='redis://localhost:6379')
@@ -108,12 +109,14 @@ CHANNEL_LAYERS = {
 }
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
-    }
-}
+# If you want to force SQLite for quick local runs, temporarily comment out the block above
+# and uncomment the block below.
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / "db.sqlite3",
+#     }
+# }
 
 
 ASTERISK_SERVERS = {
@@ -145,6 +148,13 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_BEAT_SCHEDULE = {
+    'process-outbound-queue-every-2s': {
+        'task': 'campaigns.process_outbound_queue',
+        'schedule': 2.0,
+        'args': ()
+    },
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

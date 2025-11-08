@@ -78,6 +78,10 @@ class Carrier(TimeStampedModel):
         ('dahdi', 'DAHDI'),
         ('pjsip', 'PJSIP'),
     ]
+    REGISTRATION_CHOICES = [
+        ('ip', 'IP Based'),
+        ('registration', 'Registration Based'),
+    ]
     
     # Basic Information
     name = models.CharField(max_length=200)
@@ -88,10 +92,11 @@ class Carrier(TimeStampedModel):
     protocol = models.CharField(max_length=10, choices=PROTOCOL_CHOICES, default='sip')
     server_ip = models.CharField(max_length=200)
     port = models.PositiveIntegerField(default=5060)
+    registration_type = models.CharField(max_length=20, choices=REGISTRATION_CHOICES, default='ip')
     
     # Authentication
-    username = models.CharField(max_length=100)
-    password = models.CharField(max_length=100)
+    username = models.CharField(max_length=100, blank=True)
+    password = models.CharField(max_length=100, blank=True)
     auth_username = models.CharField(max_length=100, blank=True)
     
     # Settings
@@ -99,6 +104,9 @@ class Carrier(TimeStampedModel):
     dtmf_mode = models.CharField(max_length=20, default='rfc2833')
     qualify = models.CharField(max_length=20, default='yes')
     nat = models.CharField(max_length=20, default='force_rport,comedia')
+    # Outbound routing helpers
+    dial_prefix = models.CharField(max_length=10, blank=True)
+    dial_timeout = models.PositiveIntegerField(default=60)
     
     # Capacity and Routing
     max_channels = models.PositiveIntegerField(default=30)
@@ -116,6 +124,96 @@ class Carrier(TimeStampedModel):
     
     def __str__(self):
         return f"{self.name} ({self.protocol.upper()})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Auto-sync only for PJSIP carriers
+        try:
+            if self.protocol.lower() == 'pjsip' and self.is_active:
+                from .models import PsEndpoint, PsAuth, PsAor
+                endpoint_id = self.name
+                # Endpoint
+                PsEndpoint.objects.update_or_create(
+                    id=endpoint_id,
+                    defaults={
+                        'aors': endpoint_id,
+                        'auth': endpoint_id,
+                        'context': 'from-campaign',
+                        'allow': self.codec.replace(' ', ''),
+                        'disallow': 'all',
+                        'direct_media': 'no',
+                        'force_rport': 'yes',
+                        'rewrite_contact': 'yes',
+                    }
+                )
+                # Auth
+                PsAuth.objects.update_or_create(
+                    id=endpoint_id,
+                    defaults={
+                        'auth_type': 'userpass',
+                        'username': self.auth_username or self.username,
+                        'password': self.password,
+                        'realm': ''
+                    }
+                )
+                # AOR and registration
+                contact_uri = f"sip:{self.server_ip}:{self.port}"
+                if self.registration_type == 'ip':
+                    PsAor.objects.update_or_create(
+                        id=endpoint_id,
+                        defaults={'max_contacts': 1, 'remove_existing': 'yes', 'qualify_frequency': 60, 'contact': contact_uri}
+                    )
+                    try:
+                        PsRegistration.objects.filter(id=endpoint_id).delete()
+                    except Exception:
+                        pass
+                else:
+                    PsAor.objects.update_or_create(
+                        id=endpoint_id,
+                        defaults={'max_contacts': 1, 'remove_existing': 'yes', 'qualify_frequency': 60, 'contact': ''}
+                    )
+                    # Upsert registration row
+                    try:
+                        PsRegistration.objects.update_or_create(
+                            id=endpoint_id,
+                            defaults={
+                                'server_uri': contact_uri,
+                                'client_uri': f"sip:{self.username}@{self.server_ip}",
+                                'outbound_auth': endpoint_id,
+                                'transport': 'transport-udp',
+                            }
+                        )
+                    except Exception:
+                        pass
+                # Dialplan for prefix in from-campaign
+                if self.dial_prefix:
+                    try:
+                        ctx, _ = DialplanContext.objects.get_or_create(
+                            name='from-campaign',
+                            defaults={'description': 'Auto-generated outbound routing', 'is_active': True, 'asterisk_server': self.asterisk_server}
+                        )
+                        pattern = f"_{self.dial_prefix}X."
+                        pr = 1
+                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'NoOp', 'arguments': f'Outbound via {self.name}: ${{EXTEN}}', 'is_active': True}); pr += 1
+                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'Set', 'arguments': f'STRIPPED=${{EXTEN:{len(self.dial_prefix)}}}', 'is_active': True}); pr += 1
+                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'Dial', 'arguments': f'PJSIP/{self.name}/${{STRIPPED}},{self.dial_timeout}', 'is_active': True}); pr += 1
+                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'Hangup', 'arguments': '', 'is_active': True})
+                    except Exception:
+                        pass
+        except Exception:
+            # Don't block save on sync issues
+            pass
+
+    def delete(self, *args, **kwargs):
+        try:
+            if self.protocol.lower() == 'pjsip':
+                from .models import PsEndpoint, PsAuth, PsAor
+                PsEndpoint.objects.filter(id=self.name).delete()
+                PsAuth.objects.filter(id=self.name).delete()
+                PsAor.objects.filter(id=self.name).delete()
+        except Exception:
+            pass
+        return super().delete(*args, **kwargs)
 
 class DID(TimeStampedModel):
     """
@@ -147,7 +245,7 @@ class DID(TimeStampedModel):
 
     # Routing
     asterisk_server = models.ForeignKey(AsteriskServer, on_delete=models.CASCADE, related_name='dids')
-    carrier = models.ForeignKey(Carrier, on_delete=models.SET_NULL, null=True, blank=True)
+    carrier = models.ForeignKey(Carrier, on_delete=models.SET_NULL, null=True, blank=True, related_name='dids')
 
     # Inbound Settings
     context = models.CharField(max_length=100, default='from-trunk')
@@ -187,6 +285,7 @@ class PsEndpoint(models.Model):
     dtls_auto_generate_cert = models.CharField(max_length=3, default='yes', blank=True)
     force_rport = models.CharField(max_length=3, default='yes', blank=True)
     rewrite_contact = models.CharField(max_length=3, default='yes', blank=True)
+    mailboxes = models.CharField(max_length=80, blank=True, default='')
     
     class Meta:
         db_table = 'ps_endpoints'
@@ -210,9 +309,24 @@ class PsAor(models.Model):
     max_contacts = models.IntegerField(default=1)
     remove_existing = models.CharField(max_length=3, default='yes')
     qualify_frequency = models.IntegerField(default=0, blank=True)
+    contact = models.CharField(max_length=256, blank=True, default='')
     
     class Meta:
         db_table = 'ps_aors'
+        managed = True
+
+
+class PsRegistration(models.Model):
+    """PJSIP outbound registrations - Asterisk Realtime Table"""
+    id = models.CharField(max_length=40, primary_key=True)
+    transport = models.CharField(max_length=40, default='transport-udp', blank=True)
+    server_uri = models.CharField(max_length=256)
+    client_uri = models.CharField(max_length=256)
+    contact_user = models.CharField(max_length=80, blank=True)
+    outbound_auth = models.CharField(max_length=40)
+
+    class Meta:
+        db_table = 'ps_registrations'
         managed = True
 
 class ExtensionsTable(models.Model):
@@ -617,6 +731,33 @@ class DialplanExtension(TimeStampedModel):
     
     def __str__(self):
         return f"{self.context.name},{self.extension},{self.priority}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Mirror into Asterisk Realtime extensions table
+        try:
+            ExtensionsTable.objects.update_or_create(
+                context=self.context.name,
+                exten=self.extension,
+                priority=self.priority,
+                defaults={
+                    'app': self.application,
+                    'appdata': self.arguments or ''
+                }
+            )
+        except Exception:
+            pass
+
+    def delete(self, *args, **kwargs):
+        try:
+            ExtensionsTable.objects.filter(
+                context=self.context.name,
+                exten=self.extension,
+                priority=self.priority,
+            ).delete()
+        except Exception:
+            pass
+        return super().delete(*args, **kwargs)
     
 
 
@@ -674,3 +815,4 @@ def save(self, *args, **kwargs):
     # Sync to both PJSIP and chan_sip
     self.sync_to_asterisk()  # Your existing PJSIP sync
     self.sync_to_sip()       # New chan_sip sync
+

@@ -57,10 +57,10 @@ def agent_dashboard(request):
         
         # Get agent's assigned campaigns
         assigned_campaigns = Campaign.objects.filter(
-            agent_assignments__agent=agent,
-            agent_assignments__is_active=True,
-            status='active'
-        )
+            assigned_users=agent,
+            status='active',
+            campaignagent__is_active=True
+        ).distinct()
         
         context = {
             'agent': agent,
@@ -70,6 +70,7 @@ def agent_dashboard(request):
             'webrtc_config': json.dumps(webrtc_config) if webrtc_config else '{}',
             'call_status': call_status,
             'assigned_campaigns': assigned_campaigns,
+            'dialer_session': None,
         }
         
         return render(request, 'agents/simple_dashboard.html', context)
@@ -84,6 +85,36 @@ def agent_dashboard(request):
             'pending_callbacks': [],
             'script_content': ''
         })
+
+
+# Removed persistent session flow and push_call to simplify UX
+
+
+@login_required
+@agent_required
+@require_POST
+def manual_dial(request):
+    """Manual dial: originate customer only when the agent requests, then auto-bridge to agent."""
+    agent = request.user
+    number = request.POST.get('phone_number', '').strip()
+    campaign_id = request.POST.get('campaign_id')
+    if not number:
+        return JsonResponse({'success': False, 'error': 'phone_number required'}, status=400)
+    # Enqueue a one-off queue item and process immediately for this agent
+    try:
+        from campaigns.models import OutboundQueue, Campaign
+        from campaigns.tasks import process_outbound_queue_item
+        campaign = Campaign.objects.filter(id=campaign_id).first() if campaign_id else None
+        if not campaign:
+            # Fallback: use any active campaign assigned to agent
+            campaign = Campaign.objects.filter(assigned_users=agent, status='active').first()
+        if not campaign:
+            return JsonResponse({'success': False, 'error': 'No campaign available'}, status=400)
+        q = OutboundQueue.objects.create(campaign=campaign, phone_number=number)
+        process_outbound_queue_item.delay(q.id)
+        return JsonResponse({'success': True, 'queue_id': q.id, 'message': 'Dial requested'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
@@ -795,9 +826,9 @@ def schedule_callback(request):
         
         # Get current campaign (or use first available)
         current_campaign = Campaign.objects.filter(
-            agent_assignments__agent=agent,
-            agent_assignments__is_active=True,
-            status='active'
+            assigned_users=agent,
+            status='active',
+            campaignagent__is_active=True
         ).first()
         
         if not current_campaign:

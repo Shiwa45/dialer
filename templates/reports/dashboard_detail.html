@@ -1,0 +1,13 @@
+{% extends 'reports/base.html' %}
+
+{% block page_title %}<i class="fas fa-th-large text-primary"></i> {{ dashboard.name }}{% endblock %}
+{% block page_description %}{{ dashboard.description|default:'Dashboard' }}{% endblock %}
+
+{% block reports_content %}
+<div class="card card-report">
+  <div class="card-body">
+    <p class="text-muted mb-0">This is a placeholder dashboard view. You can enhance it to render widgets defined in the Dashboard model.</p>
+  </div>
+</div>
+{% endblock %}
+

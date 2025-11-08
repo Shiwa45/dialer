@@ -47,10 +47,10 @@ def agent_dashboard(request):
     
     # Get agent's assigned campaigns
     assigned_campaigns = Campaign.objects.filter(
-        agent_assignments__agent=agent,
-        agent_assignments__is_active=True,
-        status='active'
-    )
+        assigned_users=agent,
+        status='active',
+        campaignagent__is_active=True
+    ).distinct()
     
     # Get today's statistics
     today_calls = CallLog.objects.filter(agent=agent, start_time__date=today)
@@ -795,9 +795,9 @@ class AgentScriptListView(LoginRequiredMixin, ListView):
         
         # Get agent's assigned campaigns
         assigned_campaigns = Campaign.objects.filter(
-            agent_assignments__agent=agent,
-            agent_assignments__is_active=True
-        )
+            assigned_users=agent,
+            campaignagent__is_active=True
+        ).distinct()
         
         return AgentScript.objects.filter(
             Q(campaign__in=assigned_campaigns) | Q(is_global=True),

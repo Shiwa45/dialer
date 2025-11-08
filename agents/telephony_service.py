@@ -11,7 +11,7 @@ from campaigns.models import Campaign
 from leads.models import Lead
 from calls.models import CallLog
 from users.models import AgentStatus
-from .models import AgentQueue, AgentWebRTCSession
+from .models import AgentQueue, AgentWebRTCSession, AgentDialerSession
 
 logger = logging.getLogger(__name__)
 
@@ -133,15 +133,26 @@ class AgentTelephonyService:
             }
         
         try:
+            # Normalize identifiers that may arrive as strings like "" or "null"
+            def _to_int(val):
+                if val in (None, '', 'null', 'None'):
+                    return None
+                try:
+                    return int(val)
+                except (ValueError, TypeError):
+                    return None
+
             # Get campaign and determine dial method
             campaign = None
-            if campaign_id:
-                campaign = Campaign.objects.filter(id=campaign_id).first()
+            cid = _to_int(campaign_id)
+            if cid is not None:
+                campaign = Campaign.objects.filter(id=cid).first()
             
             # Get lead if provided
             lead = None
-            if lead_id:
-                lead = Lead.objects.filter(id=lead_id).first()
+            lid = _to_int(lead_id)
+            if lid is not None:
+                lead = Lead.objects.filter(id=lid).first()
             
             # Create call log entry
             call_log = CallLog.objects.create(
@@ -164,12 +175,20 @@ class AgentTelephonyService:
                 dial_method = campaign.dial_method
             
             if dial_method in ['manual', 'preview']:
-                # Direct dial from agent to number
+                # Manual/preview: prefer dialplan routing via prefix if configured
+                ctx = 'from-campaign'
+                num = phone_number
+                if campaign and campaign.dial_prefix:
+                    num = f"{campaign.dial_prefix}{phone_number}"
+                    ctx = 'from-campaign'
+                else:
+                    # fallback to existing agents context
+                    ctx = 'agents'
                 result = asterisk_service.originate_call(
                     extension=self.agent_phone.extension,
-                    phone_number=phone_number,
+                    phone_number=num,
                     campaign=campaign,
-                    context='agents'
+                    context=ctx
                 )
             elif dial_method in ['progressive', 'predictive']:
                 # Use dialer queue system
@@ -216,6 +235,106 @@ class AgentTelephonyService:
                 'success': False,
                 'error': f'Call failed: {str(e)}'
             }
+
+    # =====================
+    # Autodial Session (Phase 1)
+    # =====================
+    def login_campaign(self, campaign_id):
+        """Create persistent agent leg and bridge for the selected campaign."""
+        if not self.agent_phone or not self.asterisk_server:
+            return {'success': False, 'error': 'Phone or Asterisk server not configured'}
+
+        try:
+            campaign = Campaign.objects.filter(id=campaign_id).first()
+            if not campaign:
+                return {'success': False, 'error': 'Campaign not found'}
+
+            service = AsteriskService(self.asterisk_server)
+            # Create bridge for the agent
+            b = service.create_bridge('mixing')
+            if not b.get('success'):
+                return b
+            bridge_id = b['bridge_id']
+
+            # Originate agent leg
+            o = service.originate_pjsip_channel(
+                endpoint=self.agent_phone.extension,
+                app='autodialer',
+                callerid=f"Agent {self.agent_phone.extension}",
+                variables={'CALL_TYPE': 'agent_leg', 'BRIDGE_ID': bridge_id}
+            )
+            if not o.get('success'):
+                # cleanup bridge
+                return o
+            agent_channel_id = o['channel_id']
+
+            # Try to add agent channel to bridge (may fail until answered)
+            _ = service.add_channel_to_bridge(bridge_id, agent_channel_id)
+
+            session = AgentDialerSession.objects.create(
+                agent=self.agent,
+                campaign=campaign,
+                asterisk_server=self.asterisk_server,
+                agent_extension=self.agent_phone.extension,
+                agent_channel_id=agent_channel_id,
+                agent_bridge_id=bridge_id,
+                status='connecting'
+            )
+
+            # Mark agent as available, connection expected to complete when answered
+            agent_status = getattr(self.agent, 'agent_status', None)
+            if agent_status:
+                agent_status.set_status('available')
+
+            return {
+                'success': True,
+                'session_id': session.id,
+                'bridge_id': bridge_id,
+                'agent_channel_id': agent_channel_id,
+                'message': 'Agent session created. Answer your phone to complete connection.'
+            }
+
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def logout_session(self):
+        try:
+            session = AgentDialerSession.objects.filter(agent=self.agent, status__in=['connecting', 'ready']).first()
+            if not session:
+                return {'success': True, 'message': 'No active session'}
+            service = AsteriskService(session.asterisk_server)
+            if session.agent_channel_id:
+                service.hangup_channel(session.agent_channel_id)
+            session.status = 'offline'
+            session.ended_at = timezone.now()
+            session.save()
+            agent_status = getattr(self.agent, 'agent_status', None)
+            if agent_status:
+                agent_status.set_status('offline')
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def push_call(self, phone_number):
+        """Manually push a number to the agent bridge (POC)."""
+        session = AgentDialerSession.objects.filter(agent=self.agent, status__in=['connecting', 'ready']).first()
+        if not session:
+            return {'success': False, 'error': 'No active session'}
+        service = AsteriskService(session.asterisk_server)
+        # Originate via Local into dialplan (from-campaign); prefix selects carrier
+        number_to_dial = f"{session.campaign.dial_prefix}{phone_number}" if session.campaign.dial_prefix else phone_number
+        o = service.originate_local_channel(
+            number=number_to_dial,
+            context='from-campaign',
+            app='autodialer',
+            callerid=f"OUT {phone_number}",
+            variables={'CALL_TYPE': 'customer_leg', 'BRIDGE_ID': session.agent_bridge_id, 'CAMPAIGN_ID': str(session.campaign.id)}
+        )
+        if not o.get('success'):
+            return o
+        # Attempt to add to bridge (will succeed when answered)
+        _ = service.add_channel_to_bridge(session.agent_bridge_id, o['channel_id'])
+        return {'success': True, 'customer_channel_id': o['channel_id']}
     
     def queue_call_for_dialing(self, phone_number, campaign, lead, call_log):
         """

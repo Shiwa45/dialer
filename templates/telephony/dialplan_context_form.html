@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load widget_tweaks %}
+{# widget_tweaks removed: forms already include Bootstrap classes #}
 
 {% block title %}
     {% if form.instance.pk %}Edit{% else %}Create{% endif %} Dialplan Context
@@ -229,7 +229,7 @@
                                 <i class="fas fa-tag me-1"></i>Context Name
                                 <span class="text-danger">*</span>
                             </label>
-                            {{ form.name|add_class:"form-control" }}
+                            {{ form.name }}
                             {% if form.name.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.name.errors %}
@@ -284,7 +284,7 @@
                             <label class="form-label" for="{{ form.description.id_for_label }}">
                                 <i class="fas fa-align-left me-1"></i>Description
                             </label>
-                            {{ form.description|add_class:"form-control" }}
+                            {{ form.description }}
                             {% if form.description.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.description.errors %}
@@ -303,7 +303,7 @@
                                 <i class="fas fa-server me-1"></i>Asterisk Server
                                 <span class="text-danger">*</span>
                             </label>
-                            {{ form.asterisk_server|add_class:"form-control" }}
+                            {{ form.asterisk_server }}
                             {% if form.asterisk_server.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.asterisk_server.errors %}
@@ -335,7 +335,7 @@
                                 <i class="fas fa-toggle-on me-1"></i>Status
                             </label>
                             <div class="form-check form-switch">
-                                {{ form.is_active|add_class:"form-check-input" }}
+                                {{ form.is_active }}
                                 <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
                                     Context is active and will be included in the dialplan
                                 </label>

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load widget_tweaks %}
+{# widget_tweaks removed: forms already include Bootstrap classes #}
 
 {% block title %}
     {% if form.instance.pk %}Edit{% else %}Add{% endif %} Queue Member - {{ queue.name }}
@@ -159,7 +159,7 @@
                                 <i class="fas fa-phone me-1"></i>Phone/Extension
                                 <span class="text-danger">*</span>
                             </label>
-                            {{ form.phone|add_class:"form-control" }}
+                            {{ form.phone }}
                             {% if form.phone.errors %}
                                 <div class="text-danger mt-1">
                                     {% for error in form.phone.errors %}
@@ -202,7 +202,7 @@
                                            oninput="updatePenaltyValue(this.value)">
                                 </div>
                                 <div class="col-2">
-                                    {{ form.penalty|add_class:"form-control text-center" }}
+                                    {{ form.penalty }}
                                 </div>
                             </div>
                             {% if form.penalty.errors %}
@@ -240,7 +240,7 @@
                                     <small>Member disabled</small>
                                 </div>
                             </div>
-                            {{ form.is_active|add_class:"d-none" }}
+                            {{ form.is_active }}
 
                             <div class="status-toggle mt-3">
                                 <div class="toggle-option {% if not form.paused.value %}active{% endif %}" 
@@ -256,7 +256,7 @@
                                     <small>Temporarily unavailable</small>
                                 </div>
                             </div>
-                            {{ form.paused|add_class:"d-none" }}
+                            {{ form.paused }}
                         </div>
 
                         <!-- Queue Information (Read-only) -->
@@ -424,3 +424,4 @@ $(document).ready(function() {
 });
 </script>
 {% endblock %}
+

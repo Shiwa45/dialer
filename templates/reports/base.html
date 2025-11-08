@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% block reports_title %}Reports{% endblock %} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+  .content-header { background:#fff; padding:20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom:20px; border-left: 5px solid #667eea; }
+  .btn-report { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border:none; color:#fff; padding: 8px 16px; border-radius: 8px; font-weight:600; }
+  .card-report { border:none; border-radius:14px; box-shadow: 0 5px 20px rgba(0,0,0,.08); }
+  .filter-bar .form-select, .filter-bar .form-control { border-radius: 10px; }
+  .table-report th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff; border: none; }
+  .table-report td { vertical-align: middle; }
+  .export-links a { margin-right: 10px; }
+  .metric { font-weight:700; font-size: 1.25rem; }
+  .metric-label { color:#6c757d; font-size: .85rem; letter-spacing:.2px; }
+  .p-4 { padding: 1.25rem !important; }
+  .mb-0 { margin-bottom: 0 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="p-4">
+    <div class="content-header d-flex justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-1">{% block page_title %}Reports{% endblock %}</h1>
+        <p class="text-muted mb-0">{% block page_description %}Analyze calls, agents, and campaigns{% endblock %}</p>
+      </div>
+      <div class="export-links">
+        {% block export_links %}{% endblock %}
+      </div>
+    </div>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">{{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block reports_content %}{% endblock %}
+  </div>
+{% endblock %}

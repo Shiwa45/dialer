@@ -107,6 +107,29 @@ class Campaign(TimeStampedModel):
     use_campaign_dnc = models.BooleanField(default=False)
     amd_enabled = models.BooleanField(default=False, help_text="Answering Machine Detection")
     
+    # Dialing speed presets (UI-level); maps to effective dials per agent
+    DIAL_SPEED = [
+        ('slow', 'Slow'),
+        ('normal', 'Normal'),
+        ('fast', 'Fast'),
+        ('very_fast', 'Very Fast'),
+        ('custom', 'Custom'),
+    ]
+    dial_speed = models.CharField(max_length=20, choices=DIAL_SPEED, default='normal')
+    custom_dials_per_agent = models.PositiveIntegerField(default=1, help_text="Used when dial_speed=custom")
+    
+    # Preferred outbound carrier (optional, syncs dial_prefix on save)
+    outbound_carrier = models.ForeignKey(
+        'telephony.Carrier', on_delete=models.SET_NULL, null=True, blank=True, related_name='preferred_campaigns'
+    )
+    # Outbound routing
+    dial_prefix = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Optional prefix to prepend to dialed numbers"
+    )
+    # Advanced: multiple trunks with weights
+    
     # Assignment
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_campaigns')
     assigned_users = models.ManyToManyField(User, through='CampaignAgent', related_name='assigned_campaigns')
@@ -141,6 +164,15 @@ class Campaign(TimeStampedModel):
         """Pause the campaign"""
         self.status = 'paused'
         self.save()
+
+    def save(self, *args, **kwargs):
+        # Auto-sync campaign dial_prefix from selected outbound_carrier if present
+        try:
+            if getattr(self, 'outbound_carrier', None) and self.outbound_carrier and self.outbound_carrier.dial_prefix:
+                self.dial_prefix = self.outbound_carrier.dial_prefix
+        except Exception:
+            pass
+        super().save(*args, **kwargs)
 
 class CampaignAgent(TimeStampedModel):
     """
@@ -317,6 +349,52 @@ class CampaignHours(TimeStampedModel):
     
     def __str__(self):
         return f"{self.campaign.name} - {self.get_day_of_week_display()}"
+
+
+class CampaignCarrier(TimeStampedModel):
+    """
+    Through model for Campaign ↔ Carrier (trunk) with weight and round-robin tracking
+    """
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='campaign_carriers')
+    carrier = models.ForeignKey('telephony.Carrier', on_delete=models.CASCADE, related_name='carrier_campaigns')
+    weight = models.PositiveIntegerField(default=1)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('campaign', 'carrier')
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.campaign.name} ↔ {self.carrier.name} (w={self.weight})"
+
+
+class OutboundQueue(TimeStampedModel):
+    """
+    Queue for autodial numbers per campaign
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('dialing', 'Dialing'),
+        ('answered', 'Answered'),
+        ('failed', 'Failed'),
+        ('completed', 'Completed'),
+    ]
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='outbound_queue')
+    lead = models.ForeignKey('leads.Lead', on_delete=models.SET_NULL, null=True, blank=True)
+    phone_number = models.CharField(max_length=32)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    attempts = models.PositiveIntegerField(default=0)
+    last_tried_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['campaign', 'status']),
+            models.Index(fields=['status', 'last_tried_at'])
+        ]
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.campaign.name} - {self.phone_number} ({self.status})"
 
 # campaigns/apps.py
 from django.apps import AppConfig

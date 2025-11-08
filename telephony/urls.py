@@ -89,6 +89,14 @@ urlpatterns = [
     path('dialplan/contexts/<int:context_pk>/extensions/create/', views.DialplanExtensionCreateView.as_view(), name='create_dialplan_extension'),
     path('dialplan/extensions/<int:pk>/edit/', views.DialplanExtensionUpdateView.as_view(), name='update_dialplan_extension'),
     path('dialplan/extensions/<int:pk>/delete/', views.DialplanExtensionDeleteView.as_view(), name='delete_dialplan_extension'),
+    path('dialplan/extensions/<int:pk>/test/', views.test_dialplan_extension, name='test_dialplan_extension'),
+    # Dialplan export/validate/reload
+    path('dialplan/export/context/<int:pk>/', views.export_dialplan_context, name='export_dialplan_context'),
+    path('dialplan/export/', views.export_dialplan, name='export_dialplan'),
+    path('dialplan/validate/', views.validate_dialplan, name='validate_dialplan'),
+    path('dialplan/reload/', views.reload_dialplan, name='reload_dialplan'),
+    path('dialplan/contexts/<int:pk>/test/', views.test_dialplan_context, name='test_dialplan_context'),
+    path('dialplan/contexts/<int:pk>/validate/', views.validate_dialplan_context, name='validate_dialplan_context'),
     
     # WebRTC Management
     path('webrtc/config/', views.webrtc_config, name='webrtc_config'),

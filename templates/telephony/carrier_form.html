@@ -72,7 +72,22 @@
                 {% endif %}
             </div>
 
-            <!-- Codec -->
+                        <!-- Registration Type -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.registration_type.id_for_label }}" class="form-label">Registration Type</label>
+                {{ form.registration_type }}
+            </div>
+
+            <!-- Dial Prefix & Timeout -->
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.dial_prefix.id_for_label }}" class="form-label">Dial Prefix</label>
+                {{ form.dial_prefix }}
+                <div class="form-text">Numbers dialed with this prefix will route to this carrier</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.dial_timeout.id_for_label }}" class="form-label">Dial Timeout (sec)</label>
+                {{ form.dial_timeout }}
+            </div>\n            <!-- Codec -->
             <div class="col-md-6 mb-3">
                 <label for="{{ form.codec.id_for_label }}" class="form-label">Codec</label>
                 {{ form.codec }}
@@ -199,3 +214,16 @@
 </script>
 {% endblock %}
 {% endblock %}
+
+<script>
+  function toggleRegFields(){
+    const reg = document.getElementById('{{ form.registration_type.id_for_label }}');
+    const mode = reg ? reg.value : 'ip';
+    const fields = ['{{ form.username.id_for_label }}','{{ form.password.id_for_label }}','{{ form.auth_username.id_for_label }}'];
+    fields.forEach(id => { const el = document.getElementById(id); if (el){ const group = el.closest('.col-md-6') || el.closest('.mb-3') || el.parentElement; if (group){ group.style.display = (mode==='registration')? '' : 'none'; } el.disabled = (mode!=='registration'); } });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const reg = document.getElementById('{{ form.registration_type.id_for_label }}');
+    if (reg){ reg.addEventListener('change', toggleRegFields); toggleRegFields(); }
+  });
+</script>

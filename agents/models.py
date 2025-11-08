@@ -443,3 +443,36 @@ class AgentCallbackTask(TimeStampedModel):
         if self.scheduled_time <= timezone.now():
             return 0
         return (self.scheduled_time - timezone.now()).total_seconds()
+
+
+class AgentDialerSession(TimeStampedModel):
+    """
+    Persistent agent leg + bridge for autodial login
+    """
+    STATUS_CHOICES = [
+        ('connecting', 'Connecting'),
+        ('ready', 'Ready'),
+        ('offline', 'Offline'),
+        ('error', 'Error'),
+    ]
+
+    agent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dialer_sessions')
+    campaign = models.ForeignKey('campaigns.Campaign', on_delete=models.CASCADE)
+    asterisk_server = models.ForeignKey('telephony.AsteriskServer', on_delete=models.CASCADE)
+
+    agent_extension = models.CharField(max_length=20)
+    agent_channel_id = models.CharField(max_length=100, blank=True)
+    agent_bridge_id = models.CharField(max_length=100, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='connecting')
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Agent Dialer Session'
+        verbose_name_plural = 'Agent Dialer Sessions'
+
+    def __str__(self):
+        return f"{self.agent.username} - {self.campaign.name} ({self.status})"

@@ -15,7 +15,7 @@ urlpatterns = [
     path('telephony/', include('telephony.urls')),
     path('agents/', include('agents.urls')),
 #    path('calls/', include('calls.urls')),
-#    path('reports/', include('reports.urls')),
+    path('reports/', include('reports.urls')),
 #    path('settings/', include('settings.urls')),
     path('dashboard/', include('core.urls', namespace='dashboard')),
 ]

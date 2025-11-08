@@ -33,7 +33,10 @@ class CampaignCreateForm(forms.ModelForm):
             'timezone', 'max_attempts', 'call_timeout', 'retry_delay',
             'dial_ratio', 'max_lines', 'abandon_rate', 'enable_recording',
             'recording_delay', 'monitor_agents', 'lead_order',
-            'use_internal_dnc', 'use_campaign_dnc', 'amd_enabled'
+            'use_internal_dnc', 'use_campaign_dnc', 'amd_enabled',
+            # Dialing speed and routing
+            'dial_speed', 'custom_dials_per_agent',
+            'outbound_carrier', 'dial_prefix'
         ]
         
         widgets = {
@@ -108,6 +111,19 @@ class CampaignCreateForm(forms.ModelForm):
             'use_internal_dnc': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'use_campaign_dnc': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'amd_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            # New dialing speed & routing widgets
+            'dial_speed': forms.Select(attrs={'class': 'form-select'}),
+            'custom_dials_per_agent': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 20,
+                'step': 1,
+            }),
+            'dial_prefix': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. 0, 91, 001'
+            }),
+            'outbound_carrier': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -60,7 +60,7 @@
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="{% url 'campaigns:list' %}"><i class="fas fa-list"></i> All Campaigns</a></li>
                                     <li><a class="dropdown-item" href="{% url 'campaigns:create' %}"><i class="fas fa-plus"></i> Create Campaign</a></li>
-                                    <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar"></i> Campaign Reports</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reports:campaign_performance' %}"><i class="fas fa-chart-bar"></i> Campaign Reports</a></li>
                                 </ul>
                         </li>
                         
@@ -94,16 +94,16 @@
                                 <span>Reports</span>
                             </a>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#"><i class="fas fa-chart-pie"></i> Call Analytics</a></li>
-                                    <li><a class="dropdown-item" href="#"><i class="fas fa-clock"></i> Agent Performance</a></li>
-                                    <li><a class="dropdown-item" href="#"><i class="fas fa-download"></i> Export Data</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reports:call_analytics' %}"><i class="fas fa-chart-pie"></i> Call Analytics</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reports:agent_performance' %}"><i class="fas fa-clock"></i> Agent Performance</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reports:summary' %}"><i class="fas fa-download"></i> Summary & Export</a></li>
                                 </ul>
                         </li>
                         {% endif %}
                         
                         {% if user.profile.is_agent %}
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="agentPanel">
+                            <a class="nav-link {% if request.resolver_match.namespace == 'agents' %}active{% endif %}" href="{% url 'agents:dashboard' %}" id="agentPanel">
                                 <i class="fas fa-headset"></i>
                                 <span>Agent Panel</span>
                             </a>
@@ -260,9 +260,34 @@
                     <span>Lead Management</span>
                 </a>
                 
-                <a class="nav-link" href="#">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Analytics</span>
+                <div class="sidebar-heading">Reports</div>
+                <a class="nav-link {% if request.resolver_match.namespace == 'reports' and request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'reports:index' %}">
+                    <i class="fas fa-compass"></i>
+                    <span>Overview</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'summary' %}active{% endif %}" href="{% url 'reports:summary' %}">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Summary</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'campaign_performance' %}active{% endif %}" href="{% url 'reports:campaign_performance' %}">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Campaigns</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'agent_performance' %}active{% endif %}" href="{% url 'reports:agent_performance' %}">
+                    <i class="fas fa-user-clock"></i>
+                    <span>Agents</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'call_analytics' %}active{% endif %}" href="{% url 'reports:call_analytics' %}">
+                    <i class="fas fa-phone"></i>
+                    <span>Call Analytics</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'lead_dispositions' %}active{% endif %}" href="{% url 'reports:lead_dispositions' %}">
+                    <i class="fas fa-filter"></i>
+                    <span>Dispositions</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'realtime' %}active{% endif %}" href="{% url 'reports:realtime' %}">
+                    <i class="fas fa-bolt"></i>
+                    <span>Realtime</span>
                 </a>
                 {% endif %}
                 

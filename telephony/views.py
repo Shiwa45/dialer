@@ -8,7 +8,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView
 )
 from django.urls import reverse_lazy, reverse
-from django.http import JsonResponse, Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotFound
+from django.http import JsonResponse, Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotFound, FileResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg, Sum
 from django.utils import timezone
@@ -19,7 +19,11 @@ import requests
 import secrets
 import string
 import os
+import io
+import zipfile
+from collections import OrderedDict
 from datetime import datetime, timedelta
+from django.template.defaultfilters import filesizeformat
 
 from .models import (
     AsteriskServer, Carrier, DID, Phone, IVR, IVROption,
@@ -1211,11 +1215,20 @@ class RecordingListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        stats = Recording.objects.aggregate(
+            total=Count('id'),
+            total_duration=Sum('duration'),
+            total_size=Sum('file_size'),
+        )
+        total_seconds = stats.get('total_duration') or 0
+        total_hours = round(total_seconds / 3600, 2) if total_seconds else 0
         context.update({
-            'total_recordings': Recording.objects.count(),
-            'total_size': Recording.objects.aggregate(
-                total_size=Sum('file_size')
-            )['total_size'] or 0,
+            'total_recordings': stats.get('total') or 0,
+            'total_duration': total_hours,
+            'total_size': stats.get('total_size') or 0,
+            'today_recordings': Recording.objects.filter(
+                recording_start__date=timezone.now().date()
+            ).count(),
         })
         return context
 
@@ -1268,6 +1281,108 @@ def play_recording(request, pk):
     recording = get_object_or_404(Recording, pk=pk)
     # TODO: Implement audio player logic
     return render(request, 'telephony/play_recording.html', {'recording': recording})
+
+
+@login_required
+def stream_recording(request, pk):
+    """
+    Stream recording audio content for HTML5 players
+    """
+    recording = get_object_or_404(Recording, pk=pk)
+    if not recording.file_path or not os.path.exists(recording.file_path):
+        raise Http404("Recording file not found")
+    
+    audio_format = (recording.format or 'wav').lower()
+    content_type = f'audio/{audio_format}'
+    
+    audio_file = open(recording.file_path, 'rb')
+    response = FileResponse(audio_file, content_type=content_type)
+    response['Content-Length'] = recording.file_size or os.path.getsize(recording.file_path)
+    response['Content-Disposition'] = f'inline; filename="{os.path.basename(recording.file_path)}"'
+    return response
+
+
+@login_required
+def recordings_stats(request):
+    """
+    Provide live statistics for recordings dashboard
+    """
+    stats = Recording.objects.aggregate(
+        total=Count('id'),
+        total_duration=Sum('duration'),
+        total_size=Sum('file_size'),
+    )
+    total_seconds = stats.get('total_duration') or 0
+    total_hours = round(total_seconds / 3600, 2) if total_seconds else 0
+    today_count = Recording.objects.filter(
+        recording_start__date=timezone.now().date()
+    ).count()
+    payload = OrderedDict([
+        ('total_recordings', stats.get('total') or 0),
+        ('total_duration', total_hours),
+        ('total_size', filesizeformat(stats.get('total_size') or 0)),
+        ('today_recordings', today_count),
+    ])
+    return JsonResponse(payload)
+
+
+@login_required
+def bulk_download_recordings(request):
+    """
+    Download multiple recordings as a ZIP archive
+    """
+    if request.method != 'POST':
+        messages.error(request, 'Bulk download must be submitted via POST.')
+        return redirect('telephony:recordings')
+    
+    recording_ids = request.POST.getlist('recording_ids')
+    if not recording_ids:
+        messages.warning(request, 'No recordings selected for download.')
+        return redirect('telephony:recordings')
+    
+    recordings = Recording.objects.filter(pk__in=recording_ids, is_available=True)
+    if not recordings.exists():
+        messages.error(request, 'Selected recordings are not available.')
+        return redirect('telephony:recordings')
+    
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for recording in recordings:
+            if recording.file_path and os.path.exists(recording.file_path):
+                arcname = os.path.basename(recording.file_path)
+                zip_file.write(recording.file_path, arcname=arcname)
+    
+    buffer.seek(0)
+    filename = f"recordings_{timezone.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    response = FileResponse(buffer, as_attachment=True, filename=filename)
+    response['Content-Type'] = 'application/zip'
+    return response
+
+
+@login_required
+def bulk_delete_recordings(request):
+    """
+    Delete multiple recordings via AJAX
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    recording_ids = request.POST.getlist('recording_ids[]') or request.POST.getlist('recording_ids')
+    if not recording_ids:
+        return JsonResponse({'success': False, 'message': 'No recordings selected'})
+    
+    recordings = Recording.objects.filter(pk__in=recording_ids)
+    deleted_count = 0
+    for recording in recordings:
+        if recording.file_path and os.path.exists(recording.file_path):
+            try:
+                os.remove(recording.file_path)
+            except OSError:
+                pass
+        recording.delete()
+        deleted_count += 1
+    
+    return JsonResponse({'success': True, 'deleted_count': deleted_count})
 
 
 # ============================================================================
@@ -2087,5 +2202,3 @@ def validate_dialplan_context(request, pk):
 # ============================================================================
 # DIALPLAN OUTBOUND WIZARD
 # ============================================================================
-
-

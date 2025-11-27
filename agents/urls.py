@@ -20,6 +20,7 @@ urlpatterns = [
     path('call/hangup/', views.hangup_call, name='hangup_call'),
     path('call/transfer/', views.transfer_call, name='transfer_call'),
     path('call/hold/', views.hold_call, name='hold_call'),
+    path('call/disposition/', views.set_disposition, name='set_disposition'),
     
     # Lead management for dialing
     path('lead/next/', views.get_next_lead, name='get_next_lead'),

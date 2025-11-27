@@ -78,7 +78,11 @@ urlpatterns = [
     path('recordings/<int:pk>/', views.RecordingDetailView.as_view(), name='recording_detail'),
     path('recordings/<int:pk>/download/', views.download_recording, name='download_recording'),
     path('recordings/<int:pk>/play/', views.play_recording, name='play_recording'),
+    path('recordings/<int:pk>/stream/', views.stream_recording, name='stream_recording'),
     path('recordings/<int:pk>/delete/', views.RecordingDeleteView.as_view(), name='delete_recording'),
+    path('recordings/bulk-download/', views.bulk_download_recordings, name='bulk_download_recordings'),
+    path('recordings/bulk-delete/', views.bulk_delete_recordings, name='bulk_delete_recordings'),
+    path('recordings/stats/live/', views.recordings_stats, name='recordings_stats'),
     
     # Dialplan Management
     path('dialplan/contexts/', views.DialplanContextListView.as_view(), name='dialplan_contexts'),

@@ -3,6 +3,8 @@
 import logging
 import requests
 import json
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.utils import timezone
 from django.conf import settings
 from telephony.models import AsteriskServer, Phone
@@ -114,7 +116,20 @@ class AgentTelephonyService:
                 'error': f'Registration failed: {str(e)}'
             }
     
-    def make_call(self, phone_number, campaign_id=None, lead_id=None):
+    def is_extension_registered(self):
+        """
+        Check if the agent's assigned extension is currently registered/reachable.
+        """
+        if not self.agent_phone or not self.asterisk_server:
+            return False
+        try:
+            service = AsteriskService(self.asterisk_server)
+            status = service.get_endpoint_status(self.agent_phone.extension)
+            return status.get('registered', False)
+        except Exception:
+            return False
+    
+    def make_call(self, phone_number, campaign_id=None, lead_id=None, force_manual=False):
         """
         Initiate outbound call using campaign dial method
         """
@@ -123,13 +138,19 @@ class AgentTelephonyService:
                 'success': False,
                 'error': 'Phone or server not configured'
             }
-        
+        call_log = None
         # Check agent availability
         agent_status = getattr(self.agent, 'agent_status', None)
         if not agent_status or agent_status.status != 'available':
             return {
                 'success': False,
                 'error': 'Agent not available for calls'
+            }
+        
+        if not self.is_extension_registered():
+            return {
+                'success': False,
+                'error': f'Extension {self.agent_phone.extension} is not registered. Please register your softphone.'
             }
         
         try:
@@ -173,6 +194,8 @@ class AgentTelephonyService:
             dial_method = 'manual'
             if campaign:
                 dial_method = campaign.dial_method
+            if force_manual:
+                dial_method = 'manual'
             
             if dial_method in ['manual', 'preview']:
                 # Manual/preview: prefer dialplan routing via prefix if configured
@@ -190,7 +213,7 @@ class AgentTelephonyService:
                     campaign=campaign,
                     context=ctx
                 )
-            elif dial_method in ['progressive', 'predictive']:
+            elif dial_method in ['progressive', 'predictive', 'auto']:
                 # Use dialer queue system
                 result = self.queue_call_for_dialing(
                     phone_number=phone_number,
@@ -207,14 +230,26 @@ class AgentTelephonyService:
             if result.get('success'):
                 # Update call log with channel info
                 if 'channel_id' in result:
+                    call_log.channel = result['channel_id']
                     call_log.uniqueid = result['channel_id']
-                    call_log.save()
+                    call_log.save(update_fields=['channel', 'uniqueid'])
                 
                 # Update agent status
                 agent_status.set_status('busy')
                 agent_status.current_call_id = str(call_log.id)
                 agent_status.call_start_time = timezone.now()
                 agent_status.save()
+
+                # Broadcast call start to agent websocket
+                self._broadcast_call_event({
+                    'type': 'call_started',
+                    'call': {
+                        'id': call_log.id,
+                        'number': phone_number,
+                        'status': call_log.call_status,
+                        'duration': 0,
+                    }
+                })
                 
                 return {
                     'success': True,
@@ -227,14 +262,50 @@ class AgentTelephonyService:
                 call_log.call_status = 'failed'
                 call_log.end_time = timezone.now()
                 call_log.save()
-                return result
+                failure = dict(result)
+                failure.setdefault('success', False)
+                failure['call_id'] = call_log.id
+                self._broadcast_call_event({
+                    'type': 'call_ended',
+                    'call_id': call_log.id,
+                })
+                return failure
                 
         except Exception as e:
             logger.error(f"Error making call: {str(e)}")
+            if call_log:
+                call_log.call_status = 'failed'
+                call_log.end_time = timezone.now()
+                call_log.save()
+                self._broadcast_call_event({
+                    'type': 'call_ended',
+                    'call_id': call_log.id,
+                })
+                return {
+                    'success': False,
+                    'error': f'Call failed: {str(e)}',
+                    'call_id': call_log.id
+                }
             return {
                 'success': False,
                 'error': f'Call failed: {str(e)}'
             }
+
+    def _broadcast_call_event(self, payload):
+        try:
+            layer = get_channel_layer()
+            if not layer:
+                return
+            async_to_sync(layer.group_send)(
+                f"agent_{self.agent.id}",
+                {
+                    'type': 'call.event',
+                    'data': payload
+                }
+            )
+        except Exception:
+            # Best-effort; don't break call flow
+            logger.debug('Call event broadcast failed', exc_info=True)
 
     # =====================
     # Autodial Session (Phase 1)
@@ -366,6 +437,12 @@ class AgentTelephonyService:
             call_log.call_status = 'answered'
             call_log.answer_time = timezone.now()
             call_log.save()
+            
+            # Notify agent via websocket about call end
+            self._broadcast_call_event({
+                'type': 'call_ended',
+                'call_id': call_id,
+            })
             
             # Update agent status
             agent_status = getattr(self.agent, 'agent_status', None)
@@ -522,32 +599,53 @@ class AgentTelephonyService:
         Get agent's current call status and active calls
         """
         try:
-            # Get current call
+            active_statuses = {'initiated', 'ringing', 'answered', 'in-progress', 'talking', 'active'}
+            # Primary: active call with no end_time and an active status
             current_call = CallLog.objects.filter(
                 agent=self.agent,
-                end_time__isnull=True
+                end_time__isnull=True,
+                call_status__in=active_statuses
             ).order_by('-start_time').first()
-            
+
+            # Fallback: most recent call in the last 5 minutes, even if end_time is set,
+            # so the UI can still show it for disposition.
+            if not current_call:
+                cutoff = timezone.now() - timezone.timedelta(minutes=5)
+                current_call = CallLog.objects.filter(
+                    agent=self.agent,
+                    start_time__gte=cutoff
+                ).order_by('-start_time').first()
+
             # Get agent status
             agent_status = getattr(self.agent, 'agent_status', None)
-            
-            # Get WebRTC session status
-            webrtc_session = getattr(self.agent, 'webrtc_session', None)
-            
+
+            call_payload = None
+            if current_call:
+                # Derive a display status from timestamps to avoid stale call_status values.
+                status = (current_call.call_status or '').lower()
+                if current_call.end_time:
+                    status = status or 'completed'
+                elif current_call.answer_time:
+                    status = status or 'in-progress'
+                elif not status:
+                    status = 'initiated'
+
+                call_payload = {
+                    'id': current_call.id,
+                    'number': current_call.called_number,
+                    'status': status,
+                    'duration': self.calculate_call_duration(current_call),
+                    'lead_id': current_call.lead.id if current_call.lead else None
+                }
+
             return {
                 'success': True,
                 'agent_status': agent_status.status if agent_status else 'offline',
-                'phone_registered': webrtc_session.is_active() if webrtc_session else False,
-                'current_call': {
-                    'id': current_call.id,
-                    'number': current_call.called_number,
-                    'status': current_call.call_status,
-                    'duration': self.calculate_call_duration(current_call),
-                    'lead_id': current_call.lead.id if current_call.lead else None
-                } if current_call else None,
+                'phone_registered': self.is_extension_registered(),
+                'current_call': call_payload,
                 'extension': self.agent_phone.extension if self.agent_phone else None
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting call status: {str(e)}")
             return {

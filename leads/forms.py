@@ -122,9 +122,15 @@ class LeadListCreateForm(forms.ModelForm):
     """
     Form for creating lead lists
     """
+    assigned_campaign = forms.ModelChoiceField(
+        queryset=Campaign.objects.filter(is_active=True),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text="If set, leads in this list will be auto-queued to this campaign."
+    )
     class Meta:
         model = LeadList
-        fields = ['name', 'description', 'is_active', 'tags']
+        fields = ['name', 'description', 'is_active', 'tags', 'assigned_campaign']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -139,7 +145,8 @@ class LeadListCreateForm(forms.ModelForm):
             'tags': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter tags separated by commas'
-            })
+            }),
+            'assigned_campaign': forms.Select(attrs={'class': 'form-select'})
         }
 
     def __init__(self, *args, **kwargs):
@@ -187,7 +194,6 @@ class LeadImportForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         help_text="Skip phone numbers in DNC list"
     )
-
     class Meta:
         model = LeadImport
         fields = ['name', 'file', 'lead_list', 'skip_duplicates', 'check_dnc']

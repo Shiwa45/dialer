@@ -28,18 +28,31 @@ def process_lead_import_task(import_id):
         if file_path.endswith('.csv'):
             # Process CSV file
             with open(file_path, 'r', encoding='utf-8-sig') as file:
-                reader = csv.DictReader(file)
+                reader = csv.reader(file)
+                headers = next(reader)
                 rows = list(reader)
                 lead_import.total_rows = len(rows)
                 lead_import.save()
                 
+                # Get field mapping
+                mapping = lead_import.field_mapping
+                
                 for row_num, row in enumerate(rows, 1):
                     try:
-                        # Extract lead data from row
-                        first_name = row.get('first_name', '').strip()
-                        last_name = row.get('last_name', '').strip()
-                        phone_number = row.get('phone_number', '').strip()
-                        email = row.get('email', '').strip()
+                        # Helper to get value by mapped column index
+                        def get_mapped_value(field_name):
+                            for col_idx, mapped_field in mapping.items():
+                                if mapped_field == field_name:
+                                    try:
+                                        return row[int(col_idx)].strip()
+                                    except (IndexError, ValueError):
+                                        return ''
+                            return ''
+
+                        # Extract lead data using mapping
+                        first_name = get_mapped_value('first_name')
+                        last_name = get_mapped_value('last_name')
+                        phone_number = get_mapped_value('phone_number')
                         
                         if not first_name or not last_name or not phone_number:
                             lead_import.failed_imports += 1
@@ -62,16 +75,15 @@ def process_lead_import_task(import_id):
                             first_name=first_name,
                             last_name=last_name,
                             phone_number=phone_number,
-                            email=email if email else None,
-                            company=row.get('company', '').strip() or None,
-                            address=row.get('address', '').strip() or None,
-                            city=row.get('city', '').strip() or None,
-                            state=row.get('state', '').strip() or None,
-                            zip_code=row.get('zip_code', '').strip() or None,
-                            source=row.get('source', 'Import') or 'Import',
-                            comments=row.get('comments', '').strip() or None,
-                            lead_list=lead_import.lead_list,
-                            created_by=lead_import.user
+                            email=get_mapped_value('email') or '',
+                            company=get_mapped_value('company') or '',
+                            address=get_mapped_value('address') or '',
+                            city=get_mapped_value('city') or '',
+                            state=get_mapped_value('state') or '',
+                            zip_code=get_mapped_value('zip_code') or '',
+                            source=get_mapped_value('source') or 'Import',
+                            comments=get_mapped_value('comments') or '',
+                            lead_list=lead_import.lead_list
                         )
                         
                         lead_import.successful_imports += 1
@@ -90,13 +102,27 @@ def process_lead_import_task(import_id):
             lead_import.total_rows = len(df)
             lead_import.save()
             
+            # Get field mapping
+            mapping = lead_import.field_mapping
+            
             for index, row in df.iterrows():
                 try:
-                    # Extract lead data from row
-                    first_name = str(row.get('first_name', '')).strip()
-                    last_name = str(row.get('last_name', '')).strip()
-                    phone_number = str(row.get('phone_number', '')).strip()
-                    email = str(row.get('email', '')).strip()
+                    # Helper to get value by mapped column index
+                    def get_mapped_value(field_name):
+                        for col_idx, mapped_field in mapping.items():
+                            if mapped_field == field_name:
+                                try:
+                                    # Excel columns are 0-indexed in mapping
+                                    val = row.iloc[int(col_idx)]
+                                    return str(val).strip() if pd.notna(val) else ''
+                                except (IndexError, ValueError):
+                                    return ''
+                        return ''
+
+                    # Extract lead data using mapping
+                    first_name = get_mapped_value('first_name')
+                    last_name = get_mapped_value('last_name')
+                    phone_number = get_mapped_value('phone_number')
                     
                     if not first_name or not last_name or not phone_number:
                         lead_import.failed_imports += 1
@@ -119,16 +145,15 @@ def process_lead_import_task(import_id):
                         first_name=first_name,
                         last_name=last_name,
                         phone_number=phone_number,
-                        email=email if email != 'nan' and email else None,
-                        company=str(row.get('company', '')).strip() or None,
-                        address=str(row.get('address', '')).strip() or None,
-                        city=str(row.get('city', '')).strip() or None,
-                        state=str(row.get('state', '')).strip() or None,
-                        zip_code=str(row.get('zip_code', '')).strip() or None,
-                        source=str(row.get('source', 'Import')) or 'Import',
-                        comments=str(row.get('comments', '')).strip() or None,
-                        lead_list=lead_import.lead_list,
-                        created_by=lead_import.user
+                        email=get_mapped_value('email') or '',
+                        company=get_mapped_value('company') or '',
+                        address=get_mapped_value('address') or '',
+                        city=get_mapped_value('city') or '',
+                        state=get_mapped_value('state') or '',
+                        zip_code=get_mapped_value('zip_code') or '',
+                        source=get_mapped_value('source') or 'Import',
+                        comments=get_mapped_value('comments') or '',
+                        lead_list=lead_import.lead_list
                     )
                     
                     lead_import.successful_imports += 1

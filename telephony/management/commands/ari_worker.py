@@ -7,6 +7,9 @@ import requests
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.db import models
 
 from telephony.models import AsteriskServer
 from calls.models import CallLog
@@ -35,11 +38,15 @@ class Command(BaseCommand):
         ari_url = f"ws://{server.ari_host}:{server.ari_port}/ari/events?app={server.ari_application}&api_key={server.ari_username}:{server.ari_password}"
         self.stdout.write(self.style.SUCCESS(f"Connecting to ARI: {ari_url}"))
 
+        self.channel_layer = get_channel_layer()
+
         async def run():
             async for ws in websockets.connect(ari_url, ping_interval=20, ping_timeout=20):
                 try:
+                    loop = asyncio.get_event_loop()
                     async for message in ws:
-                        self.process_event(server, message)
+                        # Run sync ORM work in a thread to avoid SynchronousOnlyOperation
+                        await loop.run_in_executor(None, self.process_event, server, message)
                 except websockets.ConnectionClosed:
                     logger.warning('ARI connection closed, retrying...')
                     await asyncio.sleep(2)
@@ -99,7 +106,7 @@ class Command(BaseCommand):
                     logger.info('Agent leg ended; session set offline')
                 # Mark call completed
                 try:
-                    cl = CallLog.objects.filter(channel=chan_id).first()
+                    cl = CallLog.objects.filter(models.Q(channel=chan_id) | models.Q(uniqueid=chan_id)).first()
                     if cl and not cl.end_time:
                         cl.end_time = timezone.now()
                         cl.call_status = 'completed'
@@ -107,6 +114,10 @@ class Command(BaseCommand):
                             cl.talk_duration = int((cl.end_time - cl.answer_time).total_seconds())
                         cl.total_duration = int((cl.end_time - (cl.start_time or cl.end_time)).total_seconds())
                         cl.save()
+                        self.broadcast_call_event(cl.agent_id, {
+                            'type': 'call_ended',
+                            'call_id': cl.id,
+                        })
                 except Exception:
                     pass
                 # If a queue item is tied via args, mark completed
@@ -128,11 +139,20 @@ class Command(BaseCommand):
             # Answer handling for call log and queue
             if state == 'Up':
                 try:
-                    cl = CallLog.objects.filter(channel=chan_id).first()
+                    cl = CallLog.objects.filter(models.Q(channel=chan_id) | models.Q(uniqueid=chan_id)).first()
                     if cl and not cl.answer_time:
                         cl.answer_time = timezone.now()
                         cl.call_status = 'answered'
                         cl.save()
+                        self.broadcast_call_event(cl.agent_id, {
+                            'type': 'call_update',
+                            'call': {
+                                'id': cl.id,
+                                'number': cl.called_number,
+                                'status': 'answered',
+                                'duration': 0,
+                            }
+                        })
                 except Exception:
                     pass
                 # Update queue status to answered if bound
@@ -144,3 +164,17 @@ class Command(BaseCommand):
                         break
                 if qid:
                     OutboundQueue.objects.filter(id=qid).update(status='answered')
+
+    def broadcast_call_event(self, agent_id, payload):
+        if not agent_id or not self.channel_layer:
+            return
+        try:
+            async_to_sync(self.channel_layer.group_send)(
+                f"agent_{agent_id}",
+                {
+                    'type': 'call.event',
+                    'data': payload
+                }
+            )
+        except Exception:
+            logger.warning('Failed to broadcast call event', exc_info=True)

@@ -1,6 +1,7 @@
 # agents/views_simple.py
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
@@ -8,16 +9,17 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
-import json
 import logging
 
-from .models import AgentCallbackTask, AgentScript, AgentQueue
+from django.db.models import Q
+from .models import AgentCallbackTask, AgentScript, AgentQueue, AgentBreakCode
 from .telephony_service import AgentTelephonyService
 from campaigns.models import Campaign, Disposition
 from leads.models import Lead
 from calls.models import CallLog
 from users.models import AgentStatus
 from core.decorators import agent_required
+from telephony.models import Phone
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +54,13 @@ def agent_dashboard(request):
         
         # Get agent's telephony info
         telephony_service = AgentTelephonyService(agent)
-        webrtc_config = telephony_service.get_webrtc_config()
+        webrtc_config = telephony_service.get_webrtc_config() or {}
         call_status = telephony_service.get_agent_call_status()
+        phone_info = {
+            'extension': telephony_service.agent_phone.extension if telephony_service.agent_phone else None,
+            'registered': telephony_service.is_extension_registered() if telephony_service.agent_phone else False,
+            'webrtc_enabled': telephony_service.agent_phone.webrtc_enabled if telephony_service.agent_phone else False,
+        }
         
         # Get agent's assigned campaigns
         assigned_campaigns = Campaign.objects.filter(
@@ -61,16 +68,71 @@ def agent_dashboard(request):
             status='active',
             campaignagent__is_active=True
         ).distinct()
+
+        break_codes = list(AgentBreakCode.objects.filter(
+            is_active=True
+        ).order_by('display_order').values(
+            'id', 'code', 'name', 'description', 'color_code', 'max_duration', 'requires_approval'
+        ))
+
+        status_options = [
+            {'value': value, 'label': label}
+            for value, label in AgentStatus.STATUS_CHOICES
+        ]
+        
+        current_campaign = agent_status.current_campaign or assigned_campaigns.first()
+        available_dispositions = []
+        if current_campaign:
+            campaign_dispositions = current_campaign.dispositions.filter(
+                is_active=True
+            ).select_related('disposition').order_by('sort_order')
+            available_dispositions = [
+                {
+                    'id': cd.disposition.id,
+                    'name': cd.disposition.name,
+                    'color': cd.disposition.color,
+                    'is_sale': cd.disposition.is_sale,
+                    'category': cd.disposition.category,
+                }
+                for cd in campaign_dispositions
+            ]
+        
+        transfer_targets = []
+        phone_candidates = Phone.objects.filter(
+            is_active=True,
+            user__agent_status__status='available'
+        ).exclude(user=agent).select_related('user').order_by('extension')
+        for phone in phone_candidates:
+            if not phone.user:
+                continue
+            display_name = phone.user.get_full_name() or phone.user.username
+            transfer_targets.append({
+                'extension': phone.extension,
+                'name': display_name,
+            })
         
         context = {
             'agent': agent,
             'agent_status': agent_status,
             'pending_callbacks': pending_callbacks,
             'script_content': script_content,
-            'webrtc_config': json.dumps(webrtc_config) if webrtc_config else '{}',
+            'webrtc_config': webrtc_config,
             'call_status': call_status,
             'assigned_campaigns': assigned_campaigns,
             'dialer_session': None,
+            'break_codes': break_codes,
+            'status_options': status_options,
+            'current_campaign': current_campaign,
+            'available_dispositions': available_dispositions,
+            'call_status_url': reverse('agents:call_status'),
+            'lead_info_url': reverse('agents:get_lead_info'),
+            'disposition_url': reverse('agents:set_disposition'),
+            'manual_dial_url': reverse('agents:manual_dial'),
+            'hangup_url': reverse('agents:hangup_call'),
+            'hold_url': reverse('agents:hold_call'),
+            'transfer_call_url': reverse('agents:transfer_call'),
+            'phone_info': phone_info,
+            'transfer_targets': transfer_targets,
         }
         
         return render(request, 'agents/simple_dashboard.html', context)
@@ -78,13 +140,20 @@ def agent_dashboard(request):
     except Exception as e:
         logger.error(f"Error in agent dashboard: {str(e)}")
         messages.error(request, 'Error loading dashboard. Please try again.')
-        return render(request, 'agents/simple_dashboard.html', {
+        fallback_context = {
             'agent': agent,
-            'webrtc_config': '{}',
+            'webrtc_config': {},
             'assigned_campaigns': [],
             'pending_callbacks': [],
-            'script_content': ''
-        })
+            'script_content': '',
+            'manual_dial_url': reverse('agents:manual_dial'),
+            'hangup_url': reverse('agents:hangup_call'),
+            'hold_url': reverse('agents:hold_call'),
+            'transfer_call_url': reverse('agents:transfer_call'),
+            'transfer_targets': [],
+            'phone_info': {'extension': None, 'registered': False},
+        }
+        return render(request, 'agents/simple_dashboard.html', fallback_context)
 
 
 # Removed persistent session flow and push_call to simplify UX
@@ -100,19 +169,32 @@ def manual_dial(request):
     campaign_id = request.POST.get('campaign_id')
     if not number:
         return JsonResponse({'success': False, 'error': 'phone_number required'}, status=400)
-    # Enqueue a one-off queue item and process immediately for this agent
     try:
-        from campaigns.models import OutboundQueue, Campaign
-        from campaigns.tasks import process_outbound_queue_item
         campaign = Campaign.objects.filter(id=campaign_id).first() if campaign_id else None
         if not campaign:
-            # Fallback: use any active campaign assigned to agent
-            campaign = Campaign.objects.filter(assigned_users=agent, status='active').first()
+            campaign = Campaign.objects.filter(assigned_users=agent).filter(Q(status='active') | Q(is_active=True)).first()
         if not campaign:
             return JsonResponse({'success': False, 'error': 'No campaign available'}, status=400)
-        q = OutboundQueue.objects.create(campaign=campaign, phone_number=number)
-        process_outbound_queue_item.delay(q.id)
-        return JsonResponse({'success': True, 'queue_id': q.id, 'message': 'Dial requested'})
+        if not campaign.assigned_users.filter(id=agent.id).exists():
+            return JsonResponse({'success': False, 'error': 'You are not assigned to that campaign'}, status=403)
+        telephony_service = AgentTelephonyService(agent)
+        result = telephony_service.make_call(
+            phone_number=number,
+            campaign_id=campaign.id,
+            force_manual=True,
+        )
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': 'Dial requested',
+                'channel_id': result.get('channel_id'),
+                'call_id': result.get('call_id'),
+            })
+        return JsonResponse({
+            'success': False,
+            'error': result.get('error', 'Failed to dial'),
+            'call_id': result.get('call_id')
+        }, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -222,6 +304,17 @@ def hangup_call(request):
     
     try:
         telephony_service = AgentTelephonyService(agent)
+        # First try to update our own call log directly in case backend lookup fails
+        call_log = CallLog.objects.filter(id=call_id, agent=agent).first()
+        if call_log:
+            call_log.call_status = 'completed'
+            call_log.end_time = timezone.now()
+            if call_log.answer_time:
+                call_log.talk_duration = int((call_log.end_time - call_log.answer_time).total_seconds())
+            if call_log.start_time:
+                call_log.total_duration = int((call_log.end_time - call_log.start_time).total_seconds())
+            call_log.hangup_cause_text = reason
+            call_log.save()
         result = telephony_service.hangup_call(call_id, reason)
         return JsonResponse(result)
         
@@ -359,9 +452,12 @@ def update_status(request):
     status_mapping = {
         'available': 'available',
         'break': 'break',
-        'lunch': 'lunch', 
-        'coffee': 'break',
-        'wc': 'break',
+        'lunch': 'lunch',
+        'busy': 'busy',
+        'training': 'training',
+        'meeting': 'meeting',
+        'system_issues': 'system_issues',
+        'offline': 'offline',
         'wrapup': 'busy'
     }
     
@@ -772,6 +868,11 @@ def set_disposition(request):
             lead.status = disposition.status_to_set
             lead.last_contact_date = timezone.now().date()
             lead.save()
+        
+        # Return agent to available after wrapping call
+        agent_status, _ = AgentStatus.objects.get_or_create(user=agent)
+        if agent_status.status != 'available':
+            agent_status.set_status('available')
         
         return JsonResponse({
             'success': True,

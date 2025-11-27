@@ -236,8 +236,10 @@
                 <div class="info-item mb-0">
                     <label class="text-muted small">Tags</label>
                     <div class="mt-1">
-                        {% for tag in lead_list.tags|split:"," %}
-                            <span class="badge bg-light text-dark me-1">{{ tag|trim }}</span>
+                        {% for tag in lead_list.tags|default_if_none:""|cut:"," %}
+                            {% if tag %}
+                            <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                            {% endif %}
                         {% endfor %}
                     </div>
                 </div>
@@ -438,7 +440,7 @@ function createStatusChart() {
         data: {
             labels: ['New', 'Contacted', 'DNC', 'Other'],
             datasets: [{
-                data: [{{ fresh_leads }}, {{ contacted_leads }}, {{ dnc_leads }}, {{ total_leads|add:fresh_leads|add:contacted_leads|add:dnc_leads|sub }}],
+                data: [{{ fresh_leads }}, {{ contacted_leads }}, {{ dnc_leads }}, {{ total_leads|add:fresh_leads|add:contacted_leads|add:dnc_leads|default:0 }}],
                 backgroundColor: [
                     '#28a745',
                     '#17a2b8', 

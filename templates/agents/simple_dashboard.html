@@ -1,174 +1,1420 @@
-﻿{% extends 'base.html' %}
-{% block title %}Agent Panel - {{ block.super }}{% endblock %}
-{% block content %}
-<div class="container-fluid py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h3 class="mb-0">Agent Panel</h3>
-      <small class="text-muted">Welcome, {{ user.get_full_name|default:user.username }} | Status: <span id="currentStatus">{{ agent_status.get_status_display }}</span></small>
-    </div>
-    <span id="phoneStatus" class="badge bg-secondary">Not Registered</span>
-  </div>
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Workspace</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        :root {
+            /* Light Mode Colors (Default) */
+            --bg: #f5f5f7;
+            --bg-secondary: #ffffff;
+            --card: #ffffff;
+            --card-light: #f9fafb;
+            --border: #e5e7eb;
+            --border-light: #d1d5db;
+            --text: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --accent: #dc2626;
+            --accent-hover: #b91c1c;
+            --accent-light: rgba(220, 38, 38, 0.1);
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.1);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.1);
+            --phone-body: #2c3e50;
+            --phone-screen: #1a2332;
+            --phone-button: #34495e;
+            --phone-button-hover: #4a5f7f;
+            --phone-text: #ecf0f1;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-heavy: rgba(0, 0, 0, 0.15);
+        }
 
-  <div class="row g-3">
-    <div class="col-lg-8">
-      <div class="card mb-3">
-        <div class="card-header">Manual Dial</div>
-        <div class="card-body">
-          <form method="post" action="{% url 'agents:manual_dial' %}" class="row g-2">
-            {% csrf_token %}
-            <div class="col-md-4">
-              <select name="campaign_id" class="form-select">
-                {% for c in assigned_campaigns %}
-                <option value="{{ c.id }}">{{ c.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <input type="text" name="phone_number" class="form-control" placeholder="Enter number to dial" />
-            </div>
-            <div class="col-md-2 d-grid">
-              <button class="btn btn-primary" type="submit">Dial</button>
-            </div>
-          </form>
-          <small class="text-muted">Dials customer first, then your extension, and bridges automatically.</small>
-        </div>
-      </div>
+        [data-theme="dark"] {
+            /* Dark Mode Colors */
+            --bg: linear-gradient(145deg, var(--phone-body), #c5c8cf);
+            --bg-secondary: #121212;
+            --card: linear-gradient(145deg, var(--phone-body), #4d4e52);
+            --card-light: linear-gradient(145deg, var(--phone-body), #4d4e52);
+            --border: #2a2a2a;
+            --border-light: #3a3a3a;
+            --text: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #6b6b6b;
+            --accent: #dc2626;
+            --accent-hover: #b91c1c;
+            --accent-light: rgba(220, 38, 38, 0.1);
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.1);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.1);
+            --phone-body: #1a1a1a;
+            --phone-screen: #0a0a0a;
+            --phone-button: #2a2a2a;
+            --phone-button-hover: #3a3a3a;
+            --phone-text: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --shadow-heavy: rgba(0, 0, 0, 0.5);
+        }
 
-      <div class="card">
-        <div class="card-header">Lead & Notes</div>
-        <div class="card-body">
-          <div class="row g-2">
-            <div class="col-md-6"><input class="form-control" placeholder="First Name"></div>
-            <div class="col-md-6"><input class="form-control" placeholder="Last Name"></div>
-            <div class="col-md-6"><input class="form-control" placeholder="Phone Number"></div>
-            <div class="col-md-6"><input class="form-control" placeholder="Email"></div>
-            <div class="col-md-6">
-              <select class="form-select">
-                <option>Lead Status</option>
-                <option>New</option>
-                <option>Contacted</option>
-                <option>Callback</option>
-                <option>Sale</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <select class="form-select">
-                <option>Priority</option>
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
-            </div>
-            <div class="col-12"><textarea class="form-control" rows="5" placeholder="Enter call notes..."></textarea></div>
-            <div class="col-12">
-              <div class="alert alert-light mb-0">{{ script_content|default:"Hello, this is [Agent Name] calling from [Company]. How are you today?" }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        * {
+            box-sizing: border-box;
+        }
 
-    <div class="col-lg-4">
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>Browser Phone</span>
-          <span id="webrtcRegBadge" class="badge bg-secondary">Not Registered</span>
-        </div>
-        <div class="card-body">
-          <div class="input-group mb-2">
-            <input type="text" id="webrtcNumber" class="form-control" placeholder="Enter number (e.g., 7000)">
-            <button class="btn btn-primary" type="button" onclick="webrtcCall()">Call</button>
-          </div>
-          <div class="d-flex gap-2">
-            <button class="btn btn-success btn-sm" type="button" onclick="webrtcAnswer()">Answer</button>
-            <button class="btn btn-danger btn-sm" type="button" onclick="webrtcHangup()">Hangup</button>
-            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="webrtcToggleMute()" id="btnMute">Mute</button>
-          </div>
-          <audio id="remoteAudio" autoplay></audio>
-          <audio id="localAudio" autoplay muted></audio>
-        </div>
-      </div>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 0;
+            font-size: 14px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
 
-      <div class="card">
-        <div class="card-header">Callbacks ({{ pending_callbacks.count }})</div>
-        <div class="card-body">
-          {% if pending_callbacks %}
-            <ul class="list-group list-group-flush">
-              {% for cb in pending_callbacks %}
-              <li class="list-group-item">
-                <div class="d-flex justify-content-between">
-                  <span><strong>{{ cb.lead.get_full_name }}</strong></span>
-                  <small class="text-muted">{{ cb.scheduled_time }}</small>
+        .agent-app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .agent-header {
+            padding: 1.25rem 2rem;
+            background: var(--card);
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 20px var(--shadow-heavy);
+            transition: background-color 0.3s ease;
+        }
+
+        .agent-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .agent-subtitle {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .theme-toggle {
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            width: 70px;
+            height: 36px;
+        }
+
+        .theme-toggle-slider {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            left: 4px;
+        }
+
+        [data-theme="dark"] .theme-toggle-slider {
+            transform: translateX(34px);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+        }
+
+        [data-phone-registration][data-registered="true"] {
+            color: var(--success);
+        }
+
+        [data-phone-registration][data-registered="false"] {
+            color: var(--danger);
+        }
+
+        .agent-status-pill {
+            padding: 0.625rem 1.5rem;
+            border-radius: 6px;
+            background: var(--accent);
+            border: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.625rem;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            color: white;
+        }
+
+        .agent-status-pill::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ffffff;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .agent-layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 380px;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem 2rem;
+            max-width: 1920px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 16px var(--shadow);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .panel h2 {
+            margin: 0 0 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .status-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .status-chip {
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            background: var(--card-light);
+            color: var(--text);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .status-chip i {
+            font-size: 1rem;
+        }
+
+        .status-chip.is-active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+
+        .status-chip:hover:not(.is-active) {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        .grid-two {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-card {
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            transition: border-color 0.2s ease, background-color 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: var(--border-light);
+        }
+
+        .info-card label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .info-card strong {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* Tabbed Interface */
+        .tab-container {
+            margin-top: 1.5rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+            top: 2px;
+        }
+
+        .tab-button:hover {
+            color: var(--text);
+            background: var(--card-light);
+        }
+
+        .tab-button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .call-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .call-panel h3 {
+            margin: 0 0 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 1rem;
+        }
+
+        .call-panel__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .call-placeholder {
+            border: 2px dashed var(--border-light);
+            border-radius: 6px;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            background: var(--card);
+            transition: all 0.3s ease;
+        }
+
+        .call-details {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .call-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            background: var(--card);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .call-meta label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.375rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .call-meta strong {
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .call-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .call-status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .call-status-badge[data-state="connected"] {
+            background: var(--success-light);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .call-status-badge[data-state="ringing"] {
+            background: var(--warning-light);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .call-status-badge[data-state="idle"] {
+            background: var(--card-light);
+            border-color: var(--border-light);
+            color: var(--text-muted);
+        }
+
+        .lead-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            background: var(--card);
+            transition: all 0.3s ease;
+        }
+
+        .lead-card__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .lead-card__header strong {
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .lead-status-pill {
+            padding: 0.375rem 0.875rem;
+            border-radius: 6px;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .call-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-primary {
+            border: none;
+            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            background: var(--accent);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary:not(:disabled):hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+        }
+
+        .script-panel {
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            min-height: 220px;
+            transition: all 0.3s ease;
+        }
+
+        .script-panel pre {
+            white-space: pre-wrap;
+            margin: 0;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+
+        .list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+        }
+
+        .list-item {
+            padding: 0.875rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            border-color: var(--border-light);
+        }
+
+        .list-item strong {
+            display: block;
+            margin-bottom: 0.375rem;
+            font-weight: 600;
+        }
+
+        .list-item small {
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+        }
+
+        /* Nostalgic WebRTC Phone */
+        .retro-phone {
+            background: linear-gradient(145deg, var(--phone-body), #c5c8cf);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 
+                0 20px 60px var(--shadow-heavy),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            position: relative;
+            border: 3px solid rgba(0,0,0,0.3);
+        }
+
+        .phone-header {
+            text-align: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .phone-brand {
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 0.875rem;
+            color: var(--phone-text);
+            letter-spacing: 0.15em;
+            opacity: 0.7;
+        }
+
+        .phone-screen {
+            background: var(--phone-screen);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            min-height: 140px;
+            border: 2px solid rgba(0,0,0,0.5);
+            box-shadow: 
+                inset 0 2px 8px rgba(0,0,0,0.5),
+                0 1px 0 rgba(255,255,255,0.1);
+            font-family: 'Orbitron', monospace;
+        }
+
+        .phone-display {
+            color: #00ff41;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 0 10px rgba(0,255,65,0.5);
+            min-height: 2rem;
+            letter-spacing: 0.1em;
+        }
+
+        .phone-status {
+            color: var(--phone-text);
+            font-size: 0.75rem;
+            text-align: center;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+
+        .phone-timer {
+            color: #00d4ff;
+            font-size: 1.125rem;
+            text-align: center;
+            font-weight: 500;
+            text-shadow: 0 0 8px rgba(0,212,255,0.5);
+            margin-top: 0.5rem;
+        }
+
+        .phone-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .phone-key {
+            aspect-ratio: 1;
+            background: linear-gradient(145deg, var(--phone-button), #2c3e50);
+            border: 2px solid rgba(0,0,0,0.3);
+            border-radius: 50%;
+            color: var(--phone-text);
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 
+                0 4px 8px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .phone-key:hover {
+            background: linear-gradient(145deg, var(--phone-button-hover), #3d5266);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 12px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .phone-key:active {
+            transform: translateY(0);
+            box-shadow: 
+                0 2px 4px rgba(0,0,0,0.3),
+                inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .phone-key-sub {
+            font-size: 0.625rem;
+            color: var(--phone-text);
+            opacity: 0.6;
+            margin-top: 0.125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .phone-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .phone-control-btn {
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px solid rgba(0,0,0,0.3);
+            background: linear-gradient(145deg, var(--phone-button), #2c3e50);
+            color: var(--phone-text);
+            font-weight: 700;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 
+                0 4px 8px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .phone-control-btn:hover {
+            background: linear-gradient(145deg, var(--phone-button-hover), #3d5266);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 12px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .phone-control-btn.call {
+            background: linear-gradient(145deg, #10b981, #059669);
+            grid-column: span 3;
+        }
+
+        .phone-control-btn.call:hover {
+            background: linear-gradient(145deg, #059669, #047857);
+        }
+
+        .phone-control-btn.hangup {
+            background: linear-gradient(145deg, #dc2626, #b91c1c);
+            grid-column: span 3;
+        }
+
+        .phone-control-btn.hangup:hover {
+            background: linear-gradient(145deg, #b91c1c, #991b1b);
+        }
+
+        .phone-input-display {
+            background: rgba(0,0,0,0.3);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            text-align: right;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.125rem;
+            color: #00ff41;
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            letter-spacing: 0.1em;
+        }
+
+        .status-toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.5rem;
+            min-width: 280px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 8px 24px var(--shadow-heavy);
+            z-index: 1000;
+        }
+
+        .status-toast.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status-toast.is-error {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .agent-break-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            z-index: 200;
+        }
+
+        .agent-break-modal[hidden] {
+            display: none;
+        }
+
+        .agent-break-modal__content {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            width: min(480px, 90vw);
+            box-shadow: 0 20px 60px var(--shadow-heavy);
+            transition: background-color 0.3s ease;
+        }
+
+        .agent-break-modal__content h3 {
+            margin: 0 0 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .break-chip {
+            display: block;
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--card-light);
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 0.625rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .break-chip:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            transform: translateX(4px);
+        }
+
+        .break-chip::before {
+            content: attr(data-code);
+            display: inline-block;
+            margin-right: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .agent-note-input {
+            width: 100%;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            resize: vertical;
+            font-family: inherit;
+            min-height: 80px;
+            margin-top: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .agent-note-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .btn-muted {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
+        }
+
+        .btn-muted:hover {
+            border-color: var(--border-light);
+            background: var(--card-light);
+        }
+
+        .select-control {
+            width: 100%;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .select-control:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        input[type="tel"] {
+            width: 100%;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input[type="tel"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        @media (max-width: 1400px) {
+            .agent-layout {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .retro-phone {
+                grid-column: span 2;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .agent-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .agent-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .status-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .agent-layout {
+                padding: 1rem;
+            }
+
+            .tab-buttons {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+
+            .tab-button {
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="agent-app"
+         data-agent-dashboard
+         data-agent-id="{{ agent.id }}"
+         data-status="{{ agent_status.status }}"
+         data-status-url="{% url 'agents:update_status' %}"
+         data-call-status-url="{{ call_status_url }}"
+         data-lead-info-url="{{ lead_info_url }}"
+         data-disposition-url="{{ disposition_url }}"
+         data-manual-dial-url="{{ manual_dial_url }}"
+         data-hangup-url="{{ hangup_url }}"
+         data-transfer-url="{{ transfer_call_url }}"
+         data-webrtc-enabled="{{ phone_info.webrtc_enabled|yesno:'true,false' }}">
+        <header class="agent-header">
+            <div>
+                <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
+                <p class="agent-subtitle">Stay available to receive the next {{ assigned_campaigns|length }} campaign{% if assigned_campaigns|length != 1 %}s{% endif %}.</p>
+            </div>
+            <div class="header-right">
+                <div class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">
+                    <div class="theme-toggle-slider">
+                        <i class="fas fa-sun" id="theme-icon"></i>
+                    </div>
                 </div>
-              </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <div class="text-muted">No pending callbacks</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
+                <div class="agent-status-pill" data-current-status>
+                    {{ agent_status.get_status_display }}
+                </div>
+            </div>
+        </header>
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sip.js@0.21.2/lib/platform/web/sip.min.js"></script>
-<script>
-let sipUA = null;
-let currentSession = null;
-let muted = false;
-function setRegBadge(text, cls) {
-  const b = document.getElementById('webrtcRegBadge');
-  if (!b) return;
-  b.className = 'badge ' + cls; b.innerText = text;
-}
-function attachMedia(session) {
-  const remote = document.getElementById('remoteAudio');
-  const local = document.getElementById('localAudio');
-  const pc = session.sessionDescriptionHandler.peerConnection;
-  pc.ontrack = (e) => { remote.srcObject = e.streams[0]; };
-}
-function webrtcCall() {
-  if (!sipUA) return alert('Phone not registered');
-  const num = (document.getElementById('webrtcNumber') || {}).value || '';
-  if (!num) return alert('Enter a number');
-  const cfg = {{ webrtc_config|safe }};
-  const target = `sip:${num}@${cfg.server}`;
-  const session = sipUA.invite(target, { sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } } });
-  currentSession = session;
-  session.on('trackAdded', () => attachMedia(session));
-  session.on('accepted', () => { document.getElementById('btnMute').innerText = 'Mute'; muted = false; });
-  session.on('bye', () => { currentSession = null; });
-  session.on('terminated', () => { currentSession = null; });
-}
-function webrtcHangup() { if (currentSession) { try { currentSession.bye(); } catch(e) { try { currentSession.terminate(); } catch(_) {} } currentSession = null; } }
-function webrtcToggleMute() {
-  if (!currentSession) return;
-  const pc = currentSession.sessionDescriptionHandler.peerConnection;
-  pc.getSenders().forEach(s => { if (s.track && s.track.kind === 'audio') s.track.enabled = muted; });
-  muted = !muted; document.getElementById('btnMute').innerText = muted ? 'Unmute' : 'Mute';
-}
-function webrtcAnswer() { if (currentSession && currentSession.accept) { currentSession.accept({ sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } } }); } }
-try {
-  const cfg = {{ webrtc_config|safe }};
-  if (cfg && cfg.success && window.SIP) {
-    const uri = `sip:${cfg.username}@${cfg.server}`;
-    const wsUri = `${cfg.protocol}://${cfg.server}:${cfg.port}/ws`;
-    sipUA = new SIP.UA({
-      uri,
-      transportOptions: { wsServers: [wsUri] },
-      authorizationUser: cfg.username,
-      password: cfg.password,
-      hackWssInTransport: true,
-      sessionDescriptionHandlerFactoryOptions: { peerConnectionOptions: { rtcConfiguration: { iceServers: cfg.ice_servers || [] } } }
-    });
-    sipUA.on('registered', () => { setRegBadge('Registered', 'bg-success'); const el = document.getElementById('phoneStatus'); if (el) { el.classList.remove('offline','connecting'); el.classList.add('registered'); el.innerText = `Ext: ${cfg.extension}`; } });
-    sipUA.on('unregistered', () => { setRegBadge('Not Registered', 'bg-secondary'); const el = document.getElementById('phoneStatus'); if (el) { el.classList.remove('registered'); el.classList.add('offline'); el.innerText = 'Not Registered'; } });
-    sipUA.on('invite', (session) => { currentSession = session; session.on('trackAdded', () => attachMedia(session)); });
-  }
-} catch(e) { console.warn('WebRTC init skipped', e); }
-</script>
-{% endblock %}
+        <main class="agent-layout">
+            <section class="panel">
+                <h2>Availability</h2>
+                <p class="agent-subtitle">Update your state so the dialer knows when to connect calls.</p>
+                <div class="status-actions">
+                    <button class="status-chip" data-status-trigger="available">
+                        <i class="fa-solid fa-headset"></i> Available
+                    </button>
+                    <button class="status-chip" data-status-trigger="break" data-status-reason="Break">
+                        <i class="fa-solid fa-mug-hot"></i> Break
+                    </button>
+                    <button class="status-chip" data-status-trigger="lunch" data-status-reason="Lunch">
+                        <i class="fa-solid fa-utensils"></i> Lunch
+                    </button>
+                    <button class="status-chip" data-status-trigger="training">
+                        <i class="fa-solid fa-graduation-cap"></i> Training
+                    </button>
+                    <button class="status-chip" data-status-trigger="meeting">
+                        <i class="fa-solid fa-people-group"></i> Meeting
+                    </button>
+                    <button class="status-chip" data-status-trigger="offline">
+                        <i class="fa-solid fa-power-off"></i> Offline
+                    </button>
+                </div>
+
+                <div class="grid-two" style="margin-top: 1.5rem;">
+                    <div class="info-card">
+                        <label>Extension</label>
+                        <strong>{{ phone_info.extension|default:"Not assigned" }}</strong>
+                        <p class="agent-subtitle"
+                           data-phone-registration
+                           data-registered="{{ phone_info.registered|yesno:'true,false' }}">
+                            {% if phone_info.extension %}
+                                {% if phone_info.registered %}
+                                    Softphone registered
+                                {% else %}
+                                    Not registered — open your softphone client
+                                {% endif %}
+                            {% else %}
+                                No phone assigned. Contact your supervisor.
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="info-card">
+                        <label>Assigned Campaigns</label>
+                        <strong>
+                            {% if assigned_campaigns %}
+                                {{ assigned_campaigns|length }} active
+                            {% else %}
+                                None
+                            {% endif %}
+                        </strong>
+                        <ul class="list" style="margin-top: 0.5rem;">
+                            {% for campaign in assigned_campaigns %}
+                                <li class="list-item">
+                                    <strong>{{ campaign.name }}</strong>
+                                    <small>{{ campaign.get_dial_method_display|default:"Dial mode not set" }}</small>
+                                </li>
+                            {% empty %}
+                                <li class="list-item">You are not assigned to a campaign yet.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="info-card">
+                        <label>Callbacks (next 24h)</label>
+                        <strong>{{ pending_callbacks|length }}</strong>
+                        <ul class="list" style="margin-top: 0.5rem;">
+                            {% for callback in pending_callbacks %}
+                                <li class="list-item">
+                                    <strong>{{ callback.lead.first_name }} {{ callback.lead.last_name }}</strong>
+                                    <small>{{ callback.scheduled_time|date:"M d, H:i" }} · {{ callback.campaign.name }}</small>
+                                </li>
+                            {% empty %}
+                                <li class="list-item">No callbacks scheduled.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top: 1.5rem;">
+                    <h2>Call Transfer</h2>
+                    <p class="agent-subtitle">Send the active call to another available agent without leaving the retro phone.</p>
+                    {% if transfer_targets %}
+                        <form id="transfer-call-form" style="margin-top:1rem;">
+                            <label for="transfer-target-select">Available Agents</label>
+                            <select id="transfer-target-select" class="select-control" data-transfer-target>
+                                <option value="" disabled selected>Select agent</option>
+                                {% for target in transfer_targets %}
+                                    <option value="{{ target.extension }}">{{ target.name }} ({{ target.extension }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="agent-subtitle" style="display:block; margin-top:0.5rem;">Transfer button enables when you are on a live call.</small>
+                            <div class="call-actions" style="margin-top:1rem;">
+                                <button type="submit" class="btn-primary" data-transfer-submit disabled>Transfer Call</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="info-card" style="margin-top:1rem;">
+                            <strong>No agents available</strong>
+                            <p class="agent-subtitle" style="margin-top:0.5rem;">Once another agent is online, you can transfer calls to them from here.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Tabbed Section for Live Call Feed, Scripts, Quick Notes -->
+            <section class="panel">
+                <div class="tab-container">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" data-tab="live-call">
+                            <i class="fa-solid fa-phone"></i> Live Call Feed
+                        </button>
+                        <button class="tab-button" data-tab="scripts">
+                            <i class="fa-solid fa-scroll"></i> Scripts
+                        </button>
+                        <button class="tab-button" data-tab="quick-notes">
+                            <i class="fa-solid fa-note-sticky"></i> Quick Notes
+                        </button>
+                    </div>
+
+                    <!-- Live Call Feed Tab -->
+                    <div class="tab-content active" id="tab-live-call">
+                        <div class="call-panel" data-call-panel>
+                            <div class="call-panel__header">
+                                <div>
+                                    <h3>Current Call</h3>
+                                    <p class="agent-subtitle" style="margin:0;">The dialer connects you automatically when a lead answers.</p>
+                                </div>
+                                <button class="btn-primary" data-open-disposition disabled>
+                                    <i class="fa-regular fa-clipboard"></i> Disposition
+                                </button>
+                            </div>
+                            <div class="call-placeholder" data-call-placeholder>
+                                <p>No call connected. Stay available to auto-connect.</p>
+                            </div>
+                            <div class="call-details" data-call-details hidden>
+                                <div class="call-meta">
+                                    <div>
+                                        <label>Number</label>
+                                        <strong data-call-number>—</strong>
+                                    </div>
+                                    <div>
+                                        <label>Status</label>
+                                        <span class="call-status-badge" data-call-state>Idle</span>
+                                    </div>
+                                    <div>
+                                        <label>Duration</label>
+                                        <strong data-call-duration>00:00</strong>
+                                    </div>
+                                </div>
+                                <div class="lead-card" data-lead-card hidden>
+                                    <div class="lead-card__header">
+                                        <strong data-lead-name>Lead name</strong>
+                                        <span class="lead-status-pill" data-lead-status>Unknown</span>
+                                    </div>
+                                    <div class="grid-two">
+                                        <div>
+                                            <label>Phone</label>
+                                            <strong data-lead-phone>—</strong>
+                                        </div>
+                                        <div>
+                                            <label>Email</label>
+                                            <strong data-lead-email>—</strong>
+                                        </div>
+                                        <div>
+                                            <label>Company</label>
+                                            <strong data-lead-company>—</strong>
+                                        </div>
+                                        <div>
+                                            <label>City</label>
+                                            <strong data-lead-location>—</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scripts Tab -->
+                    <div class="tab-content" id="tab-scripts">
+                        <div class="script-panel">
+                            <h2>Call Script</h2>
+                            <pre>{{ script_content }}</pre>
+                        </div>
+                    </div>
+
+                    <!-- Quick Notes Tab -->
+                    <div class="tab-content" id="tab-quick-notes">
+                        <div class="panel">
+                            <h2>Quick Notes</h2>
+                            <p class="agent-subtitle">Capture key info during or after the call. Disposition prompts will appear automatically when the call ends.</p>
+                            <textarea class="agent-note-input" placeholder="e.g. Customer asked for pricing details..." style="min-height: 300px;"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Nostalgic WebRTC Phone UI -->
+            <section class="panel">
+                <div class="retro-phone" data-retro-phone>
+                    <div class="phone-header">
+                        <div class="phone-brand">EASYIAN PHONE</div>
+                    </div>
+
+                    <div class="phone-screen">
+                        <div class="phone-input-display" id="phone-number-display">
+                            <!-- Number appears here -->
+                        </div>
+                        <div class="phone-display" id="phone-status-display">READY</div>
+                        <div class="phone-timer" id="phone-timer" style="display: none;">00:00</div>
+                        <div class="phone-status">Extension: {{ phone_info.extension|default:"N/A" }}</div>
+                        <audio id="agent-webrtc-audio" data-webrtc-audio autoplay playsinline hidden></audio>
+                    </div>
+
+                    <div class="phone-keypad">
+                        <button class="phone-key" data-key="1">
+                            1
+                            <span class="phone-key-sub"></span>
+                        </button>
+                        <button class="phone-key" data-key="2">
+                            2
+                            <span class="phone-key-sub">ABC</span>
+                        </button>
+                        <button class="phone-key" data-key="3">
+                            3
+                            <span class="phone-key-sub">DEF</span>
+                        </button>
+                        <button class="phone-key" data-key="4">
+                            4
+                            <span class="phone-key-sub">GHI</span>
+                        </button>
+                        <button class="phone-key" data-key="5">
+                            5
+                            <span class="phone-key-sub">JKL</span>
+                        </button>
+                        <button class="phone-key" data-key="6">
+                            6
+                            <span class="phone-key-sub">MNO</span>
+                        </button>
+                        <button class="phone-key" data-key="7">
+                            7
+                            <span class="phone-key-sub">PQRS</span>
+                        </button>
+                        <button class="phone-key" data-key="8">
+                            8
+                            <span class="phone-key-sub">TUV</span>
+                        </button>
+                        <button class="phone-key" data-key="9">
+                            9
+                            <span class="phone-key-sub">WXYZ</span>
+                        </button>
+                        <button class="phone-key" data-key="*">
+                            *
+                            <span class="phone-key-sub"></span>
+                        </button>
+                        <button class="phone-key" data-key="0">
+                            0
+                            <span class="phone-key-sub">+</span>
+                        </button>
+                        <button class="phone-key" data-key="#">
+                            #
+                            <span class="phone-key-sub"></span>
+                        </button>
+                    </div>
+
+                    <div class="phone-controls">
+                        <button class="phone-control-btn call" id="phone-call-btn">
+                            <i class="fa-solid fa-phone"></i> CALL
+                        </button>
+                        <button class="phone-control-btn hangup" id="phone-hangup-btn" style="display: none;">
+                            <i class="fa-solid fa-phone-slash"></i> HANG UP
+                        </button>
+                        <button class="phone-control-btn" id="phone-mute-btn">
+                            <i class="fa-solid fa-microphone"></i> MUTE
+                        </button>
+                        <button class="phone-control-btn" id="phone-hold-btn">
+                            <i class="fa-solid fa-pause"></i> HOLD
+                        </button>
+                        <button class="phone-control-btn" id="phone-clear-btn">
+                            <i class="fa-solid fa-delete-left"></i> CLEAR
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div class="status-toast" data-status-toast></div>
+    </div>
+
+    <div class="agent-break-modal" id="break-modal" hidden>
+        <div class="agent-break-modal__content">
+            <h3>Select break reason</h3>
+            <p class="agent-subtitle">Let the dialer know why you are away.</p>
+            <div id="break-code-list" style="margin: 1rem 0;"></div>
+            <textarea id="break-notes-input" class="agent-note-input" placeholder="Add optional notes..."></textarea>
+            <div class="modal-actions">
+                <button class="btn-muted" type="button" data-break-cancel>Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="agent-break-modal" id="disposition-modal" hidden>
+        <div class="agent-break-modal__content">
+            <h3>Log Call Outcome</h3>
+            <form id="disposition-form">
+                <input type="hidden" name="call_id" id="disposition-call-id">
+                <label for="disposition-select">Disposition</label>
+                <select id="disposition-select" name="disposition_id" class="select-control" required>
+                    <option value="" disabled selected>Select outcome</option>
+                    {% for disposition in available_dispositions %}
+                        <option value="{{ disposition.id }}">{{ disposition.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="disposition-notes" style="margin-top:0.75rem;">Notes</label>
+                <textarea id="disposition-notes" name="notes" class="agent-note-input" placeholder="Add remarks..."></textarea>
+                <div class="modal-actions">
+                    <button class="btn-muted" type="button" data-disposition-cancel>Cancel</button>
+                    <button class="btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if break_codes %}
+        {{ break_codes|json_script:"agent-break-codes-data" }}
+    {% else %}
+        <script id="agent-break-codes-data" type="application/json">[]</script>
+    {% endif %}
+    {% if status_options %}
+        {{ status_options|json_script:"agent-status-options" }}
+    {% else %}
+        <script id="agent-status-options" type="application/json">[]</script>
+    {% endif %}
+    {% if call_status %}
+        {{ call_status|json_script:"agent-call-status-data" }}
+    {% else %}
+        <script id="agent-call-status-data" type="application/json">{}</script>
+    {% endif %}
+    {% if available_dispositions %}
+        {{ available_dispositions|json_script:"agent-dispositions-data" }}
+    {% else %}
+        <script id="agent-dispositions-data" type="application/json">[]</script>
+    {% endif %}
+    {{ webrtc_config|json_script:"agent-webrtc-config" }}
+
+    <script>
+        // Theme Toggle Functionality
+        (function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+            const html = document.documentElement;
+            
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            html.setAttribute('data-theme', currentTheme);
+            updateThemeIcon(currentTheme);
+            
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                html.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon(newTheme);
+            });
+            
+            function updateThemeIcon(theme) {
+                if (theme === 'dark') {
+                    themeIcon.className = 'fas fa-moon';
+                } else {
+                    themeIcon.className = 'fas fa-sun';
+                }
+            }
+        })();
+
+        // Tab Switching Functionality
+        (function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked button and corresponding content
+                    this.classList.add('active');
+                    document.getElementById('tab-' + targetTab).classList.add('active');
+                });
+            });
+        })();
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/jssip@3/dist/jssip.min.js" crossorigin="anonymous"></script>
+    <script src="{% static 'js/agent_dashboard.js' %}"></script>
+</body>
+</html>

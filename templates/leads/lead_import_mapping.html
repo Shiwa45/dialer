@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Map Import Fields{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Map Fields</h1>
+            <p class="text-muted">Map columns from "{{ lead_import.name }}" to lead fields</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>CSV Column</th>
+                                <th>Sample Data (First Row)</th>
+                                <th>Map To Field</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for column, sample in headers_sample %}
+                            <tr>
+                                <td class="fw-bold">{{ column }}</td>
+                                <td class="text-muted">{{ sample }}</td>
+                                <td>
+                                    <select name="map_{{ forloop.counter0 }}" class="form-select">
+                                        <option value="skip">-- Skip Column --</option>
+                                        {% for field_value, field_label in field_choices %}
+                                        <option value="{{ field_value }}" {% if column|lower == field_label|lower or column|lower == field_value %}selected{% endif %}>
+                                            {{ field_label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Required Fields:</strong> First Name, Last Name, Phone Number
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <a href="{% url 'leads:import' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-2"></i> Start Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

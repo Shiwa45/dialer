@@ -18,8 +18,13 @@ def process_outbound_queue_task(campaign_id=None, batch_size=20):
     total = 0
     for camp in campaigns:
         idle_agents = AgentStatus.objects.filter(status='available', user__assigned_campaigns=camp).count()
+        if idle_agents == 0:
+            # No available agents; skip this campaign for now
+            continue
         dpa = compute_dials_per_agent(camp)
-        capacity = max(1, idle_agents * dpa)
+        capacity = idle_agents * dpa
+        if capacity < 1:
+            continue
         items = qs.filter(campaign=camp).order_by('created_at')[: min(capacity, batch_size)]
         for item in items:
             process_outbound_queue_item.delay(item.id)

@@ -111,6 +111,39 @@ class AsteriskService:
                 'message': str(e)
             }
     
+    def get_endpoint_status(self, extension):
+        """
+        Retrieve PJSIP endpoint registration/state information
+        """
+        try:
+            response = requests.get(
+                f"{self.ari_base_url}/endpoints/PJSIP/{extension}",
+                auth=(self.ari_username, self.ari_password),
+                timeout=5
+            )
+            if response.status_code == 200:
+                payload = response.json()
+                state = (payload.get('state') or '').lower()
+                registered = state in ('online', 'reachable', 'available', 'ready')
+                return {
+                    'success': True,
+                    'registered': registered,
+                    'state': state,
+                    'raw': payload
+                }
+            return {
+                'success': False,
+                'registered': False,
+                'error': response.text
+            }
+        except Exception as e:
+            logger.error(f"Error retrieving endpoint {extension} status: {str(e)}")
+            return {
+                'success': False,
+                'registered': False,
+                'error': str(e)
+            }
+    
     def originate_call(self, extension, phone_number, campaign=None, context='agents'):
         """
         Originate a call from agent extension to phone number

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+PREFIX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_INCLUDE="$PREFIX/include"
+INCLUDEDIR="$ROOT_INCLUDE/postgresql"
+INCLUDEDIR_SERVER="$INCLUDEDIR"
+LIBDIR="$PREFIX/lib"
+PKGINCLUDEDIR="$INCLUDEDIR"
+PKGLIBDIR="$LIBDIR"
+BINDIR="$PREFIX/bin"
+VERSION_NUM="16.10"
+VERSION_STR="PostgreSQL ${VERSION_NUM} (custom-build)"
+CONFIGURE="--without-readline"
+case "${1-}" in
+  --prefix) echo "$PREFIX" ;;
+  --includedir) echo "$INCLUDEDIR" ;;
+  --includedir-server) echo "$INCLUDEDIR_SERVER" ;;
+  --pkgincludedir) echo "$PKGINCLUDEDIR" ;;
+  --libdir) echo "$LIBDIR" ;;
+  --pkglibdir) echo "$PKGLIBDIR" ;;
+  --bindir) echo "$BINDIR" ;;
+  --libexecdir) echo "$PREFIX/lib" ;;
+  --configure) echo "$CONFIGURE" ;;
+  --version) echo "$VERSION_STR" ;;
+  --cppflags) echo "-I$INCLUDEDIR" ;;
+  --cflags) echo "-I$INCLUDEDIR" ;;
+  --cflags_sl) echo "-fPIC" ;;
+  --ldflags) echo "-L$LIBDIR" ;;
+  --ldflags_sl) echo "-L$LIBDIR" ;;
+  --libs) echo "-L$LIBDIR -lpq" ;;
+  --libs_rl) echo "-L$LIBDIR -lpq" ;;
+  --pgxs) echo "$PREFIX/share/postgresql/pgxs/src/makefiles/pgxs.mk" ;;
+  --docdir) echo "$PREFIX/share/doc" ;;
+  --htmldir) echo "$PREFIX/share/doc" ;;
+  --mandir) echo "$PREFIX/share/man" ;;
+  *)
+    cat >&2 <<USAGE
+Usage: pg_config [option]
+Options:
+  --prefix            show installation prefix
+  --includedir        show location of C header files of the client
+  --libdir            show location of object code libraries
+  --pkgincludedir     show location of other C header files
+  --pkglibdir         show location of dynamically loadable modules
+  --bindir            show location of user executables
+  --version           show the PostgreSQL version
+  --libs              show libraries used when linking
+  --ldflags           show linker flags
+  --cppflags          show CPP flags
+USAGE
+    exit 1 ;;
+esac

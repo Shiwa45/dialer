@@ -1,789 +1,399 @@
 import flet as ft
+import time  # Added for the timer
+import threading  # Added for the timer
+from flet import (
+    Page, Text, Row, Column, Container, ElevatedButton, IconButton, Icon,
+    Tabs, Tab, TextField, Dropdown, SnackBar, BoxShadow, BorderSide,
+    ThemeMode, LinearGradient, CircleBorder, RoundedRectangleBorder,
+    FontWeight, TextAlign, ScrollMode, GridView, BorderRadius,
+    Colors, Icons, Theme  
+)
 
-def main(page: ft.Page):
-    page.title = "FINANCE [1.12.23.208] FOR DEMO COMPANY - [Gold Loan CRM]"
-    page.vertical_alignment = ft.MainAxisAlignment.START
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.window_width = 1200
-    page.window_height = 800
-    page.window_maximized = True
-    page.theme_mode = ft.ThemeMode.LIGHT # Start with light mode for glossy effect
-    page.padding = 0 # Remove default page padding
+def main(page: Page):
+    page.title = "Agent Workspace"
+    page.theme_mode = ThemeMode.LIGHT
+    page.padding = 0
+    page.fonts = {
+        "Orbitron": "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap",
+        "Inter": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    }
+    page.theme = Theme(font_family="Inter")
 
-    # Custom colors for a modern, glossy Gold Loan CRM look
-    primary_gold = "#FFD700" # Gold color
-    dark_blue = "#1A237E" # Dark Indigo for accents
-    light_grey_bg = "#F5F5F5" # Very light grey background
-    card_background = "#FFFFFF" # White for cards
-    text_color_dark = "#212121" # Dark grey for text
-    text_color_light = "#FFFFFF" # White for text on dark backgrounds
-    glossy_gradient_light = ft.LinearGradient(
-        begin=ft.alignment.top_left,
-        end=ft.alignment.bottom_right,
-        colors=["#E0E0E0", "#FFFFFF", "#E0E0E0"],
-        stops=[0.0, 0.5, 1.0]
-    )
-    glossy_gradient_gold = ft.LinearGradient(
-        begin=ft.alignment.top_left,
-        end=ft.alignment.bottom_right,
-        colors=["#FFECB3", "#FFD700", "#FFECB3"],
-        stops=[0.0, 0.5, 1.0]
-    )
+    # --- State ---
+    current_status = "Available"
+    call_state = "idle"
+    phone_number = ""
+    timer_seconds = 0
+    timer_running = False
 
-    # --- Navigation Logic ---
-    def route_change(route):
-        page.views.clear()
-        page.views.append(
-            # Base view for the application, always present
-            ft.View(
-                "/",
-                [
-                    top_nav,
-                    dashboard_content, # Dashboard is the default view, now directly added
-                    bottom_status
-                ],
-                padding=0,
-                spacing=0
+    # --- Helpers ---
+    def format_time(seconds):
+        return f"{seconds // 60:02}:{seconds % 60:02}"
+
+    def show_toast(message: str, error: bool = False):
+        page.show_snack_bar(
+            SnackBar(
+                content=Text(message, color=Colors.RED if error else Colors.GREEN),
+                bgcolor=Colors.RED_50 if error else Colors.GREEN_50,
+                action="Dismiss",
+                duration=3000
             )
         )
-        if page.route == "/master":
-            page.views.append(
-                ft.View(
-                    "/master",
-                    [
-                        top_nav,
-                        MasterView(), # Removed ft.Expanded, MasterView is already expanding
-                        bottom_status
-                    ],
-                    padding=0,
-                    spacing=0
-                )
-            )
-        elif page.route == "/transaction":
-            page.views.append(
-                ft.View(
-                    "/transaction",
-                    [
-                        top_nav,
-                        TransactionView(), # Removed ft.Expanded
-                        bottom_status
-                    ],
-                    padding=0,
-                    spacing=0
-                )
-            )
-        elif page.route == "/account":
-            page.views.append(
-                ft.View(
-                    "/account",
-                    [
-                        top_nav,
-                        AccountView(), # Removed ft.Expanded
-                        bottom_status
-                    ],
-                    padding=0,
-                    spacing=0
-                )
-            )
-        elif page.route == "/report":
-            page.views.append(
-                ft.View(
-                    "/report",
-                    [
-                        top_nav,
-                        ReportView(), # Removed ft.Expanded
-                        bottom_status
-                    ],
-                    padding=0,
-                    spacing=0
-                )
-            )
-        elif page.route == "/crm":
-            page.views.append(
-                ft.View(
-                    "/crm",
-                    [
-                        top_nav,
-                        CrmGoldLoanView(), # Removed ft.Expanded
-                        bottom_status
-                    ],
-                    padding=0,
-                    spacing=0
-                )
-            )
+
+    def start_call():
+        nonlocal timer_seconds, timer_running
+        timer_seconds = 0
+        timer_running = True
+        phone_display.value = "CONNECTED"
+        phone_display.color = Colors.GREEN_ACCENT_400  
+        phone_timer.visible = True
+        phone_hangup_btn.visible = True
+        phone_call_btn.visible = False
+        update_call_status("connected")
         page.update()
 
-    def view_pop(view):
-        page.views.pop()
-        top_view = page.views[-1]
-        page.go(top_view.route)
+    def end_call():
+        nonlocal timer_running
+        timer_running = False
+        phone_display.value = "READY"
+        phone_display.color = Colors.WHITE  
+        phone_timer.visible = False
+        phone_hangup_btn.visible = False
+        phone_call_btn.visible = True
+        update_call_status("idle")
+        page.update()
 
-    page.on_route_change = route_change
-    page.on_view_pop = view_pop
+    def update_call_status(state: str):
+        nonlocal call_state
+        call_state = state
+        badge = call_status_badge
+        # Update text color inside the Text control
+        badge.content.value = state.capitalize()
+        
+        if state == "connected":
+            badge.bgcolor = Colors.GREEN_100  
+            badge.content.color = Colors.GREEN  
+            badge.border = ft.BorderSide(1, Colors.GREEN)  
+        elif state == "ringing":
+            badge.bgcolor = Colors.ORANGE_100  
+            badge.content.color = Colors.ORANGE  
+            badge.border = ft.BorderSide(1, Colors.ORANGE)  
+        else:  # idle
+            badge.bgcolor = Colors.GREY_100  
+            badge.content.color = Colors.GREY  
+            badge.border = ft.BorderSide(1, Colors.GREY_300)  
+        badge.update()
+
+    def set_status(new_status: str, reason: str = ""):
+        nonlocal current_status
+        current_status = new_status
+        status_pill.content.value = new_status
+        status_pill.bgcolor = Colors.RED if new_status.lower() != "available" else Colors.BLUE  
+        page.update()
+        show_toast(f"Status changed to: {new_status}")
+
+    def toggle_theme(e):
+        page.theme_mode = ThemeMode.DARK if page.theme_mode == ThemeMode.LIGHT else ThemeMode.LIGHT
+        theme_icon.icon = Icons.DARK_MODE if page.theme_mode == ThemeMode.LIGHT else Icons.LIGHT_MODE
+        page.update()
 
     # --- UI Components ---
 
-    def create_menu_item(text, route=None):
-        def on_click(e):
-            if route:
-                page.go(route)
-            else:
-                # Handle cases where no specific route is defined, e.g., show a message
-                print(f"{text} clicked (no specific route)")
-        return ft.TextButton(
-            content=ft.Text(text, size=14, weight=ft.FontWeight.BOLD, color=text_color_dark),
-            style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=5),
-                padding=ft.padding.symmetric(horizontal=15, vertical=10),
-                overlay_color={"hovered": ft.Colors.BLUE_GREY_100},
-            ),
-            on_click=on_click
-        )
-
-    def create_dashboard_card(icon_name, title, value, color, is_due_reminder=False):
-        content = [
-            ft.Icon(name=icon_name, color=color, size=36),
-            ft.Text(title, size=14, weight=ft.FontWeight.W_500, color=text_color_dark),
-            ft.Text(value, size=20, weight=ft.FontWeight.BOLD, color=text_color_dark),
-        ]
-        if is_due_reminder:
-            content.append(ft.Text("[4]", size=12, color=ft.Colors.RED_500, weight=ft.FontWeight.BOLD))
-
-        return ft.Container(
-            content=ft.Column(
-                content,
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=5
-            ),
-            width=180,
-            height=120,
-            padding=ft.padding.all(10),
-            alignment=ft.alignment.center,
-            border_radius=ft.border_radius.all(15),
-            bgcolor=card_background,
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=5,
-                color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                offset=ft.Offset(0, 2),
-            ),
-            gradient=glossy_gradient_light if not is_due_reminder else None,
-            border=ft.border.all(1, color),
-        )
-
-    def create_feature_box(icon_name, text, color):
-        return ft.Container(
-            content=ft.Column(
-                [
-                    ft.Icon(name=icon_name, color=color, size=30),
-                    ft.Text(text, size=12, weight=ft.FontWeight.W_500, color=text_color_dark, text_align=ft.TextAlign.CENTER),
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=5
-            ),
-            width=120,
-            height=100,
-            padding=ft.padding.all(10),
-            alignment=ft.alignment.center,
-            border_radius=ft.border_radius.all(10),
-            bgcolor=card_background,
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=3,
-                color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                offset=ft.Offset(0, 1),
-            ),
-            gradient=glossy_gradient_light,
-            border=ft.border.all(1, color),
-        )
-
-    # --- Top Navigation Bar ---
-    top_nav = ft.Container(
-        content=ft.Row(
-            [
-                ft.Row([
-                    create_menu_item("Master", "/master"),
-                    create_menu_item("Transaction", "/transaction"),
-                    create_menu_item("Account", "/account"),
-                    create_menu_item("Report", "/report"),
-                    create_menu_item("Currency Management"),
-                    create_menu_item("Windows"),
-                    create_menu_item("Change Theme"),
-                    create_menu_item("Cibil Report"),
-                    create_menu_item("Contact Us"),
-                ], spacing=0),
-                ft.Row([
-                    ft.IconButton(ft.Icons.MINIMIZE, tooltip="Minimize"),
-                    ft.IconButton(ft.Icons.FULLSCREEN, tooltip="Maximize"),
-                    ft.IconButton(ft.Icons.CLOSE, tooltip="Close"),
-                ])
+    theme_icon = IconButton(
+        icon=Icons.LIGHT_MODE,
+        on_click=toggle_theme,
+        tooltip="Toggle theme",
+        icon_color=Colors.RED  
+    )
+    
+    status_pill = Container(
+        content=Text(
+            current_status, 
+            weight=FontWeight.BOLD, 
+            size=12, 
+            color=Colors.WHITE 
+        ),
+        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        bgcolor=Colors.RED,  
+        border_radius=6,
+        shadow=BoxShadow(blur_radius=8, color=Colors.with_opacity(0.3, Colors.RED))  
+    )
+    
+    header = Container(
+        content=Row(
+            controls=[
+                Column([
+                    Text("Welcome back, Alex 👋", size=20, weight=FontWeight.BOLD),
+                    Text("Stay available to receive the next 3 campaigns.", size=13, color=Colors.GREY_600)  
+                ], spacing=2),
+                Row([theme_icon, status_pill], spacing=16, alignment=ft.MainAxisAlignment.END)
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER
         ),
-        padding=ft.padding.symmetric(horizontal=10, vertical=5),
-        bgcolor=dark_blue,
-        width=page.window_width,
-        height=40,
-        border_radius=ft.border_radius.vertical(top=0, bottom=5)
+        padding=ft.padding.symmetric(horizontal=32, vertical=20),
+        bgcolor=Colors.WHITE,  
+        border=ft.Border(bottom=ft.BorderSide(2, Colors.RED)),  
+        shadow=BoxShadow(blur_radius=10, color=Colors.with_opacity(0.2, Colors.BLACK))  
     )
 
-    # --- Dashboard Content (Default View) ---
-    dashboard_content = ft.Container(
-        content=ft.Row(
-            [
-                # Left Section (Main Dashboard Cards)
-                ft.Column(
-                    [
-                        ft.Row(
-                            [
-                                create_feature_box(ft.Icons.CALENDAR_TODAY, "Daily Loan", ft.Colors.GREEN_500),
-                                create_feature_box(ft.Icons.REPLAY, "Recurring Loan", ft.Colors.BLUE_500),
-                                create_feature_box(ft.Icons.MONEY, "Monthly Interest Loan", ft.Colors.ORANGE_500),
-                                create_feature_box(ft.Icons.CREDIT_CARD, "Cash Credit Due", ft.Colors.PURPLE_500),
-                                create_feature_box(ft.Icons.HOME_WORK, "Fix EMI Loan", ft.Colors.RED_500),
-                                create_feature_box(ft.Icons.ACCOUNT_BALANCE, "ATM Loan", ft.Colors.TEAL_500),
-                            ],
-                            alignment=ft.MainAxisAlignment.START,
-                            spacing=20,
-                            wrap=True
-                        ),
-                        ft.Divider(height=20, color="transparent"),
-                        ft.Row(
-                            [
-                                create_dashboard_card(ft.Icons.MONEY, "Cash Credit Due", "0.00", ft.Colors.GREEN_700),
-                                create_dashboard_card(ft.Icons.PAYMENT, "EMI Monthly Due Payment", "7,00,123.00", ft.Colors.BLUE_700),
-                                create_dashboard_card(ft.Icons.RECEIPT, "Receivable Payment(Daily)", "25,58,143.00", ft.Colors.ORANGE_700),
-                                create_dashboard_card(ft.Icons.COLLECTIONS_BOOKMARK, "Daily Collection Report", "0.00", ft.Colors.PURPLE_700),
-                            ],
-                            alignment=ft.MainAxisAlignment.START,
-                            spacing=20,
-                            wrap=True
-                        ),
-                        ft.Divider(height=20, color="transparent"),
-                        ft.Row(
-                            [
-                                create_dashboard_card(ft.Icons.CALENDAR_MONTH, "Monthly Due Interest", "3,06,975.24", ft.Colors.RED_700),
-                                create_dashboard_card(ft.Icons.INTERESTS, "Due ATM Loan Interest", "3,958.00", ft.Colors.TEAL_700),
-                                create_dashboard_card(ft.Icons.TODAY, "Today Reminder", "[0]", ft.Colors.BROWN_700),
-                                create_dashboard_card(ft.Icons.WARNING, "Due Reminder", "[4]", ft.Colors.DEEP_ORANGE_700, is_due_reminder=True),
-                                create_dashboard_card(ft.Icons.UPDATE, "UpComing Reminder", "[0]", ft.Colors.INDIGO_700),
-                            ],
-                            alignment=ft.MainAxisAlignment.START,
-                            spacing=20,
-                            wrap=True
-                        ),
-                        ft.Divider(height=20, color="transparent"),
-                        ft.Row(
-                            [
-                                create_feature_box(ft.Icons.REPLAY_CIRCLE_FILLED, "Recurring Report", ft.Colors.GREEN_500),
-                                create_feature_box(ft.Icons.RECEIPT_LONG, "Due Payment Report (ATM)", ft.Colors.BLUE_500),
-                                create_feature_box(ft.Icons.CALENDAR_VIEW_DAY, "Due Payment Report (Daily)", ft.Colors.ORANGE_500),
-                                create_feature_box(ft.Icons.CALENDAR_MONTH, "Due Payment Report (Monthly Interest)", ft.Colors.PURPLE_500),
-                                create_feature_box(ft.Icons.CREDIT_SCORE, "Due Payment Report (Cash Credit)", ft.Colors.RED_500),
-                                create_feature_box(ft.Icons.HOME_WORK, "Due Payment Report (Fix EMI)", ft.Colors.TEAL_500),
-                            ],
-                            alignment=ft.MainAxisAlignment.START,
-                            spacing=20,
-                            wrap=True
-                        ),
-                        ft.Divider(height=20, color="transparent"),
-                        ft.Row(
-                            [
-                                ft.TextButton(
-                                    content=ft.Text("Monthly Loan Due Date [0]", color=ft.Colors.BLUE_700, size=14, weight=ft.FontWeight.BOLD),
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=5),
-                                        padding=ft.padding.symmetric(horizontal=15, vertical=10),
-                                        overlay_color={"hovered": ft.Colors.BLUE_GREY_100},
-                                    )
-                                ),
-                                ft.TextButton(
-                                    content=ft.Text("Maturity Due Date [354]", color=ft.Colors.BLUE_700, size=14, weight=ft.FontWeight.BOLD),
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=5),
-                                        padding=ft.padding.symmetric(horizontal=15, vertical=10),
-                                        overlay_color={"hovered": ft.Colors.BLUE_GREY_100},
-                                    )
-                                ),
-                                ft.ElevatedButton(
-                                    "Send Pending Reminder",
-                                    icon=ft.Icons.SEND,
-                                    bgcolor=dark_blue,
-                                    color=ft.Colors.WHITE,
-                                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                ),
-                                ft.ElevatedButton(
-                                    "Export To Excel",
-                                    icon=ft.Icons.UPLOAD_FILE,
-                                    bgcolor=dark_blue,
-                                    color=ft.Colors.WHITE,
-                                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                ),
-                                ft.ElevatedButton(
-                                    "Refresh DashBoard",
-                                    icon=ft.Icons.REFRESH,
-                                    bgcolor=dark_blue,
-                                    color=ft.Colors.WHITE,
-                                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.START,
-                            spacing=15,
-                            wrap=True
-                        ),
-                        ft.Divider(height=20, color="transparent"),
-                        ft.Container(
-                            content=ft.Row(
-                                [
-                                    ft.Image(
-                                        src="https://placehold.co/150x100/A0A0A0/FFFFFF?text=ICESTONE+SOFTWARE",
-                                        width=150,
-                                        height=100,
-                                        fit=ft.ImageFit.CONTAIN
-                                    ),
-                                    ft.Column(
-                                        [
-                                            ft.Text("Why ICESTONE SOFTWARE", size=16, weight=ft.FontWeight.BOLD, color=dark_blue),
-                                            ft.Text("➤ 24/7 Service and support.", size=12, color=text_color_dark),
-                                            ft.Text("➤ Locally and Known Business person", size=12, color=text_color_dark),
-                                            ft.Text("➤ Software available with ANDROID APPLICATION", size=12, color=text_color_dark),
-                                            ft.Text("➤ Service and support @ YOUR DOOR STEP", size=12, color=text_color_dark),
-                                            ft.Text("➤ Fully customized software and MULTI USER", size=12, color=text_color_dark),
-                                            ft.Text("➤ Only need BASIC COMPUTER knowledge for software use", size=12, color=text_color_dark),
-                                        ],
-                                        spacing=2
-                                    ),
-                                    ft.Column(
-                                        [
-                                            ft.Text("Service & Supports", size=16, weight=ft.FontWeight.BOLD, color=dark_blue),
-                                            ft.Text("+91 9898160983", size=12, color=text_color_dark),
-                                            ft.Text("+91 9898160983", size=12, color=text_color_dark),
-                                        ],
-                                        spacing=2
-                                    )
-                                ],
-                                alignment=ft.MainAxisAlignment.SPACE_AROUND,
-                                vertical_alignment=ft.CrossAxisAlignment.START,
-                            ),
-                            width=page.window_width * 0.7,
-                            padding=ft.padding.all(15),
-                            border_radius=ft.border_radius.all(15),
-                            bgcolor=card_background,
-                            shadow=ft.BoxShadow(
-                                spread_radius=1,
-                                blur_radius=5,
-                                color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                                offset=ft.Offset(0, 2),
-                            ),
-                            gradient=glossy_gradient_light,
-                            expand=True # Added expand=True to dashboard_content
-                        )
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                    spacing=0,
-                    expand=True
-                ),
-                # Right Section (Side Menu)
-                ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.TextButton(content=ft.Text("Loan Application", size=14, weight=ft.FontWeight.BOLD, color=dark_blue), on_click=lambda e: page.go("/crm")),
-                            ft.Divider(),
-                            ft.TextButton(content=ft.Text("Party Master", size=14, weight=ft.FontWeight.BOLD, color=dark_blue), on_click=lambda e: page.go("/master")),
-                            ft.Text("Reminder Master", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Smart Search", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Backup", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Divider(),
-                            ft.Text("Cash Book", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Bank Book", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Journal Entry", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Cheque Printing", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Day Book", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Divider(),
-                            ft.Text("Loan Summary", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Recurring Entry", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Rec. Int. Calcu.", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Share Summary", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Divider(),
-                            ft.Text("View Ledger", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Statistic Report", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("P & L Statment", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Text("Balance Sheet", size=14, weight=ft.FontWeight.BOLD, color=dark_blue),
-                            ft.Divider(),
-                            ft.ElevatedButton(
-                                "Open Anydesk",
-                                icon=ft.Icons.DESKTOP_WINDOWS,
-                                bgcolor=primary_gold,
-                                color=text_color_dark,
-                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                            ),
-                        ],
-                        spacing=10,
-                        horizontal_alignment=ft.CrossAxisAlignment.START
-                    ),
-                    padding=ft.padding.all(15),
-                    margin=ft.margin.only(left=20),
-                    border_radius=ft.border_radius.all(15),
-                    bgcolor=card_background,
-                    shadow=ft.BoxShadow(
-                        spread_radius=1,
-                        blur_radius=5,
-                        color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                        offset=ft.Offset(0, 2),
-                    ),
-                    gradient=glossy_gradient_light,
-                    width=200,
-                    height=650,
-                )
-            ],
-            vertical_alignment=ft.CrossAxisAlignment.START,
-            spacing=20,
-            expand=True
+    def make_status_chip(icon: str, label: str, status: str):
+        return ElevatedButton(
+            content=Row([Icon(icon), Text(label)], tight=True),
+            style=ft.ButtonStyle(
+                bgcolor=Colors.RED if status == "offline" else Colors.GREY_200,  
+                color=Colors.WHITE if status == "offline" else Colors.BLACK,  
+                shape=RoundedRectangleBorder(radius=6)
+            ),
+            on_click=lambda _: set_status(status)
+        )
+
+    status_actions = Row(
+        controls=[
+            make_status_chip(Icons.HEADSET, "Available", "available"),
+            make_status_chip(Icons.COFFEE, "Break", "break"), 
+            make_status_chip(Icons.LUNCH_DINING, "Lunch", "lunch"),
+            make_status_chip(Icons.SCHOOL, "Training", "training"),
+            make_status_chip(Icons.PEOPLE, "Meeting", "meeting"),
+            make_status_chip(Icons.POWER_OFF, "Offline", "offline")
+        ],
+        wrap=True,
+        spacing=12,
+        run_spacing=12
+    )
+
+    def info_card(title: str, value: str, subtitle: str = ""):
+        return Container(
+            content=Column([
+                Text(title, size=10, color=Colors.GREY, weight=FontWeight.BOLD),  
+                Text(value, size=16, weight=FontWeight.BOLD),
+                Text(subtitle, size=12, color=Colors.GREY_700) if subtitle else Container()  
+            ], spacing=4),
+            padding=20,
+            bgcolor=Colors.GREY_50,  
+            border_radius=6,
+            border=ft.border.all(1, Colors.GREY_300)  
+        )
+
+    cards_row = Row(
+        controls=[
+            info_card("Extension", "101", "Softphone registered"),
+            info_card("Assigned Campaigns", "3 active", ""),
+            info_card("Callbacks (next 24h)", "2", "")
+        ],
+        wrap=True,
+        spacing=16
+    )
+
+    transfer_select = Dropdown(
+        options=[
+            ft.dropdown.Option("102", "Sarah (102)"),
+            ft.dropdown.Option("103", "Mark (103)"),
+        ],
+        label="Available Agents",
+        width=300
+    )
+    transfer_btn = ElevatedButton("Transfer Call", disabled=True, bgcolor=Colors.RED, color=Colors.WHITE)  
+
+    call_status_badge = Container(
+        content=Text(
+            "Idle", 
+            size=14, 
+            weight=FontWeight.BOLD, 
+            color=Colors.GREY 
         ),
-        padding=ft.padding.all(20),
-        bgcolor=light_grey_bg,
+        padding=10,
+        border_radius=6,
+        bgcolor=Colors.GREY_100,  
+        border=ft.border.all(1, Colors.GREY_300),  
+        alignment=ft.alignment.center
+    )
+
+    phone_display = Text("READY", size=24, font_family="Orbitron", color=Colors.WHITE, text_align=TextAlign.CENTER)  
+    phone_timer = Text("00:00", size=20, font_family="Orbitron", color=Colors.CYAN_ACCENT, visible=False, text_align=TextAlign.CENTER)  
+    phone_number_display = Text("—", size=20, font_family="Orbitron", color=Colors.LIME_ACCENT, text_align=TextAlign.RIGHT)  
+
+    call_details = Column(
+        controls=[
+            Row([Text("Number:"), Text("—", weight=FontWeight.BOLD)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            Row([Text("Status:"), call_status_badge]),
+            Row([Text("Duration:"), Text("00:00", weight=FontWeight.BOLD)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        ],
+        spacing=8
+    )
+
+    live_call_content = Column(
+        controls=[
+            Container(
+                content=Column([
+                    Text("Current Call", size=16, weight=FontWeight.BOLD),
+                    Text("The dialer connects you automatically when a lead answers.", size=12, color=Colors.GREY_600)  
+                ], spacing=4),
+                padding=ft.padding.only(bottom=16)
+            ),
+            Container(
+                content=Text("No call connected. Stay available to auto-connect.", color=Colors.GREY),  
+                padding=32,
+                border=ft.border.all(2, Colors.GREY_300),  
+                border_radius=6,
+                alignment=ft.alignment.center
+            ),
+            Container(content=call_details, visible=False)
+        ],
+        spacing=12
+    )
+
+    scripts_content = Container(
+        content=Column([
+            Text("Call Script", size=16, weight=FontWeight.BOLD),
+            Text("Hello! Thank you for calling Acme Corp...", selectable=True)
+        ], spacing=10),
+        padding=16,
+        bgcolor=Colors.GREY_50,  
+        border_radius=6
+    )
+
+    notes_field = TextField(
+        label="Quick Notes",
+        multiline=True,
+        min_lines=8,
+        max_lines=12,
+        hint_text="e.g. Customer asked for pricing details..."
+    )
+    notes_content = Column([notes_field], spacing=12)
+
+    tabs = Tabs(
+        selected_index=0,
+        tabs=[
+            Tab(text="Live Call Feed", icon=Icons.PHONE, content=live_call_content),
+            Tab(text="Scripts", icon=Icons.DESCRIPTION, content=scripts_content),
+            Tab(text="Quick Notes", icon=Icons.NOTE, content=notes_content),
+        ],
         expand=True
     )
 
-    # --- Bottom Status Bar ---
-    bottom_status = ft.Container(
-        content=ft.Row(
-            [
-                ft.Text("Company : DEMO COMPANY", size=12, color=text_color_dark),
-                ft.VerticalDivider(),
-                ft.Text("Welcome : Administrator", size=12, color=text_color_dark),
-                ft.VerticalDivider(),
-                ft.Text("Year : 2020-2026", size=12, color=text_color_dark),
-                ft.VerticalDivider(),
-                ft.Text("Insert : Calculator", size=12, color=text_color_dark),
-                ft.VerticalDivider(),
-                ft.Text("Date : 05-Jul-2025", size=12, color=text_color_dark),
-                ft.VerticalDivider(),
-                ft.Text("Time : 02:25:18 PM", size=12, color=text_color_dark),
-                ft.VerticalDivider(),
-                ft.Row([
-                    ft.IconButton(ft.Icons.AUTO_AWESOME, tooltip="I AUTO"),
-                    ft.IconButton(ft.Icons.BACKUP, tooltip="Backup Option Disable For This Company."),
-                    ft.IconButton(ft.Icons.REFRESH, tooltip="I RICE"),
-                    ft.IconButton(ft.Icons.CREDIT_CARD, tooltip="I CRM"),
-                    ft.IconButton(ft.Icons.PHONE_ANDROID, tooltip="I APP"),
-                ], spacing=0)
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        ),
-        padding=ft.padding.symmetric(horizontal=10, vertical=5),
-        bgcolor=dark_blue,
-        width=page.window_width,
-        height=40,
-        border_radius=ft.border_radius.vertical(top=5, bottom=0)
+    def on_key(e):
+        nonlocal phone_number
+        key = e.control.data
+        if key == "clear":
+            phone_number = ""
+        elif key == "call":
+            if phone_number:
+                start_call()
+            return
+        elif key == "hangup":
+            end_call()
+            return
+        elif len(phone_number) < 15 and (key.isdigit() or key in "*#"):
+            phone_number += key
+        phone_number_display.value = phone_number or "—"
+        phone_number_display.update()
+
+    keypad = GridView(
+        runs_count=3,
+        max_extent=80,
+        spacing=8,
+        run_spacing=8,
+        controls=[
+            ElevatedButton(data=str(i), text=str(i), on_click=on_key, style=ft.ButtonStyle(shape=CircleBorder())) for i in range(1, 10)
+        ] + [
+            ElevatedButton(data="*", text="*", on_click=on_key, style=ft.ButtonStyle(shape=CircleBorder())),
+            ElevatedButton(data="0", text="0", on_click=on_key, style=ft.ButtonStyle(shape=CircleBorder())),
+            ElevatedButton(data="#", text="#", on_click=on_key, style=ft.ButtonStyle(shape=CircleBorder())),
+        ]
     )
 
-    # --- New Page Views ---
+    phone_call_btn = ElevatedButton("CALL", icon=Icons.PHONE, on_click=on_key, data="call", bgcolor=Colors.GREEN, color=Colors.WHITE, expand=True)  
+    
+    # --- FIXED: Icons.PHONE_OFF -> Icons.CALL_END ---
+    phone_hangup_btn = ElevatedButton("HANG UP", icon=Icons.CALL_END, on_click=on_key, data="hangup", bgcolor=Colors.RED, color=Colors.WHITE, expand=True, visible=False)  
 
-    class MasterView(ft.Container):
-        def __init__(self):
-            super().__init__(
-                content=ft.Column(
-                    [
-                        ft.Text("Master Data Management", size=24, weight=ft.FontWeight.BOLD, color=dark_blue),
-                        ft.Divider(),
-                        ft.Text("Here you can manage customer details, loan types, and other master data.", size=16, color=text_color_dark),
-                        ft.ElevatedButton(
-                            "Add New Customer",
-                            icon=ft.Icons.PERSON_ADD,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                        ft.ElevatedButton(
-                            "Manage Loan Types",
-                            icon=ft.Icons.MONEY,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                    spacing=20
-                ),
-                padding=ft.padding.all(30),
-                margin=ft.margin.all(20),
-                border_radius=ft.border_radius.all(15),
-                bgcolor=card_background,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                    offset=ft.Offset(0, 5),
-                ),
-                gradient=glossy_gradient_light,
-                expand=True
-            )
+    retro_phone = Container(
+        content=Column([
+            Text("EASYIAN PHONE", size=14, font_family="Orbitron", color=Colors.GREY_400, text_align=TextAlign.CENTER),  
+            ft.Divider(height=10, color=Colors.TRANSPARENT),  
+            Container(
+                content=Column([
+                    phone_number_display,
+                    phone_display,
+                    phone_timer,
+                    Text("Extension: 101", size=12, color=Colors.GREY_400, text_align=TextAlign.CENTER),  
+                ], spacing=10, alignment=ft.MainAxisAlignment.CENTER),
+                padding=20,
+                bgcolor=Colors.BLACK,  
+                border_radius=8,
+            ),
+            keypad,
+            Column([phone_call_btn, phone_hangup_btn], spacing=8)
+        ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+        padding=24,
+        bgcolor=Colors.GREY_900,  
+        border_radius=20,
+        gradient=LinearGradient(begin=ft.alignment.top_left, end=ft.alignment.bottom_right, colors=[Colors.GREY_900, Colors.BLUE_GREY_800]),  
+        shadow=BoxShadow(blur_radius=20, color=Colors.with_opacity(0.5, Colors.BLACK))  
+    )
 
-    class TransactionView(ft.Container):
-        def __init__(self):
-            super().__init__(
-                content=ft.Column(
-                    [
-                        ft.Text("Loan Transactions", size=24, weight=ft.FontWeight.BOLD, color=dark_blue),
-                        ft.Divider(),
-                        ft.Text("Process new loans, repayments, and other financial transactions here.", size=16, color=text_color_dark),
-                        ft.ElevatedButton(
-                            "New Loan Application",
-                            icon=ft.Icons.ADD_CIRCLE,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                        ft.ElevatedButton(
-                            "Process Repayment",
-                            icon=ft.Icons.PAYMENT,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                    spacing=20
-                ),
-                padding=ft.padding.all(30),
-                margin=ft.margin.all(20),
-                border_radius=ft.border_radius.all(15),
-                bgcolor=card_background,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                    offset=ft.Offset(0, 5),
-                ),
-                gradient=glossy_gradient_light,
-                expand=True
-            )
+    main_layout = Row(
+        controls=[
+            Column([
+                Text("Availability", size=18, weight=FontWeight.BOLD, color=Colors.RED),  
+                Text("Update your state so the dialer knows when to connect calls.", size=13, color=Colors.GREY_600),  
+                status_actions,
+                cards_row,
+                ft.Divider(height=24),
+                Text("Call Transfer", size=18, weight=FontWeight.BOLD, color=Colors.RED),  
+                transfer_select,
+                # --- FIXED: Corrected the typo 'GREY_6G00' -> 'GREY_600' ---
+                Text("Transfer button enables when you are on a live call.", size=12, color=Colors.GREY_600),  
+                transfer_btn
+            ], spacing=16, expand=True),
+            Column([tabs], expand=True),
+            Column([retro_phone], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+        ],
+        expand=True,
+        spacing=24,
+        scroll=ScrollMode.ADAPTIVE
+    )
+    
+    # --- Timer Thread (FIXED) ---
+    def timer_thread():
+        """
+        Runs in a separate thread to update the call timer every second.
+        """
+        while True:
+            if timer_running:
+                # Use nonlocal to modify the variable from the outer scope
+                nonlocal timer_seconds
+                timer_seconds += 1
+                phone_timer.value = format_time(timer_seconds)
+                # Update only the timer control from the thread
+                try:
+                    # Check if page is still available before updating
+                    if page:
+                        phone_timer.update()
+                except Exception as e:
+                    # Handle exceptions if page context is lost (e.g., app closed)
+                    print(f"Error updating timer: {e}")
+                    break
+            # Wait for 1 second before the next check
+            time.sleep(1)
 
-    class AccountView(ft.Container):
-        def __init__(self):
-            super().__init__(
-                content=ft.Column(
-                    [
-                        ft.Text("Account Management", size=24, weight=ft.FontWeight.BOLD, color=dark_blue),
-                        ft.Divider(),
-                        ft.Text("View account statements, ledgers, and manage financial records.", size=16, color=text_color_dark),
-                        ft.ElevatedButton(
-                            "View Account Statement",
-                            icon=ft.Icons.RECEIPT,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                        ft.ElevatedButton(
-                            "Access Ledger",
-                            icon=ft.Icons.BOOK,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                    spacing=20
-                ),
-                padding=ft.padding.all(30),
-                margin=ft.margin.all(20),
-                border_radius=ft.border_radius.all(15),
-                bgcolor=card_background,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                    offset=ft.Offset(0, 5),
-                ),
-                gradient=glossy_gradient_light,
-                expand=True
-            )
-
-    class ReportView(ft.Container):
-        def __init__(self):
-            super().__init__(
-                content=ft.Column(
-                    [
-                        ft.Text("Reports & Analytics", size=24, weight=ft.FontWeight.BOLD, color=dark_blue),
-                        ft.Divider(),
-                        ft.Text("Generate various reports for business insights.", size=16, color=text_color_dark),
-                        ft.ElevatedButton(
-                            "Loan Portfolio Report",
-                            icon=ft.Icons.PIE_CHART,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                        ft.ElevatedButton(
-                            "Collection Summary",
-                            icon=ft.Icons.COLLECTIONS_BOOKMARK,
-                            bgcolor=dark_blue,
-                            color=text_color_light,
-                            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    horizontal_alignment=ft.CrossAxisAlignment.START,
-                    spacing=20
-                ),
-                padding=ft.padding.all(30),
-                margin=ft.margin.all(20),
-                border_radius=ft.border_radius.all(15),
-                bgcolor=card_background,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                    offset=ft.Offset(0, 5),
-                ),
-                gradient=glossy_gradient_light,
-                expand=True
-            )
-
-    class CrmGoldLoanView(ft.Container):
-        def __init__(self):
-            super().__init__(
-                content=ft.Column(
-                    [
-                        ft.Text("Gold Loan CRM", size=28, weight=ft.FontWeight.BOLD, color=primary_gold),
-                        ft.Divider(height=20, color=primary_gold),
-                        ft.Row(
-                            [
-                                # Customer List / Search
-                                ft.Container(
-                                    content=ft.Column(
-                                        [
-                                            ft.Text("Existing Customers", size=18, weight=ft.FontWeight.BOLD, color=dark_blue),
-                                            ft.TextField(label="Search Customer", icon=ft.Icons.SEARCH, border_radius=10),
-                                            ft.ListView(
-                                                [
-                                                    ft.Text("John Doe - Loan #GL001", size=14),
-                                                    ft.Text("Jane Smith - Loan #GL002", size=14),
-                                                    ft.Text("Alice Johnson - Loan #GL003", size=14),
-                                                    ft.Text("Bob Williams - Loan #GL004", size=14),
-                                                ],
-                                                expand=True,
-                                                spacing=10,
-                                                padding=ft.padding.symmetric(vertical=10)
-                                            )
-                                        ],
-                                        spacing=10,
-                                        horizontal_alignment=ft.CrossAxisAlignment.START
-                                    ),
-                                    padding=ft.padding.all(15),
-                                    border_radius=ft.border_radius.all(15),
-                                    bgcolor=card_background,
-                                    shadow=ft.BoxShadow(
-                                        spread_radius=1,
-                                        blur_radius=5,
-                                        color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                                        offset=ft.Offset(0, 2),
-                                    ),
-                                    gradient=glossy_gradient_light,
-                                    width=300,
-                                    height=400
-                                ),
-                                # New Loan Application Form
-                                ft.Container(
-                                    content=ft.Column(
-                                        [
-                                            ft.Text("New Gold Loan Application", size=18, weight=ft.FontWeight.BOLD, color=dark_blue),
-                                            ft.TextField(label="Customer Name", border_radius=10),
-                                            ft.TextField(label="Contact Number", border_radius=10),
-                                            ft.TextField(label="Gold Weight (grams)", keyboard_type=ft.KeyboardType.NUMBER, border_radius=10),
-                                            ft.TextField(label="Gold Purity (Karat)", keyboard_type=ft.KeyboardType.NUMBER, border_radius=10),
-                                            ft.TextField(label="Loan Amount Requested", keyboard_type=ft.KeyboardType.NUMBER, border_radius=10),
-                                            ft.ElevatedButton(
-                                                "Submit Loan Application",
-                                                icon=ft.Icons.CHECK_CIRCLE,
-                                                bgcolor=primary_gold,
-                                                color=text_color_dark,
-                                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                            ),
-                                        ],
-                                        spacing=10,
-                                        horizontal_alignment=ft.CrossAxisAlignment.START
-                                    ),
-                                    padding=ft.padding.all(15),
-                                    border_radius=ft.border_radius.all(15),
-                                    bgcolor=card_background,
-                                    shadow=ft.BoxShadow(
-                                        spread_radius=1,
-                                        blur_radius=5,
-                                        color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                                        offset=ft.Offset(0, 2),
-                                    ),
-                                    gradient=glossy_gradient_light,
-                                    width=350,
-                                    height=400
-                                ),
-                                # Gold Valuation Calculator & Loan Status
-                                ft.Container(
-                                    content=ft.Column(
-                                        [
-                                            ft.Text("Gold Valuation Calculator", size=18, weight=ft.FontWeight.BOLD, color=dark_blue),
-                                            ft.TextField(label="Weight (grams)", keyboard_type=ft.KeyboardType.NUMBER, border_radius=10),
-                                            ft.TextField(label="Purity (Karat)", keyboard_type=ft.KeyboardType.NUMBER, border_radius=10),
-                                            ft.ElevatedButton(
-                                                "Calculate Value",
-                                                icon=ft.Icons.CALCULATE,
-                                                bgcolor=dark_blue,
-                                                color=text_color_light,
-                                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
-                                            ),
-                                            ft.Text("Estimated Value: ₹ 0.00", size=16, weight=ft.FontWeight.BOLD, color=primary_gold),
-                                            ft.Divider(),
-                                            ft.Text("Loan Status & Tracking", size=18, weight=ft.FontWeight.BOLD, color=dark_blue),
-                                            ft.Text("Selected Loan: None", size=14),
-                                            ft.Text("Status: Pending", size=14),
-                                            ft.Text("Next Action: Follow-up", size=14),
-                                        ],
-                                        spacing=10,
-                                        horizontal_alignment=ft.CrossAxisAlignment.START
-                                    ),
-                                    padding=ft.padding.all(15),
-                                    border_radius=ft.border_radius.all(15),
-                                    bgcolor=card_background,
-                                    shadow=ft.BoxShadow(
-                                        spread_radius=1,
-                                        blur_radius=5,
-                                        color=ft.Colors.BLACK12, # Corrected: BLACK_12 to BLACK12
-                                        offset=ft.Offset(0, 2),
-                                    ),
-                                    gradient=glossy_gradient_light,
-                                    width=350,
-                                    height=400
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_AROUND,
-                            vertical_alignment=ft.CrossAxisAlignment.START,
-                            wrap=True,
-                            expand=True
-                        ),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=20,
-                    expand=True
-                ),
-                padding=ft.padding.all(20),
-                bgcolor=light_grey_bg,
-                expand=True
-            )
-
-    # Initial page content
     page.add(
-        top_nav,
-        dashboard_content, # Removed ft.Expanded here as dashboard_content now has expand=True
-        bottom_status
+        Column([
+            header,
+            Container(main_layout, padding=ft.padding.all(24), expand=True)
+        ], expand=True)
     )
-    page.go(page.route) # Go to the initial route to render the view
 
-ft.app(target=main)
+    # Start the timer thread
+    # daemon=True ensures the thread exits when the main program exits
+    t = threading.Thread(target=timer_thread, daemon=True)
+    t.start()
+
+
+if __name__ == "__main__":
+    ft.app(
+        target=main,
+        view=ft.WEB_BROWSER,
+        port=8000
+    )

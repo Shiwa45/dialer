@@ -736,12 +736,33 @@ class LeadImportProcessor:
                     return
             
             # Create lead
-            from .models import Lead
-            Lead.objects.create(
+            from .models import Lead, LeadList
+            lead = Lead.objects.create(
                 **cleaned_data,
                 lead_list=self.import_obj.lead_list,
                 created_by=self.import_obj.user
             )
+            # If the lead list is tied to a campaign, enqueue for autodial
+            assigned_campaign_id = None
+            try:
+                # re-fetch to ensure we have the FK value
+                assigned_campaign_id = LeadList.objects.filter(pk=self.import_obj.lead_list_id).values_list('assigned_campaign_id', flat=True).first()
+            except Exception:
+                assigned_campaign_id = None
+            if assigned_campaign_id:
+                from campaigns.models import OutboundQueue
+                exists = OutboundQueue.objects.filter(
+                    campaign_id=assigned_campaign_id,
+                    phone_number=cleaned_data['phone_number'],
+                    status='pending'
+                ).exists()
+                if not exists:
+                    OutboundQueue.objects.create(
+                        campaign_id=assigned_campaign_id,
+                        lead=lead,
+                        phone_number=cleaned_data['phone_number'],
+                        status='pending'
+                    )
             
             self.success_count += 1
             

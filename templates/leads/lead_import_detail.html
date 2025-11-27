@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Import Details: {{ lead_import.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Import Details</h1>
+            <p class="text-muted">Status and results for "{{ lead_import.name }}"</p>
+        </div>
+        <div>
+            <a href="{% url 'leads:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Leads
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Import Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <strong>Status:</strong>
+                            <span
+                                class="badge {% if lead_import.status == 'completed' %}bg-success{% elif lead_import.status == 'failed' %}bg-danger{% else %}bg-info{% endif %}">
+                                {{ lead_import.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Date:</strong> {{ lead_import.created_at|date:"M d, Y H:i" }}
+                        </div>
+                    </div>
+
+                    {% if lead_import.error_message %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {{ lead_import.error_message }}
+                    </div>
+                    {% endif %}
+
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="h2 mb-0 text-primary">{{ lead_import.total_rows }}</h3>
+                                <small class="text-muted">Total Rows</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="h2 mb-0 text-success">{{ lead_import.successful_imports }}</h3>
+                                <small class="text-muted">Imported</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="h2 mb-0 text-warning">{{ lead_import.duplicate_count }}</h3>
+                                <small class="text-muted">Duplicates</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="h2 mb-0 text-danger">{{ lead_import.failed_imports }}</h3>
+                                <small class="text-muted">Failed</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            Target List
+                            <span class="fw-bold">{{ lead_import.lead_list.name }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            Skip Duplicates
+                            <span
+                                class="badge {% if lead_import.skip_duplicates %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ lead_import.skip_duplicates|yesno:"Yes,No" }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            Check DNC
+                            <span
+                                class="badge {% if lead_import.check_dnc %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ lead_import.check_dnc|yesno:"Yes,No" }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            Imported By
+                            <span>{{ lead_import.user.username }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

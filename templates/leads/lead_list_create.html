@@ -104,6 +104,17 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <div class="col-12">
+                    <div class="form-floating">
+                        {{ form.assigned_campaign }}
+                        <label for="{{ form.assigned_campaign.id_for_label }}">Assign to Campaign (optional)</label>
+                        <div class="form-text">If selected, leads in this list will be auto-queued to that campaign.</div>
+                        {% if form.assigned_campaign.errors %}
+                            <div class="invalid-feedback d-block">{{ form.assigned_campaign.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
 

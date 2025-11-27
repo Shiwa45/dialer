@@ -15,6 +15,15 @@ class LeadList(TimeStampedModel):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
+    # Optional: automatically queue this list's leads to a campaign
+    assigned_campaign = models.ForeignKey(
+        'campaigns.Campaign',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lead_lists',
+        help_text="If set, leads in this list will be auto-queued to the campaign."
+    )
     
     # Assignment and Access
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_lead_lists')
@@ -180,6 +189,7 @@ class LeadImport(TimeStampedModel):
     # Import Configuration
     skip_duplicates = models.BooleanField(default=True)
     check_dnc = models.BooleanField(default=True)
+    field_mapping = models.JSONField(default=dict, blank=True)
     
     # Statistics
     total_rows = models.PositiveIntegerField(default=0)

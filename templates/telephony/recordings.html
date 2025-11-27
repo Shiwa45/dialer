@@ -717,10 +717,10 @@ function deleteSelected() {
 function deleteRecording(recordingId) {
     if (confirm('Are you sure you want to delete this recording? This action cannot be undone.')) {
         $.ajax({
-            url: '{% url "telephony:delete_recording" %}',
+            url: '{% url "telephony:bulk_delete_recordings" %}',
             method: 'POST',
             data: {
-                'recording_id': recordingId,
+                'recording_ids': [recordingId],
                 'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
             },
             success: function(response) {

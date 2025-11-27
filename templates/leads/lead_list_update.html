@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Update Lead List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Update Lead List</h1>
+            <p class="text-muted mb-0">Edit details for "{{ form.instance.name }}"</p>
+        </div>
+        <div>
+            <a href="{% url 'leads:lead_lists' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Lead Lists
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" id="leadListForm">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.name }}
+                            <label for="{{ form.name.id_for_label }}">Name *</label>
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check mt-3">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-floating">
+                            {{ form.description }}
+                            <label for="{{ form.description.id_for_label }}">Description</label>
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.tags }}
+                            <label for="{{ form.tags.id_for_label }}">Tags</label>
+                            <div class="form-text">Enter tags separated by commas (e.g., "high-value, referrals, hot-leads")</div>
+                            {% if form.tags.errors %}
+                                <div class="invalid-feedback d-block">{{ form.tags.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.assigned_campaign }}
+                            <label for="{{ form.assigned_campaign.id_for_label }}">Assign to Campaign (optional)</label>
+                            <div class="form-text">If selected, leads in this list will be auto-queued to that campaign.</div>
+                            {% if form.assigned_campaign.errors %}
+                                <div class="invalid-feedback d-block">{{ form.assigned_campaign.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <small class="text-muted">* Required fields</small>
+                    <div class="btn-group">
+                        <a href="{% url 'leads:lead_lists' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

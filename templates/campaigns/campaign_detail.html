@@ -5,183 +5,505 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --primary-color: #3b82f6;
+        --primary-dark: #1e40af;
+        --primary-light: #60a5fa;
+        --success-color: #10b981;
+        --success-dark: #059669;
+        --warning-color: #f59e0b;
+        --warning-dark: #d97706;
+        --danger-color: #ef4444;
+        --danger-dark: #dc2626;
+        --info-color: #06b6d4;
+        --info-dark: #0891b2;
+        --dark-color: #1e293b;
+        --light-bg: #f8fafc;
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        --card-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    body {
+        background-color: #f1f5f9;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* Campaign Header */
     .campaign-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-radius: 15px;
-        padding: 2rem;
+        border-radius: 20px;
+        padding: 2.5rem;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
     
     .campaign-header::before {
         content: '';
         position: absolute;
-        top: 0;
-        right: 0;
-        width: 200px;
-        height: 200px;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/><circle cx="50" cy="50" r="25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg>');
-        opacity: 0.3;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .campaign-header::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -5%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        border-radius: 50%;
     }
     
     .status-badge {
         position: absolute;
-        top: 1rem;
-        right: 1rem;
-        font-size: 1rem;
-        padding: 0.5rem 1rem;
+        top: 1.5rem;
+        right: 1.5rem;
+        font-size: 0.95rem;
+        padding: 0.6rem 1.2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .campaign-header .badge.bg-light {
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white !important;
+    }
+
+    .campaign-header h1 {
+        font-weight: 700;
+        font-size: 2.2rem;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .campaign-header p {
+        position: relative;
+        z-index: 1;
+        font-size: 1.05rem;
+    }
+
+    .campaign-header .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 0.7rem 1.5rem;
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .campaign-header .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.8rem;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--card-shadow-lg);
     }
     
     .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
+        font-size: 2.8rem;
+        font-weight: 800;
+        line-height: 1;
         margin-bottom: 0.5rem;
     }
     
     .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
+        color: #64748b;
+        font-size: 0.875rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
+        font-weight: 600;
+    }
+
+    .stat-card .progress {
+        background-color: #e2e8f0;
+        border-radius: 10px;
+    }
+
+    .stat-card .progress-bar {
+        border-radius: 10px;
     }
     
+    /* Info Cards */
     .info-card {
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
         margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .info-card:hover {
+        box-shadow: var(--card-shadow-lg);
     }
     
     .info-card-header {
-        background: #f8f9fa;
-        border-radius: 12px 12px 0 0;
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid #dee2e6;
+        background: linear-gradient(to right, #f8fafc, #f1f5f9);
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .info-card-header h5 {
+        font-weight: 700;
+        color: var(--dark-color);
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .info-card-header i {
+        color: var(--primary-color);
     }
     
     .info-card-body {
-        padding: 1.5rem;
+        padding: 2rem;
     }
-    
-    .control-panel {
-        background: linear-gradient(45deg, #28a745, #20c997);
+
+    /* Buttons */
+    .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 0.6rem 1.4rem;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), var(--success-dark));
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, var(--success-dark), var(--success-color));
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, var(--warning-color), var(--warning-dark));
+        box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
         color: white;
+    }
+
+    .btn-warning:hover {
+        background: linear-gradient(135deg, var(--warning-dark), var(--warning-color));
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.4);
+        color: white;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger-color), var(--danger-dark));
+        box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+        background: linear-gradient(135deg, var(--danger-dark), var(--danger-color));
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+        background: white;
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-outline-light {
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        color: white;
+        background: transparent;
+    }
+
+    .btn-outline-light:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.6);
+        color: white;
+    }
+
+    /* Dropdown */
+    .dropdown-menu {
         border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: var(--card-shadow-lg);
+        padding: 0.5rem;
     }
-    
-    .control-panel.paused {
-        background: linear-gradient(45deg, #ffc107, #fd7e14);
+
+    .dropdown-item {
+        border-radius: 8px;
+        padding: 0.7rem 1rem;
+        transition: all 0.2s ease;
+        font-weight: 500;
     }
-    
-    .control-panel.inactive {
-        background: linear-gradient(45deg, #6c757d, #495057);
+
+    .dropdown-item:hover {
+        background: var(--light-bg);
+        color: var(--primary-color);
+        transform: translateX(5px);
     }
-    
+
+    .dropdown-divider {
+        border-top: 1px solid #e2e8f0;
+        margin: 0.5rem 0;
+    }
+
+    /* Timeline */
     .timeline-item {
         position: relative;
-        padding-left: 2rem;
-        margin-bottom: 1rem;
+        padding-left: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-left: 2px solid #e2e8f0;
+        margin-left: 0.375rem;
+    }
+
+    .timeline-item:last-child {
+        border-left: 2px solid transparent;
+        padding-bottom: 0;
     }
     
     .timeline-item::before {
         content: '';
         position: absolute;
-        left: 0;
+        left: -0.5rem;
         top: 0.25rem;
-        width: 0.75rem;
-        height: 0.75rem;
-        background: #0d6efd;
+        width: 1rem;
+        height: 1rem;
+        background: var(--primary-color);
         border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px var(--primary-color);
+        transition: all 0.3s ease;
+    }
+
+    .timeline-item:hover::before {
+        transform: scale(1.3);
     }
     
     .timeline-item.success::before {
-        background: #198754;
+        background: var(--success-color);
+        box-shadow: 0 0 0 2px var(--success-color);
     }
     
     .timeline-item.warning::before {
-        background: #ffc107;
+        background: var(--warning-color);
+        box-shadow: 0 0 0 2px var(--warning-color);
     }
     
     .timeline-item.danger::before {
-        background: #dc3545;
+        background: var(--danger-color);
+        box-shadow: 0 0 0 2px var(--danger-color);
     }
-    
+
+    /* Progress Ring */
     .progress-ring {
-        width: 120px;
-        height: 120px;
+        width: 150px;
+        height: 150px;
         margin: 0 auto;
+        position: relative;
     }
     
     .progress-ring-circle {
-        stroke: #e9ecef;
-        stroke-width: 8;
+        stroke: #e2e8f0;
+        stroke-width: 10;
         fill: transparent;
-        r: 52;
-        cx: 60;
-        cy: 60;
+        r: 60;
+        cx: 75;
+        cy: 75;
     }
     
     .progress-ring-progress {
-        stroke: #0d6efd;
-        stroke-width: 8;
+        stroke: url(#progressGradient);
+        stroke-width: 10;
         stroke-linecap: round;
         fill: transparent;
-        r: 52;
-        cx: 60;
-        cy: 60;
-        stroke-dasharray: 326.56;
-        stroke-dashoffset: 326.56;
-        transition: stroke-dashoffset 0.5s ease;
+        r: 60;
+        cx: 75;
+        cy: 75;
+        stroke-dasharray: 376.99;
+        stroke-dashoffset: 376.99;
+        transition: stroke-dashoffset 0.8s ease;
+        transform: rotate(-90deg);
+        transform-origin: center;
     }
-    
+
+    /* Agent Avatar */
     .agent-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(45deg, #667eea, #764ba2);
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: bold;
+        font-weight: 700;
+        font-size: 1.2rem;
         margin-right: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-    
+
+    .agent-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.2rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .agent-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Quick Actions */
     .quick-actions {
         position: fixed;
         bottom: 2rem;
         right: 2rem;
         z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
     }
     
     .quick-action-btn {
-        width: 60px;
-        height: 60px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        transition: transform 0.3s ease;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        border: none;
     }
     
     .quick-action-btn:hover {
-        transform: scale(1.1);
+        transform: scale(1.15);
+        box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.4);
     }
-    
+
+    /* Quick Stats */
+    .quick-stat-box {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, var(--light-bg), white);
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .quick-stat-box:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .quick-stat-box .h5 {
+        font-weight: 700;
+    }
+
+    /* Chart Container */
     .chart-container {
-        height: 300px;
+        height: 320px;
         position: relative;
     }
-    
+
+    /* Configuration Grid */
+    .config-item {
+        padding: 1rem 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .config-item:last-child {
+        border-bottom: none;
+    }
+
+    .config-item strong {
+        color: var(--dark-color);
+        font-weight: 600;
+    }
+
+    .config-item .text-muted {
+        color: #64748b !important;
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .status-indicator.enabled {
+        background: #d1fae5;
+        color: var(--success-dark);
+    }
+
+    .status-indicator.disabled {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
+        .campaign-header {
+            padding: 2rem 1.5rem;
+        }
+
+        .campaign-header h1 {
+            font-size: 1.75rem;
+        }
+
         .stat-number {
-            font-size: 2rem;
+            font-size: 2.2rem;
         }
         
         .quick-actions {
@@ -190,15 +512,40 @@
         }
         
         .quick-action-btn {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
+        }
+
+        .info-card-body {
+            padding: 1.5rem;
         }
     }
+
+    /* Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card, .info-card {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+    .stat-card:nth-child(4) { animation-delay: 0.4s; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
+<div class="container-fluid px-4 py-4">
     <!-- Campaign Header -->
     <div class="campaign-header">
         <span class="status-badge badge 
@@ -207,22 +554,22 @@
             {% elif campaign.status == 'completed' %}bg-info
             {% else %}bg-secondary{% endif %}">
             {% if campaign.status == 'active' %}
-                <i class="fas fa-play me-1"></i>Active
+                <i class="fas fa-play me-2"></i>Active
             {% elif campaign.status == 'paused' %}
-                <i class="fas fa-pause me-1"></i>Paused
+                <i class="fas fa-pause me-2"></i>Paused
             {% elif campaign.status == 'completed' %}
-                <i class="fas fa-check me-1"></i>Completed
+                <i class="fas fa-check me-2"></i>Completed
             {% else %}
-                <i class="fas fa-stop me-1"></i>Inactive
+                <i class="fas fa-stop me-2"></i>Inactive
             {% endif %}
         </span>
         
         <div class="row align-items-center">
             <div class="col-lg-8">
-                <h1 class="h2 mb-2">{{ campaign.name }}</h1>
-                <p class="mb-3 opacity-75">{{ campaign.description|default:"No description provided" }}</p>
+                <h1 class="mb-3">{{ campaign.name }}</h1>
+                <p class="mb-4 opacity-90">{{ campaign.description|default:"No description provided" }}</p>
                 
-                <div class="d-flex flex-wrap gap-3 mb-3">
+                <div class="d-flex flex-wrap gap-2 mb-3">
                     <span class="badge bg-light text-dark">
                         <i class="fas fa-bullhorn me-1"></i>{{ campaign.get_campaign_type_display }}
                     </span>
@@ -246,7 +593,7 @@
                         <i class="fas fa-play me-2"></i>Start Campaign
                     </button>
                     {% elif campaign.status == 'active' %}
-                    <button class="btn btn-warning" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
+                    <button class="btn btn-warning text-white" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
                         <i class="fas fa-pause me-2"></i>Pause Campaign
                     </button>
                     <button class="btn btn-danger" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
@@ -262,21 +609,21 @@
                     {% endif %}
                     
                     <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
-                            <i class="fas fa-cog me-2"></i>Manage
+                        <button class="btn btn-outline-light dropdown-toggle w-100" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-2"></i>Manage Campaign
                         </button>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}">
-                                <i class="fas fa-edit me-2"></i>Edit Campaign</a></li>
+                                <i class="fas fa-edit me-2 text-primary"></i>Edit Campaign</a></li>
                             <li><a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}">
-                                <i class="fas fa-users me-2"></i>Manage Agents</a></li>
+                                <i class="fas fa-users me-2 text-success"></i>Manage Agents</a></li>
                             <li><a class="dropdown-item" href="{% url 'campaigns:scripts' campaign.pk %}">
-                                <i class="fas fa-file-alt me-2"></i>Manage Scripts</a></li>
+                                <i class="fas fa-file-alt me-2 text-info"></i>Manage Scripts</a></li>
                             <li><a class="dropdown-item" href="{% url 'campaigns:dispositions' campaign.pk %}">
-                                <i class="fas fa-tags me-2"></i>Manage Dispositions</a></li>
+                                <i class="fas fa-tags me-2 text-warning"></i>Manage Dispositions</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
-                                <i class="fas fa-copy me-2"></i>Clone Campaign</a></li>
+                                <i class="fas fa-copy me-2 text-secondary"></i>Clone Campaign</a></li>
                         </ul>
                     </div>
                 </div>
@@ -287,40 +634,47 @@
 
     <!-- Dialing & Routing Summary -->
     <div class="row g-4 mb-4">
-        <div class="col-lg-12">
+        <div class="col-12">
             <div class="info-card">
                 <div class="info-card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-gauge-high me-2 text-primary"></i>Dialing & Routing</h5>
+                    <h5 class="mb-0"><i class="fas fa-gauge-high me-2"></i>Dialing & Routing Configuration</h5>
                     <a class="btn btn-sm btn-outline-primary" href="{% url 'campaigns:update' campaign.pk %}">
-                        <i class="fas fa-edit me-1"></i>Edit
+                        <i class="fas fa-edit me-1"></i>Edit Settings
                     </a>
                 </div>
                 <div class="info-card-body">
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-3">
-                            <div class="small text-muted">Dialing Speed</div>
-                            <div class="fw-semibold">
-                                {{ campaign.get_dial_speed_display|default:campaign.dial_speed }}
-                                {% if campaign.dial_speed == 'custom' %}
-                                    ({{ campaign.custom_dials_per_agent }} per agent)
-                                {% endif %}
+                            <div class="config-item">
+                                <div class="small text-uppercase fw-semibold text-muted mb-2">Dialing Speed</div>
+                                <div class="fw-bold text-dark fs-6">
+                                    {{ campaign.get_dial_speed_display|default:campaign.dial_speed }}
+                                    {% if campaign.dial_speed == 'custom' %}
+                                        <span class="badge bg-primary ms-1">{{ campaign.custom_dials_per_agent }} per agent</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="small text-muted">Dial Prefix</div>
-                            <div class="fw-semibold">{{ campaign.dial_prefix|default:'-' }}</div>
+                            <div class="config-item">
+                                <div class="small text-uppercase fw-semibold text-muted mb-2">Dial Prefix</div>
+                                <div class="fw-bold text-dark fs-6">{{ campaign.dial_prefix|default:'-' }}</div>
+                            </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="small text-muted">Fallback Trunk (legacy)</div>
-                            <div class="fw-semibold">{{ campaign.outbound_carrier.name|default:'-' }}</div>
+                            <div class="config-item">
+                                <div class="small text-uppercase fw-semibold text-muted mb-2">Fallback Trunk</div>
+                                <div class="fw-bold text-dark fs-6">{{ campaign.outbound_carrier.name|default:'-' }}</div>
+                            </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="small text-muted">Outbound Trunks</div>
-                            <div class="fw-semibold">
+                            <div class="config-item">
+                                <div class="small text-uppercase fw-semibold text-muted mb-2">Outbound Trunks</div>
+                                <div class="fw-bold text-dark fs-6">
                                     {% if trunks %}
                                         {% for t in trunks %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                                     {% else %}-{% endif %}
-                                {% endwith %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -333,86 +687,80 @@
     <div class="row g-4 mb-4">
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="flex-grow-1">
                         <div class="stat-number text-primary" id="totalLeads">
                             {{ campaign.total_leads|default:0 }}
                         </div>
                         <div class="stat-label">Total Leads</div>
                     </div>
-                    <div class="fs-1 text-primary opacity-25">
+                    <div class="fs-2 text-primary opacity-25">
                         <i class="fas fa-database"></i>
                     </div>
                 </div>
-                <div class="mt-3">
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-primary" style="width: 100%"></div>
-                    </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" style="width: 100%"></div>
                 </div>
             </div>
         </div>
         
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card success">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
+            <div class="stat-card">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="flex-grow-1">
                         <div class="stat-number text-success" id="callsMade">
                             {{ today_stats.calls_made|default:0 }}
                         </div>
                         <div class="stat-label">Calls Made Today</div>
                     </div>
-                    <div class="fs-1 text-success opacity-25">
+                    <div class="fs-2 text-success opacity-25">
                         <i class="fas fa-phone"></i>
                     </div>
                 </div>
-                <div class="mt-3">
-                    <small class="text-muted">
-                        <i class="fas fa-arrow-up text-success me-1"></i>
-                        +{{ today_stats.calls_made_change|default:0 }}% from yesterday
-                    </small>
-                </div>
+                <small class="text-muted d-flex align-items-center">
+                    <i class="fas fa-arrow-up text-success me-1"></i>
+                    <span>+{{ today_stats.calls_made_change|default:0 }}% from yesterday</span>
+                </small>
             </div>
         </div>
         
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card warning">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
+            <div class="stat-card">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="flex-grow-1">
                         <div class="stat-number text-warning" id="callsAnswered">
                             {{ today_stats.calls_answered|default:0 }}
                         </div>
                         <div class="stat-label">Calls Answered</div>
                     </div>
-                    <div class="fs-1 text-warning opacity-25">
+                    <div class="fs-2 text-warning opacity-25">
                         <i class="fas fa-phone-volume"></i>
                     </div>
                 </div>
-                <div class="mt-3">
-                    <small class="text-muted">
-                        {{ today_stats.answer_rate|default:0 }}% answer rate
-                    </small>
-                </div>
+                <small class="text-muted d-flex align-items-center">
+                    <i class="fas fa-percentage me-1"></i>
+                    <span>{{ today_stats.answer_rate|default:0 }}% answer rate</span>
+                </small>
             </div>
         </div>
         
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card danger">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
+            <div class="stat-card">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="flex-grow-1">
                         <div class="stat-number text-danger" id="salesMade">
                             {{ today_stats.sales_made|default:0 }}
                         </div>
                         <div class="stat-label">Sales Today</div>
                     </div>
-                    <div class="fs-1 text-danger opacity-25">
+                    <div class="fs-2 text-danger opacity-25">
                         <i class="fas fa-trophy"></i>
                     </div>
                 </div>
-                <div class="mt-3">
-                    <small class="text-muted">
-                        {{ today_stats.conversion_rate|default:0 }}% conversion rate
-                    </small>
-                </div>
+                <small class="text-muted d-flex align-items-center">
+                    <i class="fas fa-chart-line me-1"></i>
+                    <span>{{ today_stats.conversion_rate|default:0 }}% conversion rate</span>
+                </small>
             </div>
         </div>
     </div>
@@ -430,44 +778,48 @@
                 <div class="info-card-body">
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <h6 class="mb-3">Schedule Settings</h6>
-                            <div class="mb-2">
+                            <h6 class="mb-4 text-dark fw-bold">
+                                <i class="fas fa-clock text-primary me-2"></i>Schedule Settings
+                            </h6>
+                            <div class="config-item">
                                 <strong>Start Date:</strong>
-                                <span class="text-muted">{{ campaign.start_date|date:"M d, Y H:i" }}</span>
+                                <span class="text-muted ms-2">{{ campaign.start_date|date:"M d, Y H:i" }}</span>
                             </div>
                             {% if campaign.end_date %}
-                            <div class="mb-2">
+                            <div class="config-item">
                                 <strong>End Date:</strong>
-                                <span class="text-muted">{{ campaign.end_date|date:"M d, Y H:i" }}</span>
+                                <span class="text-muted ms-2">{{ campaign.end_date|date:"M d, Y H:i" }}</span>
                             </div>
                             {% endif %}
-                            <div class="mb-2">
+                            <div class="config-item">
                                 <strong>Daily Hours:</strong>
-                                <span class="text-muted">{{ campaign.daily_start_time }} - {{ campaign.daily_end_time }}</span>
+                                <span class="text-muted ms-2">{{ campaign.daily_start_time }} - {{ campaign.daily_end_time }}</span>
                             </div>
-                            <div class="mb-2">
+                            <div class="config-item">
                                 <strong>Timezone:</strong>
-                                <span class="text-muted">{{ campaign.timezone }}</span>
+                                <span class="text-muted ms-2">{{ campaign.timezone }}</span>
                             </div>
                         </div>
                         
                         <div class="col-md-6">
-                            <h6 class="mb-3">Call Settings</h6>
-                            <div class="mb-2">
+                            <h6 class="mb-4 text-dark fw-bold">
+                                <i class="fas fa-phone-alt text-success me-2"></i>Call Settings
+                            </h6>
+                            <div class="config-item">
                                 <strong>Max Attempts:</strong>
-                                <span class="text-muted">{{ campaign.max_attempts }}</span>
+                                <span class="text-muted ms-2">{{ campaign.max_attempts }}</span>
                             </div>
-                            <div class="mb-2">
+                            <div class="config-item">
                                 <strong>Call Timeout:</strong>
-                                <span class="text-muted">{{ campaign.call_timeout }}s</span>
+                                <span class="text-muted ms-2">{{ campaign.call_timeout }}s</span>
                             </div>
-                            <div class="mb-2">
+                            <div class="config-item">
                                 <strong>Retry Delay:</strong>
-                                <span class="text-muted">{{ campaign.retry_delay }}s</span>
+                                <span class="text-muted ms-2">{{ campaign.retry_delay }}s</span>
                             </div>
-                            <div class="mb-2">
+                            <div class="config-item">
                                 <strong>Dial Ratio:</strong>
-                                <span class="text-muted">{{ campaign.dial_ratio }}</span>
+                                <span class="text-muted ms-2">{{ campaign.dial_ratio }}</span>
                             </div>
                         </div>
                     </div>
@@ -476,42 +828,50 @@
                     
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <h6 class="mb-3">Recording & Monitoring</h6>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-microphone me-2 {% if campaign.enable_recording %}text-success{% else %}text-muted{% endif %}"></i>
-                                <span>Call Recording: 
-                                    <strong class="{% if campaign.enable_recording %}text-success{% else %}text-muted{% endif %}">
+                            <h6 class="mb-4 text-dark fw-bold">
+                                <i class="fas fa-microphone text-info me-2"></i>Recording & Monitoring
+                            </h6>
+                            <div class="config-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span><strong>Call Recording:</strong></span>
+                                    <span class="status-indicator {% if campaign.enable_recording %}enabled{% else %}disabled{% endif %}">
+                                        <i class="fas fa-{% if campaign.enable_recording %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.enable_recording|yesno:"Enabled,Disabled" }}
-                                    </strong>
-                                </span>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-eye me-2 {% if campaign.monitor_agents %}text-success{% else %}text-muted{% endif %}"></i>
-                                <span>Agent Monitoring: 
-                                    <strong class="{% if campaign.monitor_agents %}text-success{% else %}text-muted{% endif %}">
+                            <div class="config-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span><strong>Agent Monitoring:</strong></span>
+                                    <span class="status-indicator {% if campaign.monitor_agents %}enabled{% else %}disabled{% endif %}">
+                                        <i class="fas fa-{% if campaign.monitor_agents %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.monitor_agents|yesno:"Enabled,Disabled" }}
-                                    </strong>
-                                </span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         
                         <div class="col-md-6">
-                            <h6 class="mb-3">Compliance Settings</h6>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-ban me-2 {% if campaign.use_internal_dnc %}text-success{% else %}text-muted{% endif %}"></i>
-                                <span>Internal DNC: 
-                                    <strong class="{% if campaign.use_internal_dnc %}text-success{% else %}text-muted{% endif %}">
+                            <h6 class="mb-4 text-dark fw-bold">
+                                <i class="fas fa-shield-alt text-warning me-2"></i>Compliance Settings
+                            </h6>
+                            <div class="config-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span><strong>Internal DNC:</strong></span>
+                                    <span class="status-indicator {% if campaign.use_internal_dnc %}enabled{% else %}disabled{% endif %}">
+                                        <i class="fas fa-{% if campaign.use_internal_dnc %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.use_internal_dnc|yesno:"Enabled,Disabled" }}
-                                    </strong>
-                                </span>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-robot me-2 {% if campaign.amd_enabled %}text-success{% else %}text-muted{% endif %}"></i>
-                                <span>AMD Detection: 
-                                    <strong class="{% if campaign.amd_enabled %}text-success{% else %}text-muted{% endif %}">
+                            <div class="config-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span><strong>AMD Detection:</strong></span>
+                                    <span class="status-indicator {% if campaign.amd_enabled %}enabled{% else %}disabled{% endif %}">
+                                        <i class="fas fa-{% if campaign.amd_enabled %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.amd_enabled|yesno:"Enabled,Disabled" }}
-                                    </strong>
-                                </span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -522,10 +882,11 @@
             <div class="info-card">
                 <div class="info-card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-users me-2"></i>Active Agents ({{ active_agents.count }})
+                        <i class="fas fa-users me-2"></i>Active Agents 
+                        <span class="badge bg-primary rounded-pill ms-2">{{ active_agents.count }}</span>
                     </h5>
                     <a href="{% url 'campaigns:agents' campaign.pk %}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-cog me-1"></i>Manage
+                        <i class="fas fa-cog me-1"></i>Manage Agents
                     </a>
                 </div>
                 <div class="info-card-body">
@@ -533,30 +894,37 @@
                     <div class="row g-3">
                         {% for agent in active_agents %}
                         <div class="col-md-6">
-                            <div class="d-flex align-items-center p-3 border rounded">
-                                <div class="agent-avatar">
-                                    {{ agent.user.first_name.0|default:agent.user.username.0|upper }}
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">{{ agent.user.get_full_name|default:agent.user.username }}</h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-phone me-1"></i>{{ agent.calls_made }} calls today
-                                        {% if agent.sales_made %}
-                                        | <i class="fas fa-trophy me-1"></i>{{ agent.sales_made }} sales
-                                        {% endif %}
-                                    </small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-success">Online</span>
+                            <div class="agent-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="agent-avatar">
+                                        {{ agent.user.first_name.0|default:agent.user.username.0|upper }}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 fw-bold text-dark">{{ agent.user.get_full_name|default:agent.user.username }}</h6>
+                                        <div class="small text-muted">
+                                            <i class="fas fa-phone me-1 text-primary"></i>{{ agent.calls_made|default:0 }} calls
+                                            {% if agent.sales_made %}
+                                            <i class="fas fa-trophy ms-2 me-1 text-warning"></i>{{ agent.sales_made }} sales
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success rounded-pill">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>Online
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-users text-muted fs-1 mb-3"></i>
-                        <p class="text-muted">No agents assigned to this campaign</p>
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-users text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                        </div>
+                        <h5 class="text-muted mb-3">No agents assigned yet</h5>
+                        <p class="text-muted mb-4">Assign agents to this campaign to start making calls</p>
                         <a href="{% url 'campaigns:agents' campaign.pk %}" class="btn btn-primary">
                             <i class="fas fa-plus me-2"></i>Assign Agents
                         </a>
@@ -586,33 +954,39 @@
             <div class="info-card">
                 <div class="info-card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-progress me-2"></i>Campaign Progress
+                        <i class="fas fa-chart-pie me-2"></i>Campaign Progress
                     </h5>
                 </div>
                 <div class="info-card-body text-center">
-                    <div class="progress-ring">
-                        <svg class="progress-ring">
+                    <div class="progress-ring mb-4">
+                        <svg class="progress-ring" viewBox="0 0 150 150">
+                            <defs>
+                                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
                             <circle class="progress-ring-circle"></circle>
                             <circle class="progress-ring-progress" id="progressCircle"></circle>
                         </svg>
                         <div class="position-absolute top-50 start-50 translate-middle">
-                            <div class="h4 mb-0" id="progressPercent">{{ campaign.completion_percentage|default:0 }}%</div>
-                            <small class="text-muted">Complete</small>
+                            <div class="display-6 fw-bold text-primary mb-0" id="progressPercent">{{ campaign.completion_percentage|default:0 }}%</div>
+                            <small class="text-muted fw-semibold">Complete</small>
                         </div>
                     </div>
                     
                     <div class="mt-4">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Leads Contacted:</span>
-                            <strong>{{ campaign.leads_contacted|default:0 }}</strong>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted">Leads Contacted:</span>
+                            <strong class="text-dark">{{ campaign.leads_contacted|default:0 }}</strong>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Remaining Leads:</span>
-                            <strong>{{ campaign.leads_remaining|default:0 }}</strong>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted">Remaining Leads:</span>
+                            <strong class="text-dark">{{ campaign.leads_remaining|default:0 }}</strong>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Estimated Completion:</span>
-                            <strong>{{ campaign.estimated_completion|default:"N/A" }}</strong>
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span class="text-muted">Est. Completion:</span>
+                            <strong class="text-dark">{{ campaign.estimated_completion|default:"N/A" }}</strong>
                         </div>
                     </div>
                 </div>
@@ -629,17 +1003,17 @@
                     <div class="timeline">
                         {% for activity in recent_activities %}
                         <div class="timeline-item {{ activity.type }}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <strong>{{ activity.title }}</strong>
-                                    <p class="mb-1 small text-muted">{{ activity.description }}</p>
-                                    <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
-                                </div>
+                            <div class="mb-1">
+                                <strong class="text-dark">{{ activity.title }}</strong>
                             </div>
+                            <p class="mb-2 small text-muted">{{ activity.description }}</p>
+                            <small class="text-muted fw-semibold">
+                                <i class="fas fa-clock me-1"></i>{{ activity.timestamp|timesince }} ago
+                            </small>
                         </div>
                         {% empty %}
-                        <div class="text-center py-3">
-                            <i class="fas fa-clock text-muted fs-3 mb-2"></i>
+                        <div class="text-center py-4">
+                            <i class="fas fa-clock text-muted mb-3" style="font-size: 3rem; opacity: 0.3;"></i>
                             <p class="text-muted mb-0">No recent activity</p>
                         </div>
                         {% endfor %}
@@ -655,29 +1029,29 @@
                     </h5>
                 </div>
                 <div class="info-card-body">
-                    <div class="row g-3 text-center">
+                    <div class="row g-3">
                         <div class="col-6">
-                            <div class="p-3 bg-light rounded">
-                                <div class="h5 mb-1 text-primary">{{ campaign.average_call_duration|default:"0:00" }}</div>
-                                <small class="text-muted">Avg Call Duration</small>
+                            <div class="quick-stat-box text-center">
+                                <div class="h5 mb-1 text-primary fw-bold">{{ campaign.average_call_duration|default:"0:00" }}</div>
+                                <small class="text-muted fw-semibold">Avg Duration</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="p-3 bg-light rounded">
-                                <div class="h5 mb-1 text-success">{{ campaign.contact_rate|default:0 }}%</div>
-                                <small class="text-muted">Contact Rate</small>
+                            <div class="quick-stat-box text-center">
+                                <div class="h5 mb-1 text-success fw-bold">{{ campaign.contact_rate|default:0 }}%</div>
+                                <small class="text-muted fw-semibold">Contact Rate</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="p-3 bg-light rounded">
-                                <div class="h5 mb-1 text-warning">{{ campaign.abandon_rate|default:0 }}%</div>
-                                <small class="text-muted">Abandon Rate</small>
+                            <div class="quick-stat-box text-center">
+                                <div class="h5 mb-1 text-warning fw-bold">{{ campaign.abandon_rate|default:0 }}%</div>
+                                <small class="text-muted fw-semibold">Abandon Rate</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="p-3 bg-light rounded">
-                                <div class="h5 mb-1 text-info">{{ campaign.callbacks_pending|default:0 }}</div>
-                                <small class="text-muted">Pending Callbacks</small>
+                            <div class="quick-stat-box text-center">
+                                <div class="h5 mb-1 text-info fw-bold">{{ campaign.callbacks_pending|default:0 }}</div>
+                                <small class="text-muted fw-semibold">Callbacks</small>
                             </div>
                         </div>
                     </div>
@@ -688,14 +1062,14 @@
 
     <!-- Quick Actions Floating Menu -->
     <div class="quick-actions">
-        <button class="btn btn-primary quick-action-btn" onclick="refreshStats()" title="Refresh Stats">
+        <button class="btn btn-primary quick-action-btn" onclick="refreshStats()" title="Refresh Stats" data-bs-toggle="tooltip">
             <i class="fas fa-sync-alt"></i>
         </button>
         {% if user.is_staff or campaign.created_by == user %}
-        <button class="btn btn-success quick-action-btn" onclick="exportData()" title="Export Data">
+        <button class="btn btn-success quick-action-btn" onclick="exportData()" title="Export Data" data-bs-toggle="tooltip">
             <i class="fas fa-download"></i>
         </button>
-        <button class="btn btn-warning quick-action-btn" onclick="generateReport()" title="Generate Report">
+        <button class="btn btn-warning text-white quick-action-btn" onclick="generateReport()" title="Generate Report" data-bs-toggle="tooltip">
             <i class="fas fa-chart-bar"></i>
         </button>
         {% endif %}
@@ -716,7 +1090,6 @@
         };
 
         if (confirm(`Are you sure you want to ${action} this campaign?`)) {
-            // Show loading state
             const buttons = document.querySelectorAll('button[onclick*="controlCampaign"]');
             buttons.forEach(btn => {
                 btn.disabled = true;
@@ -734,11 +1107,18 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    toastr.success(data.message);
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success(data.message);
+                    } else {
+                        alert(data.message);
+                    }
                     setTimeout(() => location.reload(), 1000);
                 } else {
-                    toastr.error(data.error || 'Operation failed');
-                    // Re-enable buttons
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(data.error || 'Operation failed');
+                    } else {
+                        alert(data.error || 'Operation failed');
+                    }
                     buttons.forEach(btn => {
                         btn.disabled = false;
                         btn.innerHTML = btn.getAttribute('data-original-html');
@@ -746,7 +1126,11 @@
                 }
             })
             .catch(error => {
-                toastr.error('Network error occurred');
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Network error occurred');
+                } else {
+                    alert('Network error occurred');
+                }
                 console.error('Error:', error);
             });
         }
@@ -763,10 +1147,18 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    toastr.success('Campaign cloned successfully!');
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success('Campaign cloned successfully!');
+                    } else {
+                        alert('Campaign cloned successfully!');
+                    }
                     setTimeout(() => window.location.href = data.redirect_url, 1000);
                 } else {
-                    toastr.error(data.error || 'Failed to clone campaign');
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(data.error || 'Failed to clone campaign');
+                    } else {
+                        alert(data.error || 'Failed to clone campaign');
+                    }
                 }
             });
         }
@@ -776,19 +1168,21 @@
         fetch(`/campaigns/{{ campaign.pk }}/api/stats/`)
             .then(response => response.json())
             .then(data => {
-                // Update stat cards
                 document.getElementById('totalLeads').textContent = data.total_leads || 0;
                 document.getElementById('callsMade').textContent = data.calls_made || 0;
                 document.getElementById('callsAnswered').textContent = data.calls_answered || 0;
                 document.getElementById('salesMade').textContent = data.sales_made || 0;
                 
-                // Update progress circle
                 updateProgressCircle(data.completion_percentage || 0);
                 
-                toastr.success('Stats refreshed!');
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Stats refreshed!');
+                }
             })
             .catch(error => {
-                toastr.error('Failed to refresh stats');
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Failed to refresh stats');
+                }
                 console.error('Error:', error);
             });
     }
@@ -803,7 +1197,7 @@
 
     function updateProgressCircle(percentage) {
         const circle = document.getElementById('progressCircle');
-        const circumference = 2 * Math.PI * 52;
+        const circumference = 2 * Math.PI * 60;
         const offset = circumference - (percentage / 100) * circumference;
         circle.style.strokeDashoffset = offset;
         
@@ -814,30 +1208,35 @@
     function initPerformanceChart() {
         const ctx = document.getElementById('performanceChart').getContext('2d');
         
-        // Sample data - replace with actual data from your backend
         const chartData = {
             labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
             datasets: [
                 {
                     label: 'Calls Made',
                     data: [45, 52, 38, 65, 42, 30, 25],
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    tension: 0.4
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
                 },
                 {
                     label: 'Calls Answered',
                     data: [32, 38, 28, 45, 32, 22, 18],
-                    borderColor: '#198754',
-                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                    tension: 0.4
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
                 },
                 {
                     label: 'Sales Made',
                     data: [8, 12, 7, 15, 10, 6, 4],
-                    borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    tension: 0.4
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
                 }
             ]
         };
@@ -851,6 +1250,14 @@
                 plugins: {
                     legend: {
                         position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12,
+                                weight: '600'
+                            }
+                        }
                     },
                     title: {
                         display: false
@@ -860,12 +1267,24 @@
                     y: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0,0,0,0.1)'
+                            color: 'rgba(0,0,0,0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
                         }
                     },
                     x: {
                         grid: {
-                            color: 'rgba(0,0,0,0.1)'
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
                         }
                     }
                 }
@@ -877,7 +1296,6 @@
     let autoRefreshInterval;
     
     function startAutoRefresh() {
-        // Refresh stats every 30 seconds
         autoRefreshInterval = setInterval(refreshStats, 30000);
     }
     
@@ -889,23 +1307,23 @@
 
     // Initialize everything when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        // Store original button HTML for reset functionality
         document.querySelectorAll('button[onclick*="controlCampaign"]').forEach(btn => {
             btn.setAttribute('data-original-html', btn.innerHTML);
         });
 
-        // Initialize charts
         initPerformanceChart();
-        
-        // Set initial progress circle
         updateProgressCircle({{ campaign.completion_percentage|default:0 }});
         
-        // Start auto-refresh if campaign is active
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
         {% if campaign.status == 'active' %}
         startAutoRefresh();
         {% endif %}
         
-        // Cleanup on page unload
         window.addEventListener('beforeunload', stopAutoRefresh);
     });
 
@@ -919,7 +1337,6 @@
             const data = JSON.parse(event.data);
             
             if (data.type === 'stats_update') {
-                // Update stats in real-time
                 document.getElementById('totalLeads').textContent = data.stats.total_leads || 0;
                 document.getElementById('callsMade').textContent = data.stats.calls_made || 0;
                 document.getElementById('callsAnswered').textContent = data.stats.calls_answered || 0;
@@ -931,7 +1348,6 @@
         
         socket.onclose = function(event) {
             console.log('WebSocket connection closed');
-            // Attempt to reconnect after 5 seconds
             setTimeout(initWebSocket, 5000);
         };
         
@@ -940,12 +1356,9 @@
         };
     }
     
-    // Initialize WebSocket connection
     initWebSocket();
     {% endif %}
 </script>
 
-<!-- Add CSRF token for AJAX requests -->
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 {% endblock %}
-

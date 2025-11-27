@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 
 urlpatterns = [
-    re_path(r'^admin/(?P<app_label>auth|core|users)/$', admin.site.app_index, name='app_list'),
+    re_path(r'^admin/(?P<app_label>[\w-]+)/$', admin.site.app_index, name='app_list'),
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
     path('users/', include('users.urls')),

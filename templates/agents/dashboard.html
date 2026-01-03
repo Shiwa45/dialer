@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +16,7 @@
             --light-gray: #f5f5f5;
             --medium-gray: #e0e0e0;
             --dark-gray: #757575;
-            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             --transition: all 0.3s ease;
             --dark-bg: #0d1117;
             --dark-card: #161b22;
@@ -191,7 +192,8 @@
             gap: 1rem;
         }
 
-        .form-grid input, .form-grid select {
+        .form-grid input,
+        .form-grid select {
             padding: 0.8rem;
             border: 1px solid var(--medium-gray);
             border-radius: 6px;
@@ -199,7 +201,8 @@
             transition: var(--transition);
         }
 
-        .form-grid input:focus, .form-grid select:focus {
+        .form-grid input:focus,
+        .form-grid select:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
@@ -289,12 +292,27 @@
             box-shadow: var(--shadow);
         }
 
-        .break { background-color: #fbbc05; }
-        .smoke { background-color: #ff7043; }
-        .lunch { background-color: #8e24aa; }
-        .wc { background-color: #26c6da; }
-        .coffee { background-color: #5c6bc0; }
-        .wrapup { 
+        .break {
+            background-color: #fbbc05;
+        }
+
+        .smoke {
+            background-color: #ff7043;
+        }
+
+        .lunch {
+            background-color: #8e24aa;
+        }
+
+        .wc {
+            background-color: #26c6da;
+        }
+
+        .coffee {
+            background-color: #5c6bc0;
+        }
+
+        .wrapup {
             grid-column: span 2;
             background-color: var(--accent-color);
         }
@@ -362,7 +380,7 @@
             border-radius: 16px;
             padding: 2rem;
             text-align: center;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
             width: 350px;
         }
 
@@ -407,39 +425,42 @@
                 flex-direction: column;
                 height: auto;
             }
-            
-            .left-panel, .right-panel {
+
+            .left-panel,
+            .right-panel {
                 width: 100%;
                 border: none;
             }
-            
+
             .form-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .status-buttons {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
+
 <body>
     <!-- Navbar -->
     <div class="navbar">
         <div class="flex items-center gap-2">
             <h1 class="text-xl font-semibold">Agent Portal</h1>
         </div>
-        
+
         <div class="flex items-center gap-2">
             <button id="darkModeToggleBtn" aria-label="Toggle Dark Mode"
                 class="p-2 rounded-full hover:bg-blue-600 transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 0112.21 3a7 7 0 000 14 9 9 0 008.79-4.21z" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 12.79A9 9 0 0112.21 3a7 7 0 000 14 9 9 0 008.79-4.21z" />
                 </svg>
             </button>
-            
-            <button id="menuBtn" aria-label="Menu"
-                class="p-2 rounded-full hover:bg-blue-600 text-white">
+
+            <button id="menuBtn" aria-label="Menu" class="p-2 rounded-full hover:bg-blue-600 text-white">
                 <span class="material-icons">more_vert</span>
             </button>
         </div>
@@ -457,7 +478,8 @@
             <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Agent" class="w-10 h-10 rounded-full" />
             <div>
                 <h2 class="agent-title">{{ user.get_full_name|default:user.username }}</h2>
-                <span class="text-sm text-gray-600">Status: <span id="currentStatus" class="font-medium">Available</span></span>
+                <span class="text-sm text-gray-600">Status: <span id="currentStatus"
+                        class="font-medium">Available</span></span>
             </div>
         </div>
 
@@ -509,7 +531,8 @@
 
                 <div class="tab-content" id="script">
                     <div class="comments-section">
-                        <textarea id="callScript" placeholder="Call script will appear here..." readonly>{{ script_content|default:"Hello, this is [Agent Name] calling from [Company]. How are you today?" }}</textarea>
+                        <textarea id="callScript" placeholder="Call script will appear here..."
+                            readonly>{{ script_content|default:"Hello, this is [Agent Name] calling from [Company]. How are you today?" }}</textarea>
                     </div>
                 </div>
             </div>
@@ -519,26 +542,29 @@
                 <h3 class="text-lg font-semibold mb-4">My Callbacks</h3>
                 <div id="callbacksList">
                     {% if pending_callbacks %}
-                        {% for callback in pending_callbacks %}
-                        <div class="callback-item p-4 bg-gray-50 rounded-lg mb-3">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-medium">{{ callback.lead.first_name }} {{ callback.lead.last_name }}</h4>
-                                    <p class="text-sm text-gray-600">{{ callback.lead.phone_number }}</p>
-                                    <p class="text-sm text-gray-500">{{ callback.scheduled_time|date:"M d, Y H:i" }}</p>
-                                    {% if callback.notes %}
-                                        <p class="text-sm mt-2">{{ callback.notes }}</p>
-                                    {% endif %}
-                                </div>
-                                <div class="flex gap-2">
-                                    <button class="bg-green-500 text-white px-3 py-1 rounded text-sm" onclick="callLead('{{ callback.lead.phone_number }}')">Call</button>
-                                    <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm" onclick="rescheduleCallback({{ callback.id }})">Reschedule</button>
-                                </div>
+                    {% for callback in pending_callbacks %}
+                    <div class="callback-item p-4 bg-gray-50 rounded-lg mb-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-medium">{{ callback.lead.first_name }} {{ callback.lead.last_name }}
+                                </h4>
+                                <p class="text-sm text-gray-600">{{ callback.lead.phone_number }}</p>
+                                <p class="text-sm text-gray-500">{{ callback.scheduled_time|date:"M d, Y H:i" }}</p>
+                                {% if callback.notes %}
+                                <p class="text-sm mt-2">{{ callback.notes }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="bg-green-500 text-white px-3 py-1 rounded text-sm"
+                                    onclick="callLead('{{ callback.lead.phone_number }}')">Call</button>
+                                <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                                    onclick="rescheduleCallback({{ callback.id }})">Reschedule</button>
                             </div>
                         </div>
-                        {% endfor %}
+                    </div>
+                    {% endfor %}
                     {% else %}
-                        <p class="text-gray-500">No pending callbacks</p>
+                    <p class="text-gray-500">No pending callbacks</p>
                     {% endif %}
                 </div>
             </div>
@@ -547,14 +573,14 @@
         <!-- Right Panel -->
         <div class="right-panel">
             <h3 class="text-lg font-semibold mb-4">Phone</h3>
-            
+
             <div class="number-display">
                 <div class="flex items-center justify-between w-full">
                     <span id="numberDisplay"></span>
                     <button class="backspace-btn" onclick="backspace()">⌫</button>
                 </div>
             </div>
-            
+
             <div class="dialpad">
                 <button onclick="addDigit('1')">1</button>
                 <button onclick="addDigit('2')">2</button>
@@ -569,8 +595,8 @@
                 <button onclick="addDigit('0')">0</button>
                 <button onclick="addDigit('#')">#</button>
             </div>
-            
-            <button class="call-btn" onclick="makeCall()">📞 Call</button>
+
+            <button id="mainCallBtn" class="call-btn" onclick="makeCall()">📞 Call</button>
 
             <div class="status-buttons">
                 <button class="status break" onclick="setStatus('BREAK')">BREAK</button>
@@ -620,7 +646,7 @@
             document.querySelectorAll('.view-content').forEach(content => {
                 content.style.display = 'none';
             });
-            
+
             if (view === 'contact-info') {
                 document.getElementById('contact-info-view').style.display = 'block';
             } else if (view === 'callbacks') {
@@ -632,7 +658,7 @@
         function switchTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
+
             event.target.classList.add('active');
             document.getElementById(tab).classList.add('active');
         }
@@ -659,20 +685,20 @@
                     },
                     body: `phone_number=${currentNumber}`
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(`Calling ${currentNumber}...`);
-                        currentNumber = '';
-                        document.getElementById('numberDisplay').textContent = '';
-                    } else {
-                        alert('Error making call: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error making call');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(`Calling ${currentNumber}...`);
+                            currentNumber = '';
+                            document.getElementById('numberDisplay').textContent = '';
+                        } else {
+                            alert('Error making call: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error making call');
+                    });
             }
         }
 
@@ -753,13 +779,130 @@
         // Auto-refresh callbacks every 30 seconds
         setInterval(() => {
             fetch('{% url "agents:pending_callbacks" %}')
-            .then(response => response.json())
-            .then(data => {
-                // Update callbacks list if needed
-                console.log('Updated callbacks:', data);
-            })
-            .catch(error => console.error('Error updating callbacks:', error));
+                .then(response => response.json())
+                .then(data => {
+                    // Update callbacks list if needed
+                    console.log('Updated callbacks:', data);
+                })
+                .catch(error => console.error('Error updating callbacks:', error));
         }, 30000);
+        // WebSocket Integration
+        const ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+        const socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/agent/{{ user.id }}/`);
+
+        socket.onopen = function (e) {
+            console.log("WebSocket connected");
+        };
+
+        socket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            handleEvent(data);
+        };
+
+        socket.onclose = function (e) {
+            console.error("WebSocket closed unexpectedly");
+        };
+
+        function handleEvent(data) {
+            console.log("Received event:", data);
+
+            if (data.type === 'call_connected') {
+                handleCallConnected(data);
+            } else if (data.type === 'status_update') {
+                handleStatusUpdate(data);
+            } else if (data.type === 'call_ended') {
+                handleCallEnded(data);
+            }
+        }
+
+        function handleCallConnected(data) {
+            // 1. Switch to Contact Info view
+            switchView('contact-info');
+
+            // 2. Populate Lead Data (Screen Pop)
+            const lead = data.lead;
+            if (lead) {
+                document.getElementById('leadPhone').value = lead.phone || data.call.number || '';
+                document.getElementById('leadName').value = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+                document.getElementById('leadEmail').value = lead.email || '';
+                document.getElementById('leadCompany').value = lead.company || '';
+                document.getElementById('leadAddress').value = lead.address || '';
+                document.getElementById('leadCity').value = lead.city || '';
+                document.getElementById('leadState').value = lead.state || '';
+                document.getElementById('leadZip').value = lead.zip_code || '';
+                document.getElementById('leadTitle').value = lead.title || '';
+                // Comments/Notes
+                document.getElementById('leadComments').value = lead.notes || '';
+            } else {
+                // If no lead data (manual call/unknown), just show number
+                document.getElementById('leadPhone').value = data.call.number || '';
+                document.getElementById('leadName').value = 'Unknown';
+            }
+
+            // 3. Update UI Status
+            currentStatus = 'In Call'; // Local update, will be confirmed by status_update event
+            document.getElementById('currentStatus').textContent = 'In Call';
+            document.getElementById('currentStatus').classList.add('text-red-600');
+
+            // 4. Update Call Button to Hangup
+            const btn = document.getElementById('mainCallBtn');
+            btn.textContent = 'End Call';
+            btn.classList.remove('bg-green-600'); // Assuming default was green-ish or secondary color
+            btn.classList.add('bg-red-600');
+            btn.onclick = function () { hangupCall(data.call.id); };
+
+            // 5. Update number display
+            document.getElementById('numberDisplay').textContent = data.call.number;
+        }
+
+        function handleStatusUpdate(data) {
+            const status = data.status.charAt(0).toUpperCase() + data.status.slice(1); // Capitalize
+            currentStatus = status;
+            const statusEl = document.getElementById('currentStatus');
+            statusEl.textContent = status;
+
+            // Reset styles
+            statusEl.className = 'font-medium';
+            if (data.status === 'incall' || data.status === 'busy') {
+                statusEl.classList.add('text-red-600');
+            } else if (data.status === 'ready' || data.status === 'available') {
+                statusEl.classList.add('text-green-600');
+            } else if (data.status === 'wrapup') {
+                statusEl.classList.add('text-yellow-600');
+            }
+        }
+
+        function handleCallEnded(data) {
+            // 1. Reset Call Button
+            const btn = document.getElementById('mainCallBtn');
+            btn.textContent = '📞 Call';
+            btn.classList.remove('bg-red-600');
+            btn.onclick = makeCall;
+
+            // 2. Disposition Handling
+            if (data.disposition_needed) {
+                // Show disposition modal or prompt
+                // For now, simpler implementation: just alert or change status text
+                alert("Call Ended. Please enter disposition.");
+                // Ensure we are in wrapup
+                setStatus('WRAPUP');
+            }
+
+            document.getElementById('numberDisplay').textContent = '';
+        }
+
+        function hangupCall(callId) {
+            // Send hangup request to backend
+            fetch('{% url "agents:hangup_call" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `call_id=${callId}`
+            });
+        }
     </script>
 </body>
+
 </html>

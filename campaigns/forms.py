@@ -36,7 +36,8 @@ class CampaignCreateForm(forms.ModelForm):
             'use_internal_dnc', 'use_campaign_dnc', 'amd_enabled',
             # Dialing speed and routing
             'dial_speed', 'custom_dials_per_agent',
-            'outbound_carrier', 'dial_prefix'
+            'outbound_carrier', 'dial_prefix',
+            'hopper_size',
         ]
         
         widgets = {
@@ -124,6 +125,12 @@ class CampaignCreateForm(forms.ModelForm):
                 'placeholder': 'e.g. 0, 91, 001'
             }),
             'outbound_carrier': forms.Select(attrs={'class': 'form-select'}),
+            'hopper_size': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 5000,
+                'step': 1,
+            }),
         }
 
     def __init__(self, *args, **kwargs):

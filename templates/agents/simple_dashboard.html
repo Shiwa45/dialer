@@ -1000,7 +1000,10 @@
          data-manual-dial-url="{{ manual_dial_url }}"
          data-hangup-url="{{ hangup_url }}"
          data-transfer-url="{{ transfer_call_url }}"
-         data-webrtc-enabled="{{ phone_info.webrtc_enabled|yesno:'true,false' }}">
+         data-webrtc-enabled="{{ phone_info.webrtc_enabled|yesno:'true,false' }}"
+         data-webrtc-config-url="{% url 'agents:get_webrtc_config' %}"
+         data-webrtc-enabled-flag="{{ phone_info.webrtc_enabled|yesno:'true,false' }}"
+         data-wrapup-timeout="{{ current_campaign.wrapup_timeout|default:120 }}">
         <header class="agent-header">
             <div>
                 <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
@@ -1414,7 +1417,9 @@
         })();
 
     </script>
+    {% if phone_info.webrtc_enabled %}
     <script src="https://cdn.jsdelivr.net/npm/jssip@3/dist/jssip.min.js" crossorigin="anonymous"></script>
+    {% endif %}
     <script src="{% static 'js/agent_dashboard.js' %}"></script>
 </body>
 </html>

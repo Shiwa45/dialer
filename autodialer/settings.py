@@ -172,13 +172,16 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_ALWAYS_EAGER = True  # Run tasks synchronously to avoid broker connection issues
 CELERY_TASK_EAGER_PROPAGATES = True
-CELERY_BEAT_SCHEDULE = {
-    'process-outbound-queue-every-2s': {
-        'task': 'campaigns.process_outbound_queue',
-        'schedule': 2.0,
-        'args': ()
-    },
-}
+
+# DISABLED: Old outbound queue processing - replaced by hopper-based predictive dialer
+# CELERY_BEAT_SCHEDULE = {
+#     'process-outbound-queue-every-2s': {
+#         'task': 'campaigns.process_outbound_queue',
+#         'schedule': 2.0,
+#         'args': ()
+#     },
+# }
+CELERY_BEAT_SCHEDULE = {}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

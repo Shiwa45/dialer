@@ -240,6 +240,15 @@ class AsteriskService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def destroy_bridge(self, bridge_id):
+        try:
+            r = self._ari_delete(f"/bridges/{bridge_id}")
+            if r.status_code in (200, 204):
+                return {"success": True}
+            return {"success": False, "error": f"Bridge destroy failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def originate_pjsip_channel(self, endpoint, app='autodialer', callerid=None, variables=None, timeout=30):
         try:
             payload = {
@@ -252,10 +261,9 @@ class AsteriskService:
                 payload['variables'] = variables
                 # Also pass critical routing info in appArgs so StasisStart args are populated
                 args = []
-                if 'CALL_TYPE' in variables:
-                    args.append(f"CALL_TYPE={variables['CALL_TYPE']}")
-                if 'BRIDGE_ID' in variables:
-                    args.append(f"BRIDGE_ID={variables['BRIDGE_ID']}")
+                for key in ['CALL_TYPE', 'BRIDGE_ID', 'QUEUE_ID', 'CAMPAIGN_ID', 'AGENT_ID', 'CUSTOMER_NUMBER']:
+                    if key in variables:
+                        args.append(f"{key}={variables[key]}")
                 if args:
                     payload['appArgs'] = ','.join(args)
             r = self._ari_post("/channels", json_body=payload, timeout=timeout+5)
@@ -265,7 +273,7 @@ class AsteriskService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def originate_local_channel(self, number, context='from-campaign', app='autodialer', callerid=None, variables=None, timeout=45):
+    def originate_local_channel(self, number, context='from-campaign', app='autodialer', extension=None, priority=1, callerid=None, variables=None, timeout=45):
         """
         Originate using Local/number@context so PBX dialplan handles routing.
         Use this for prefix-based routing to GSM gateways (Dinstar/OpenVox).
@@ -273,18 +281,25 @@ class AsteriskService:
         try:
             payload = {
                 'endpoint': f'Local/{number}@{context}',
-                'app': app,
                 'callerId': callerid or number,
                 'timeout': timeout,
             }
+            
+            # Allow originating to an extension/context/priority OR an application
+            if extension:
+                payload['extension'] = extension
+                payload['context'] = context
+                payload['priority'] = priority
+            else:
+                payload['app'] = app
+                
             if variables:
                 payload['variables'] = variables
                 args = []
-                if 'CALL_TYPE' in variables:
-                    args.append(f"CALL_TYPE={variables['CALL_TYPE']}")
-                if 'BRIDGE_ID' in variables:
-                    args.append(f"BRIDGE_ID={variables['BRIDGE_ID']}")
-                if args:
+                for key in ['CALL_TYPE', 'BRIDGE_ID', 'QUEUE_ID', 'CAMPAIGN_ID', 'AGENT_ID', 'CUSTOMER_NUMBER']:
+                    if key in variables:
+                        args.append(f"{key}={variables[key]}")
+                if args and 'app' in payload:
                     payload['appArgs'] = ','.join(args)
 
             r = self._ari_post("/channels", json_body=payload, timeout=timeout+5)
@@ -300,6 +315,30 @@ class AsteriskService:
             if r.status_code in (200, 204):
                 return {"success": True}
             return {"success": False, "error": f"Hangup failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def hold_channel(self, channel_id):
+        """
+        Put channel on hold (play MOH)
+        """
+        try:
+            r = self._ari_post(f"/channels/{channel_id}/moh")
+            if r.status_code in (200, 204):
+                return {"success": True}
+            return {"success": False, "error": f"Hold failed: {r.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def stop_moh_channel(self, channel_id):
+        """
+        Stop MOH on channel (Unhold)
+        """
+        try:
+            r = self._ari_delete(f"/channels/{channel_id}/moh")
+            if r.status_code in (200, 204):
+                return {"success": True}
+            return {"success": False, "error": f"Unhold failed: {r.text}"}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -326,6 +365,25 @@ class AsteriskService:
                     return {"success": True}
             time.sleep(interval)
         return {"success": False, "error": "Timeout waiting for channel Up"}
+    
+    def get_channel_variables(self, channel_id):
+        """Get channel variables from Asterisk ARI"""
+        try:
+            resp = requests.get(
+                f"{self.ari_base_url}/channels/{channel_id}/variable",
+                auth=(self.ari_username, self.ari_password),
+                timeout=5
+            )
+            if resp.status_code == 200:
+                channel_info = self.get_channel(channel_id)
+                if channel_info.get('success'):
+                    return {
+                        "success": True,
+                        "channelvars": channel_info['data'].get('channelvars', {})
+                    }
+            return {"success": False, "error": f"{resp.status_code}: {resp.text}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     
     def hangup_call(self, channel_id):

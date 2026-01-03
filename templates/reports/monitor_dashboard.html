@@ -1,0 +1,220 @@
+{% extends "core/base.html" %}
+
+{% block title %}Real-time Monitor | Autodialer{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" data-monitor-dashboard>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Real-time Monitor</h1>
+        <div class="d-flex align-items-center">
+            <span class="badge bg-success me-2" id="connection-status">Live</span>
+            <small class="text-muted" id="last-updated">Updated: Just now</small>
+        </div>
+    </div>
+
+    <!-- Top Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Active Agents</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="stat-active-agents">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Calls (Today)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="stat-total-calls">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-phone fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Answered</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="stat-answered">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Sales</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="stat-sales">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Agent Status Grid -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Agent Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="agent-table" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Agent</th>
+                                    <th>Status</th>
+                                    <th>Campaign</th>
+                                    <th>Duration</th>
+                                    <th>Call ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Queue Status -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Campaign Queues</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="queue-table">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th>Pending</th>
+                                    <th>Dialing</th>
+                                    <th>Live</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const apiUrl = "{% url 'reports:monitor_api' %}";
+        const agentTableBody = document.querySelector('#agent-table tbody');
+        const queueTableBody = document.querySelector('#queue-table tbody');
+        const lastUpdatedEl = document.getElementById('last-updated');
+
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return [h, m, s].map(v => v < 10 ? "0" + v : v).filter((v, i) => v !== "00" || i > 0).join(":");
+        }
+
+        function updateDashboard() {
+            fetch(apiUrl, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) return;
+
+                    // Update Top Stats
+                    document.getElementById('stat-active-agents').textContent = data.stats.active_agents;
+                    document.getElementById('stat-total-calls').textContent = data.stats.total_calls;
+                    document.getElementById('stat-answered').textContent = data.stats.answered;
+                    document.getElementById('stat-sales').textContent = data.stats.sales;
+
+                    // Update Agents
+                    agentTableBody.innerHTML = '';
+                    data.agents.forEach(agent => {
+                        const row = document.createElement('tr');
+                        let statusClass = 'text-secondary';
+                        if (agent.status === 'available') statusClass = 'text-success';
+                        if (agent.status === 'busy' || agent.status === 'incall') statusClass = 'text-danger';
+                        if (agent.status === 'wrapup') statusClass = 'text-warning';
+
+                        row.innerHTML = `
+                    <td>${agent.name}</td>
+                    <td><span class="badge ${getBadgeClass(agent.status)}">${agent.status.toUpperCase()}</span></td>
+                    <td>${agent.campaign}</td>
+                    <td>${formatDuration(agent.duration)}</td>
+                    <td>${agent.call_id || '-'}</td>
+                `;
+                        agentTableBody.appendChild(row);
+                    });
+
+                    // Update Queues
+                    queueTableBody.innerHTML = '';
+                    data.queues.forEach(queue => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                    <td>${queue.name}</td>
+                    <td>${queue.pending}</td>
+                    <td>${queue.dialing}</td>
+                    <td>${queue.connected}</td>
+                `;
+                        queueTableBody.appendChild(row);
+                    });
+
+                    lastUpdatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+                })
+                .catch(err => console.error('Monitor update failed', err));
+        }
+
+        function getBadgeClass(status) {
+            switch (status) {
+                case 'available': return 'bg-success';
+                case 'busy':
+                case 'incall': return 'bg-danger';
+                case 'wrapup': return 'bg-warning text-dark';
+                case 'paused': return 'bg-secondary';
+                default: return 'bg-light text-dark';
+            }
+        }
+
+        // Poll every 3 seconds
+        updateDashboard();
+        setInterval(updateDashboard, 3000);
+    });
+</script>
+{% endblock %}

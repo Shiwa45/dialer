@@ -124,6 +124,7 @@ class AgentStatus(TimeStampedModel):
         ('offline', 'Offline'),
         ('available', 'Available'),
         ('busy', 'Busy'),
+        ('wrapup', 'Wrap-up'),
         ('break', 'Break'),
         ('lunch', 'Lunch'),
         ('training', 'Training'),
@@ -164,4 +165,3 @@ class AgentStatus(TimeStampedModel):
         self.break_reason = reason if status == 'break' else ''
         self.status_changed_at = timezone.now()
         self.save()
-

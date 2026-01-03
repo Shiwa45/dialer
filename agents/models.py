@@ -466,8 +466,21 @@ class AgentDialerSession(TimeStampedModel):
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='connecting')
     started_at = models.DateTimeField(auto_now_add=True)
+    last_state_change = models.DateTimeField(auto_now=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True)
+    
+    # Performance tracking
+    calls_handled = models.PositiveIntegerField(default=0)
+    total_talk_time = models.PositiveIntegerField(default=0, help_text="Total talk time in seconds")
+    average_handle_time = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2, 
+        default=0.0,
+        help_text="Average handle time in seconds"
+    )
+    last_call_end = models.DateTimeField(null=True, blank=True)
+    wrapup_end_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -476,3 +489,13 @@ class AgentDialerSession(TimeStampedModel):
 
     def __str__(self):
         return f"{self.agent.username} - {self.campaign.name} ({self.status})"
+    
+    def update_call_stats(self, talk_duration):
+        """Update call statistics after a call"""
+        self.calls_handled += 1
+        self.total_talk_time += talk_duration
+        if self.calls_handled > 0:
+            self.average_handle_time = self.total_talk_time / self.calls_handled
+        self.last_call_end = timezone.now()
+        self.save(update_fields=['calls_handled', 'total_talk_time', 'average_handle_time', 'last_call_end'])
+

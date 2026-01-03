@@ -7,6 +7,8 @@ urlpatterns = [
     path('', views.report_index, name='index'),
     path('summary/', views.summary_report, name='summary'),
     path('realtime/', views.realtime, name='realtime'),
+    path('monitor/', views.monitor_dashboard, name='monitor_dashboard'),
+    path('monitor/api/', views.monitor_api, name='monitor_api'),
 
     # Analytical reports
     path('campaign-performance/', views.campaign_performance, name='campaign_performance'),

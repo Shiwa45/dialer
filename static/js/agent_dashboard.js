@@ -1,456 +1,1515 @@
-// Simplified agent panel controller with reliable call state handling.
-// Keeps current call visible until disposition is done and mirrors events from polling + websocket.
+class RetroPhoneController {
+    constructor(container, options = {}) {
+        this.container = container;
+        this.options = options;
+        this.toast = typeof options.toast === 'function' ? options.toast : () => { };
+        this.onRegistrationChange =
+            typeof options.onRegistrationChange === 'function' ? options.onRegistrationChange : () => { };
+        this.manualDialHandler =
+            typeof options.manualDialHandler === 'function' ? options.manualDialHandler : null;
+        this.webrtcEnabled = !!options.webrtcEnabled;
+        this.webrtcConfig = options.webrtcConfig || {};
+        this.softphoneRegistered = !!options.softphoneRegistered;
+        this.phoneNumber = '';
+        this.callTimer = null;
+        this.callDuration = 0;
+        this.isMuted = false;
+        this.isOnHold = false;
+        this.ua = null;
+        this.uaRegistered = false;
+        this.currentSession = null;
+        this.remoteAudio =
+            this.container.querySelector('[data-webrtc-audio]') ||
+            document.querySelector('[data-webrtc-audio]') ||
+            null;
 
-class AgentDashboard {
-    constructor(root) {
-        this.root = root;
-        this.csrfToken = this._getCsrf();
-
-        this.urls = {
-            status: root.dataset.statusUrl,
-            callStatus: root.dataset.callStatusUrl,
-            leadInfo: root.dataset.leadInfoUrl,
-            disposition: root.dataset.dispositionUrl,
-            manualDial: root.dataset.manualDialUrl,
-            hangup: root.dataset.hangupUrl,
-            hold: root.dataset.holdUrl,
-        };
-        this.agentId = root.dataset.agentId || '';
-
-        this.state = {
-            activeCall: null,
-            lastEndedCall: null,
-            phoneRegistered: root.querySelector('[data-phone-registration]')?.dataset.registered === 'true',
-            isDisposing: false,
-            dispositionComplete: false,
-        };
-
-        this.el = {
-            callPlaceholder: root.querySelector('[data-call-placeholder]'),
-            callDetails: root.querySelector('[data-call-details]'),
-            callNumber: root.querySelector('[data-call-number]'),
-            callState: root.querySelector('[data-call-state]'),
-            callDuration: root.querySelector('[data-call-duration]'),
-            dispositionBtn: root.querySelector('[data-open-disposition]'),
-            dispositionModal: document.getElementById('disposition-modal'),
-            dispositionForm: document.getElementById('disposition-form'),
-            dispositionCallInput: document.getElementById('disposition-call-id'),
-            dispositionSelect: document.getElementById('disposition-select'),
-            dispositionNotes: document.getElementById('disposition-notes'),
-            hangupBtn: root.querySelector('[data-hangup-call]'),
-            holdBtn: root.querySelector('[data-hold-call]'),
-            statusToast: root.querySelector('[data-status-toast]'),
-            phoneStatus: root.querySelector('[data-phone-registration]'),
-            manualForm: document.getElementById('manual-dial-form'),
-            manualInput: root.querySelector('[data-manual-input]'),
-            manualCampaign: document.getElementById('manual-dial-campaign'),
-        };
-
-        this.timers = { duration: null, startedAt: null };
+        this.displayEl = this.container.querySelector('#phone-number-display');
+        this.statusEl = this.container.querySelector('#phone-status-display');
+        this.timerEl = this.container.querySelector('#phone-timer');
+        this.callBtn = this.container.querySelector('#phone-call-btn');
+        this.hangupBtn = this.container.querySelector('#phone-hangup-btn');
+        this.muteBtn = this.container.querySelector('#phone-mute-btn');
+        this.holdBtn = this.container.querySelector('#phone-hold-btn');
+        this.clearBtn = this.container.querySelector('#phone-clear-btn');
+        this.keyButtons = Array.from(this.container.querySelectorAll('.phone-key'));
 
         this._bindUI();
-        this._pollCallStatus();
-        this.pollInterval = setInterval(() => this._pollCallStatus(), 5000);
-        this._initWebsocket();
+
+        if (this.webrtcEnabled && this._hasValidWebRTCConfig()) {
+            this._initWebRTC();
+        } else {
+            this.webrtcEnabled = false;
+            this._updateIdleStatus();
+        }
     }
 
-    // ------------------------------------------------------------
-    // UI Binding
-    // ------------------------------------------------------------
+    _hasValidWebRTCConfig() {
+        if (!this.webrtcEnabled || !this.webrtcConfig || this.webrtcConfig.success === false) {
+            return false;
+        }
+        const cfg = this.webrtcConfig;
+        return Boolean(cfg.username || cfg.extension) && Boolean(cfg.password) && Boolean(cfg.server);
+    }
+
     _bindUI() {
-        if (this.el.hangupBtn) {
-            this.el.hangupBtn.addEventListener('click', () => this._hangup());
-            this.el.hangupBtn.disabled = true;
+        this._updateIdleStatus();
+        this._updateNumberDisplay();
+        this._toggleCallButtons(false);
+        this._bindKeyboard();
+        if (this.callBtn) {
+            this.callBtn.addEventListener('click', () => this._handleCall());
         }
-        if (this.el.holdBtn) {
-            this.el.holdBtn.addEventListener('click', () => this._toggleHold());
-            this.el.holdBtn.disabled = true;
+        if (this.hangupBtn) {
+            this.hangupBtn.addEventListener('click', () => this._handleHangup());
         }
-        if (this.el.dispositionBtn) {
-            this.el.dispositionBtn.addEventListener('click', () => this._openDisposition());
-            this.el.dispositionBtn.disabled = true;
+        if (this.clearBtn) {
+            this.clearBtn.addEventListener('click', () => this._handleClear());
         }
-        if (this.el.dispositionForm) {
-            this.el.dispositionForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this._submitDisposition();
-            });
-            const cancel = this.el.dispositionModal?.querySelector('[data-disposition-cancel]');
-            cancel?.addEventListener('click', () => this._closeDisposition());
+        if (this.muteBtn) {
+            this.muteBtn.addEventListener('click', () => this._toggleMute());
         }
-        if (this.el.manualForm) {
-            this.el.manualForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this._manualDial();
-            });
+        if (this.holdBtn) {
+            this.holdBtn.addEventListener('click', () => this._toggleHold());
         }
-        this._bindRetroPhone();
-        this._bindKeyboardDial();
-    }
-
-    _bindRetroPhone() {
-        const keys = this.root.querySelectorAll('.phone-key');
-        const display = document.getElementById('phone-number-display');
-        const callBtn = document.getElementById('phone-call-btn');
-        const hangupBtn = document.getElementById('phone-hangup-btn');
-        const clearBtn = document.getElementById('phone-clear-btn');
-        this.retroCallBtn = callBtn;
-        this.retroHangupBtn = hangupBtn;
-        this.retroNumber = '';
-        keys.forEach((btn) => {
+        this.keyButtons.forEach((btn) => {
             btn.addEventListener('click', () => {
-                this.retroNumber += btn.dataset.key || '';
-                display.textContent = this.retroNumber;
+                const digit = btn.dataset.key || '';
+                this._handleDigit(digit, btn);
             });
         });
-        clearBtn?.addEventListener('click', () => {
-            this.retroNumber = this.retroNumber.slice(0, -1);
-            display.textContent = this.retroNumber;
-        });
-        callBtn?.addEventListener('click', () => {
-            if (this.retroNumber) {
-                this._manualDial(this.retroNumber);
-            }
-        });
-        hangupBtn?.addEventListener('click', () => this._hangup());
-        // initial state: show call, hide hangup
-        if (this.retroHangupBtn) this.retroHangupBtn.style.display = 'none';
-        if (this.retroCallBtn) this.retroCallBtn.style.display = 'block';
+        this._updateCallButtonState();
     }
 
-    _bindKeyboardDial() {
-        document.addEventListener('keydown', (evt) => {
-            const target = evt.target;
-            const tag = target?.tagName;
-            if (tag && ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
-            if (evt.metaKey || evt.ctrlKey || evt.altKey) return;
-
+    _bindKeyboard() {
+        this._keyboardHandler = (evt) => {
+            if (this._shouldIgnoreKeyEvent(evt)) {
+                return;
+            }
             const key = evt.key;
-            if (/^[0-9]$/.test(key) || key === '*' || key === '#' || key === '+') {
-                this.retroNumber += key;
-                const display = document.getElementById('phone-number-display');
-                if (display) display.textContent = this.retroNumber;
+            if (/^[0-9]$/.test(key)) {
                 evt.preventDefault();
+                this._handleDigit(key);
+                return;
+            }
+            if (key === '*' || key === '#') {
+                evt.preventDefault();
+                this._handleDigit(key);
+                return;
+            }
+            if (key === '+' || (key === '=' && evt.shiftKey)) {
+                evt.preventDefault();
+                this._handleDigit('+');
                 return;
             }
             if (key === 'Backspace') {
-                this.retroNumber = this.retroNumber.slice(0, -1);
-                const display = document.getElementById('phone-number-display');
-                if (display) display.textContent = this.retroNumber;
                 evt.preventDefault();
+                this._handleClear();
                 return;
             }
             if (key === 'Enter') {
-                if (this.retroNumber) {
-                    this._manualDial(this.retroNumber);
-                }
                 evt.preventDefault();
+                this._handleCall();
                 return;
             }
             if (key === 'Escape') {
-                this._hangup();
                 evt.preventDefault();
+                this._handleHangup();
             }
-        });
+        };
+        window.addEventListener('keydown', this._keyboardHandler);
     }
 
-    // ------------------------------------------------------------
-    // Call State Handling
-    // ------------------------------------------------------------
-    _applyCall(call) {
-        // Normalize status: if we have duration > 0 but status is empty/initiated, treat as in-progress
-        let status = (call.status || '').toLowerCase();
-        if ((!status || status === 'initiated') && call.duration && call.duration > 0) {
-            status = 'in-progress';
-        }
-        this.state.activeCall = call;
-        this.state.lastEndedCall = null;
-        this.state.dispositionComplete = false;
-        if (this.el.callPlaceholder) this.el.callPlaceholder.hidden = true;
-        if (this.el.callDetails) this.el.callDetails.hidden = false;
-        if (this.el.callNumber) this.el.callNumber.textContent = call.number || 'Unknown';
-        if (this.el.callState) this.el.callState.textContent = status || 'active';
-        if (this.el.hangupBtn) this.el.hangupBtn.disabled = false;
-        if (this.el.holdBtn) this.el.holdBtn.disabled = !Boolean(this.urls.hold);
-        if (this.el.dispositionBtn) this.el.dispositionBtn.disabled = true;
-        if (this.retroCallBtn) this.retroCallBtn.style.display = 'none';
-        if (this.retroHangupBtn) this.retroHangupBtn.style.display = 'block';
-        this._startDurationTimer(call.duration || 0);
+    _shouldIgnoreKeyEvent(evt) {
+        if (evt.metaKey || evt.ctrlKey || evt.altKey) return true;
+        const target = evt.target;
+        if (!target) return false;
+        const tag = target.tagName;
+        if (!tag) return false;
+        const interactiveTags = ['INPUT', 'TEXTAREA', 'SELECT'];
+        if (interactiveTags.includes(tag)) return true;
+        if (target.isContentEditable) return true;
+        return false;
     }
 
-    _setIdle() {
-        this.state.activeCall = null;
-        if (this.el.callPlaceholder) this.el.callPlaceholder.hidden = false;
-        if (this.el.callDetails) this.el.callDetails.hidden = true;
-        if (this.el.callNumber) this.el.callNumber.textContent = '—';
-        if (this.el.callState) this.el.callState.textContent = 'idle';
-        if (this.el.callDuration) this.el.callDuration.textContent = '00:00';
-        if (this.el.hangupBtn) this.el.hangupBtn.disabled = true;
-        if (this.el.holdBtn) this.el.holdBtn.disabled = true;
-        if (this.retroCallBtn) this.retroCallBtn.style.display = 'block';
-        if (this.retroHangupBtn) this.retroHangupBtn.style.display = 'none';
-        this._stopDurationTimer();
-    }
-
-    _endCallAndDispose(callId) {
-        // Prevent reopening if we already saved disposition for this call
-        if (this.state.dispositionComplete) return;
-        const id = callId || this.state.activeCall?.id || this.state.lastEndedCall;
-        this.state.activeCall = null;
-        this.state.lastEndedCall = id;
-        this.state.dispositionComplete = false;
-        this._setIdle();
-        if (this.el.dispositionBtn) this.el.dispositionBtn.disabled = false;
-        if (id && !this.state.isDisposing) {
-            this.state.isDisposing = true;
-            this._openDisposition(id);
-        }
-    }
-
-    // ------------------------------------------------------------
-    // Actions
-    // ------------------------------------------------------------
-    _manualDial(numberOverride = null) {
-        if (!this.urls.manualDial) return;
-        const raw = numberOverride || this.el.manualInput?.value || '';
-        const digits = raw.replace(/[^\d+#*+]/g, '');
-        if (!digits) return;
-        const payload = new URLSearchParams();
-        payload.append('phone_number', digits);
-        if (this.el.manualCampaign) payload.append('campaign_id', this.el.manualCampaign.value || '');
-        fetch(this.urls.manualDial, {
-            method: 'POST',
-            headers: this._formHeaders(),
-            body: payload.toString(),
-        })
-            .then((r) => r.json())
-            .then((res) => {
-                if (res.success) {
-                if (this.el.manualInput) this.el.manualInput.value = '';
-                this._applyCall({
-                    id: res.call_id,
-                    number: digits,
-                    status: 'initiated',
-                    duration: 0,
-                });
-            } else if (res.call_id) {
-                this._endCallAndDispose(res.call_id);
+    _handleDigit(digit, buttonEl) {
+        if (!digit) return;
+        if (this.currentSession && this.webrtcEnabled && this.currentSession.isEstablished()) {
+            try {
+                this.currentSession.sendDTMF(digit);
+            } catch (err) {
+                console.warn('Failed to send DTMF', err);
             }
-        })
-        .catch(() => { });
+            this._flashButton(buttonEl);
+            return;
+        }
+        if (this.phoneNumber.length >= 32) return;
+        this.phoneNumber += digit;
+        this._updateNumberDisplay();
+        this._updateCallButtonState();
+        this._flashButton(buttonEl);
     }
 
-    _hangup() {
-        const callId = this.state.activeCall?.id || this.state.lastEndedCall;
-        if (callId && this.urls.hangup) {
-            const payload = new URLSearchParams();
-            payload.append('call_id', callId);
-            fetch(this.urls.hangup, {
-                method: 'POST',
-                headers: this._formHeaders(),
-                body: payload.toString(),
-            }).finally(() => {
-                this._endCallAndDispose(callId);
-            });
+    _handleClear() {
+        if (!this.phoneNumber) return;
+        this.phoneNumber = this.phoneNumber.slice(0, -1);
+        this._updateNumberDisplay();
+        this._updateCallButtonState();
+    }
+
+    _handleCall() {
+        const digits = this._getNormalizedNumber();
+        if (!digits) {
+            this.toast('Enter a phone number', true);
+            return;
+        }
+        if (this.webrtcEnabled && this.ua && this.uaRegistered) {
+            this._dialViaWebRTC(digits);
+        } else if (this.webrtcEnabled && (!this.ua || !this.uaRegistered)) {
+            this._setStatus('WEBRTC NOT REGISTERED');
+            this.toast('WebRTC phone is not registered yet. Please wait or reload.', true);
         } else {
-            this._endCallAndDispose(callId);
+            this._dialViaManual(digits);
+        }
+    }
+
+    _handleHangup() {
+        if (this.currentSession) {
+            try {
+                this.currentSession.terminate();
+            } catch (err) {
+                console.warn('Failed to terminate WebRTC session', err);
+            }
+        }
+        if (typeof this.options.onHangup === 'function') {
+            this.options.onHangup();
+        } else if (!this.currentSession) {
+            this.toast('Hang up from your softphone client', false);
+            this._resetPhone();
+        }
+    }
+
+    _toggleMute() {
+        if (!this.currentSession || !this.webrtcEnabled) {
+            this.toast('Mute control is only available for WebRTC calls', true);
+            return;
+        }
+        this.isMuted = !this.isMuted;
+        if (this.isMuted) {
+            this.currentSession.mute({ audio: true });
+            this._setStatus('MUTED');
+            if (this.muteBtn) {
+                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> UNMUTE';
+            }
+        } else {
+            this.currentSession.unmute({ audio: true });
+            this._setStatus('CONNECTED');
+            if (this.muteBtn) {
+                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
+            }
         }
     }
 
     _toggleHold() {
-        const callId = this.state.activeCall?.id;
-        if (!callId || !this.urls.hold) return;
-        const payload = new URLSearchParams();
-        payload.append('call_id', callId);
-        fetch(this.urls.hold, {
-            method: 'POST',
-            headers: this._formHeaders(),
-            body: payload.toString(),
-        }).catch(() => { });
-    }
-
-    // ------------------------------------------------------------
-    // Disposition
-    // ------------------------------------------------------------
-    _openDisposition(callId = null) {
-        if (this.state.dispositionComplete) return;
-        if (!this.el.dispositionModal) return;
-        const targetId = callId || this.state.lastEndedCall;
-        if (this.el.dispositionCallInput) this.el.dispositionCallInput.value = targetId || '';
-        if (this.el.dispositionSelect) {
-            // Only reset if we are opening for a new call
-            if (this.el.dispositionSelect.dataset.callId !== String(targetId)) {
-                this.el.dispositionSelect.value = '';
-                this.el.dispositionSelect.dataset.callId = targetId || '';
-            }
-            if (!this.el.dispositionSelect.options.length) {
-                const opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = 'No dispositions configured';
-                opt.disabled = true;
-                opt.selected = true;
-                this.el.dispositionSelect.appendChild(opt);
-            }
-        }
-        if (this.el.dispositionNotes) this.el.dispositionNotes.value = '';
-        this.el.dispositionModal.removeAttribute('hidden');
-    }
-
-    _closeDisposition() {
-        this.el.dispositionModal?.setAttribute('hidden', 'hidden');
-        this.state.lastEndedCall = null;
-        this.state.isDisposing = false;
-        this.state.dispositionComplete = true;
-    }
-
-    _submitDisposition() {
-        if (!this.urls.disposition || !this.el.dispositionForm) return;
-        const fd = new FormData(this.el.dispositionForm);
-        const callId = fd.get('call_id');
-        const dispId = fd.get('disposition_id');
-        if (!callId || !dispId) {
-            this._showToast('Select an outcome before saving', true);
+        if (!this.currentSession || !this.webrtcEnabled) {
+            this.toast('Hold control is only available for WebRTC calls', true);
             return;
         }
-        const payload = new URLSearchParams(fd);
-        fetch(this.urls.disposition, {
-            method: 'POST',
-            headers: this._formHeaders(),
-            body: payload.toString(),
-        })
-            .then((r) => r.json())
-            .then((res) => {
-                if (res.success) {
-                    this._closeDisposition();
-                    this.state.lastEndedCall = null;
-                    this.state.dispositionComplete = true;
-                    this.state.isDisposing = false;
-                } else {
-                    this._showToast(res.error || 'Failed to save disposition', true);
+        this.isOnHold = !this.isOnHold;
+        try {
+            if (this.isOnHold) {
+                this.currentSession.hold({ useUpdate: true });
+                this._setStatus('ON HOLD');
+                if (this.holdBtn) {
+                    this.holdBtn.innerHTML = '<i class="fa-solid fa-play"></i> RESUME';
                 }
-            })
-            .catch(() => { this._showToast('Network error saving disposition', true); });
+            } else {
+                this.currentSession.unhold({ useUpdate: true });
+                this._setStatus('CONNECTED');
+                if (this.holdBtn) {
+                    this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
+                }
+            }
+        } catch (err) {
+            console.warn('Hold toggle failed', err);
+        }
     }
 
-    // ------------------------------------------------------------
-    // Polling + Websocket
-    // ------------------------------------------------------------
+    _toggleHoldApi() {
+        if (!this.holdUrl || !this.activeCallId) {
+            this._showToast('No active call to hold', true);
+            return;
+        }
+
+        // Determine action based on current button state
+        const isCurrentlyOnHold = (this.callElements.holdBtn?.dataset.state === 'hold-on');
+        const action = isCurrentlyOnHold ? 'unhold' : 'hold';
+
+        const payload = new URLSearchParams();
+        payload.append('call_id', this.activeCallId);
+        payload.append('action', action);
+
+        fetch(this.holdUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload.toString(),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    const isOnHold = data.is_on_hold;
+                    if (this.callElements.holdBtn) {
+                        this.callElements.holdBtn.dataset.state = isOnHold ? 'hold-on' : 'hold-off';
+                        this.callElements.holdBtn.innerHTML = isOnHold
+                            ? '<i class="fa-solid fa-play"></i> Resume'
+                            : '<i class="fa-solid fa-pause"></i> Hold';
+                    }
+                    // Also update retro phone state if present
+                    if (this.retroPhone) {
+                        this.retroPhone.isOnHold = isOnHold;
+                        if (isOnHold) this.retroPhone._setStatus('ON HOLD');
+                        else this.retroPhone._setStatus('CONNECTED');
+                    }
+                    this._showToast(data.message || (isOnHold ? 'Call on hold' : 'Call resumed'));
+                } else {
+                    this._showToast(data.error || 'Hold action failed', true);
+                }
+            })
+            .catch(() => this._showToast('Network error toggling hold', true));
+    }
+
+    _dialViaManual(digits) {
+        if (!this.manualDialHandler) {
+            this.toast('Manual dialing is unavailable', true);
+            return;
+        }
+        this._setStatus('REQUESTING CALL…');
+        this._toggleCallButtons(true);
+        this.manualDialHandler(digits)
+            .then((res) => {
+                if (res && res.success) {
+                    this._setStatus('CHECK YOUR PHONE');
+                    setTimeout(() => this._resetPhone(), 4000);
+                } else {
+                    const error = (res && res.error) || 'Dial failed';
+                    this._setStatus('CALL FAILED');
+                    this.toast(error, true);
+                    this._toggleCallButtons(false);
+                }
+            })
+            .catch((err) => {
+                const message = err && err.message ? err.message : 'Dial failed';
+                this._setStatus('CALL FAILED');
+                this.toast(message, true);
+                this._toggleCallButtons(false);
+            });
+    }
+
+    _dialViaWebRTC(digits) {
+        if (typeof JsSIP === 'undefined') {
+            this.toast('WebRTC library missing', true);
+            return;
+        }
+        try {
+            const cfg = this.webrtcConfig;
+            const target = this._buildTargetUri(digits);
+            const options = {
+                mediaConstraints: { audio: true, video: false },
+                rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: false },
+            };
+            if (cfg.ice_servers && cfg.ice_servers.length) {
+                options.pcConfig = { iceServers: cfg.ice_servers };
+            }
+            this.ua.call(target, options);
+            this._toggleCallButtons(true);
+            this._setStatus('CALLING…');
+        } catch (err) {
+            console.error('WebRTC call failed', err);
+            this._setStatus('CALL FAILED');
+            this._toggleCallButtons(false);
+            this.toast('Failed to start WebRTC call', true);
+        }
+    }
+
+    _buildTargetUri(number) {
+        const cfg = this.webrtcConfig || {};
+        const domain = cfg.from_domain || cfg.server;
+        return `sip:${number}@${domain}`;
+    }
+
+    _flashButton(buttonEl) {
+        if (!buttonEl) return;
+        buttonEl.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+            buttonEl.style.transform = '';
+        }, 120);
+    }
+
+    _setStatus(text) {
+        if (this.statusEl) {
+            this.statusEl.textContent = text;
+        }
+    }
+
+    _updateNumberDisplay() {
+        if (this.displayEl) {
+            this.displayEl.textContent = this.phoneNumber;
+        }
+    }
+
+    _toggleCallButtons(inCall) {
+        if (this.callBtn) {
+            this.callBtn.style.display = inCall ? 'none' : 'block';
+        }
+        if (this.hangupBtn) {
+            this.hangupBtn.style.display = inCall ? 'block' : 'none';
+        }
+        if (!inCall) {
+            this._updateCallButtonState();
+        }
+    }
+
+    _updateCallButtonState() {
+        if (!this.callBtn) return;
+        const hasDigits = this.phoneNumber.length > 0;
+        this.callBtn.disabled = !hasDigits;
+    }
+
+    _getNormalizedNumber() {
+        return (this.phoneNumber || '').replace(/[^\d*#\+]/g, '');
+    }
+
+    _resetPhone() {
+        this.phoneNumber = '';
+        this._updateNumberDisplay();
+        this._toggleCallButtons(false);
+        this._stopTimer();
+        this.isMuted = false;
+        this.isOnHold = false;
+        if (this.muteBtn) {
+            this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
+        }
+        if (this.holdBtn) {
+            this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
+        }
+        if (this.timerEl) {
+            this.timerEl.style.display = 'none';
+            this.timerEl.textContent = '00:00';
+        }
+        this._updateIdleStatus();
+    }
+
+    _startTimer() {
+        if (!this.timerEl) return;
+        this._stopTimer();
+        this.callDuration = 0;
+        this.timerEl.style.display = 'block';
+        this.timerEl.textContent = '00:00';
+        this.callTimer = setInterval(() => {
+            this.callDuration += 1;
+            const minutes = Math.floor(this.callDuration / 60)
+                .toString()
+                .padStart(2, '0');
+            const seconds = (this.callDuration % 60).toString().padStart(2, '0');
+            this.timerEl.textContent = `${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    _stopTimer() {
+        if (this.callTimer) {
+            clearInterval(this.callTimer);
+            this.callTimer = null;
+        }
+    }
+
+    _initWebRTC() {
+        if (typeof JsSIP === 'undefined') {
+            console.warn('JsSIP not available');
+            this.webrtcEnabled = false;
+            this._setStatus('WebRTC script missing');
+            this._updateIdleStatus();
+            return;
+        }
+        const cfg = this.webrtcConfig;
+        const protocol = cfg.protocol || 'wss';
+        const port = cfg.port || 8089;
+        const socketUrl = `${protocol}://${cfg.server}:${port}/ws`;
+        let socket;
+        try {
+            socket = new JsSIP.WebSocketInterface(socketUrl);
+        } catch (err) {
+            console.error('Failed to create WebSocketInterface', err);
+            this.webrtcEnabled = false;
+            this._setStatus('WebRTC socket error');
+            return;
+        }
+        const uriUser = cfg.username || cfg.extension;
+        const domain = cfg.from_domain || cfg.server;
+        const uaConfig = {
+            sockets: [socket],
+            uri: `sip:${uriUser}@${domain}`,
+            password: cfg.password,
+            authorization_user: uriUser,
+            display_name: cfg.display_name || uriUser,
+            registrar_server: domain,
+            session_timers: false,
+            trace_sip: false,
+        };
+        this.ua = new JsSIP.UA(uaConfig);
+        this.ua.on('connected', () => this._setStatus('CONNECTING…'));
+        this.ua.on('disconnected', () => this._handleWebRTCDrop('SOCKET CLOSED'));
+        this.ua.on('registered', () => {
+            this.uaRegistered = true;
+            this._setStatus('WEBRTC READY');
+            this.onRegistrationChange(true);
+        });
+        this.ua.on('unregistered', () => this._handleWebRTCDrop('WEBRTC UNREGISTERED'));
+        this.ua.on('registrationFailed', (evt) => {
+            this.uaRegistered = false;
+            console.error('WebRTC registration failed', evt.cause);
+            this.toast('WebRTC registration failed. Check credentials.', true);
+            this._handleWebRTCDrop('REGISTRATION FAILED');
+        });
+        this.ua.on('newRTCSession', (evt) => this._handleRTCSession(evt));
+        this.ua.start();
+    }
+
+    _handleRTCSession(evt) {
+        const session = evt.session;
+        const originator = evt.originator;
+        if (this.currentSession && originator === 'local') {
+            session.terminate();
+            return;
+        }
+        this.currentSession = session;
+        this._attachSessionEvents(session);
+        this._toggleCallButtons(true);
+        if (originator === 'local') {
+            this._setStatus('CALLING…');
+        } else {
+            this._setStatus('INCOMING CALL');
+        }
+    }
+
+    _attachSessionEvents(session) {
+        session.on('progress', () => this._setStatus('RINGING…'));
+        session.on('accepted', () => {
+            this._setStatus('CONNECTED');
+            this._startTimer();
+        });
+        session.on('confirmed', () => {
+            this._setStatus('CONNECTED');
+            this._startTimer();
+        });
+        session.on('ended', () => this._handleSessionEnd('CALL ENDED'));
+        session.on('failed', (evt) => {
+            const reason = evt && evt.cause ? String(evt.cause) : 'CALL FAILED';
+            this._handleSessionEnd(reason, true);
+        });
+        session.on('hold', () => {
+            this.isOnHold = true;
+            this._setStatus('ON HOLD');
+            if (this.holdBtn) {
+                this.holdBtn.innerHTML = '<i class="fa-solid fa-play"></i> RESUME';
+            }
+        });
+        session.on('unhold', () => {
+            this.isOnHold = false;
+            this._setStatus('CONNECTED');
+            if (this.holdBtn) {
+                this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
+            }
+        });
+        session.on('muted', () => {
+            this.isMuted = true;
+            if (this.muteBtn) {
+                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> UNMUTE';
+            }
+        });
+        session.on('unmuted', () => {
+            this.isMuted = false;
+            if (this.muteBtn) {
+                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
+            }
+        });
+        if (session.connection) {
+            session.connection.addEventListener('track', (event) => {
+                if (!this.remoteAudio || !event.streams || !event.streams.length) return;
+                this.remoteAudio.srcObject = event.streams[0];
+            });
+        }
+    }
+
+    _handleSessionEnd(statusText, isError = false) {
+        this._stopTimer();
+        this._setStatus(statusText);
+        this._toggleCallButtons(false);
+        this.currentSession = null;
+        this.isMuted = false;
+        this.isOnHold = false;
+        if (this.muteBtn) {
+            this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
+        }
+        if (this.holdBtn) {
+            this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
+        }
+        if (isError) {
+            this.toast(statusText || 'Call failed', true);
+        }
+        setTimeout(() => this._resetPhone(), 1200);
+    }
+
+    _handleWebRTCDrop(message) {
+        this.uaRegistered = false;
+        if (message) {
+            this._setStatus(message);
+        }
+        this.onRegistrationChange(false);
+        this._updateIdleStatus();
+    }
+
+    _updateIdleStatus() {
+        const statusText = this.hasActiveWebRTC()
+            ? 'READY'
+            : this.softphoneRegistered
+                ? 'READY (SOFTPHONE)'
+                : 'SOFTPHONE OFFLINE';
+        this._setStatus(statusText);
+    }
+
+    hasActiveWebRTC() {
+        return this.webrtcEnabled && this.uaRegistered;
+    }
+
+    setSoftphoneRegistration(isRegistered) {
+        this.softphoneRegistered = !!isRegistered;
+        if (!this.hasActiveWebRTC()) {
+            this._updateIdleStatus();
+        }
+    }
+}
+
+class AgentDashboardUI {
+    constructor(root) {
+        this.root = root;
+        this.statusUrl = root.dataset.statusUrl;
+        this.currentStatus = root.dataset.status || 'offline';
+        this.statusDisplay = root.querySelector('[data-current-status]');
+        this.statusToast = root.querySelector('[data-status-toast]');
+        this.statusOptions = this._parseJSON('agent-status-options') || [];
+        this.breakCodes = this._parseJSON('agent-break-codes-data') || [];
+        this.callStatusData = this._parseJSON('agent-call-status-data') || {};
+        this.dispositions = this._parseJSON('agent-dispositions-data') || [];
+        this.callStatusUrl = root.dataset.callStatusUrl || '';
+        this.leadInfoUrl = root.dataset.leadInfoUrl || '';
+        this.dispositionUrl = root.dataset.dispositionUrl || '';
+        this.manualDialUrl = root.dataset.manualDialUrl || '';
+        this.webrtcEnabled = root.dataset.webrtcEnabled === 'true';
+        this.csrfToken = this._getCsrfToken();
+        this.phoneStatusEl = root.querySelector('[data-phone-registration]');
+        this.webrtcConfig = this._parseJSON('agent-webrtc-config') || {};
+        this.hangupUrl = root.dataset.hangupUrl || '';
+        this.holdUrl = root.dataset.holdUrl || '';
+        this.agentId = root.dataset.agentId || '';
+        this.isDisposing = false;
+        this.pendingDispositionCallId = null;
+
+
+        this.breakModal = document.getElementById('break-modal');
+        this.breakList = document.getElementById('break-code-list');
+        this.breakNotesInput = document.getElementById('break-notes-input');
+
+        this.callElements = {
+            placeholder: root.querySelector('[data-call-placeholder]'),
+            details: root.querySelector('[data-call-details]'),
+            number: root.querySelector('[data-call-number]'),
+            state: root.querySelector('[data-call-state]'),
+            duration: root.querySelector('[data-call-duration]'),
+            leadCard: root.querySelector('[data-lead-card]'),
+            leadName: root.querySelector('[data-lead-name]'),
+            leadStatus: root.querySelector('[data-lead-status]'),
+            leadPhone: root.querySelector('[data-lead-phone]'),
+            leadEmail: root.querySelector('[data-lead-email]'),
+            leadCompany: root.querySelector('[data-lead-company]'),
+            leadLocation: root.querySelector('[data-lead-location]'),
+            dispositionBtn: root.querySelector('[data-open-disposition]'),
+            hangupBtn: root.querySelector('[data-hangup-call]'),
+            holdBtn: root.querySelector('[data-hold-call]'),
+        };
+        if (this.callElements.dispositionBtn) {
+            this.callElements.dispositionBtn.disabled = !this.dispositions.length;
+        }
+
+        this.dispositionModal = document.getElementById('disposition-modal');
+        this.dispositionForm = document.getElementById('disposition-form');
+        this.dispositionCallInput = document.getElementById('disposition-call-id');
+        this.dispositionSelect = document.getElementById('disposition-select');
+        this.dispositionNotes = document.getElementById('disposition-notes');
+
+        this.manualDialForm = document.getElementById('manual-dial-form');
+        this.manualDialInput = document.querySelector('[data-manual-input]');
+        this.manualDialCampaign = document.getElementById('manual-dial-campaign');
+        this.manualDialButton = document.querySelector('[data-manual-submit]');
+        this.manualDialLoading = false;
+        this.manualDialDisabledByRegistration = false;
+        this.transferUrl = root.dataset.transferUrl || '';
+        this.transferForm = document.getElementById('transfer-call-form');
+        this.transferSelect = document.querySelector('[data-transfer-target]');
+        this.transferButton = document.querySelector('[data-transfer-submit]');
+        this.transferButtonLabel = this.transferButton ? this.transferButton.textContent.trim() : 'Transfer Call';
+        this.transferLoading = false;
+
+        this._bindStatusButtons();
+        this._bindModalEvents();
+        const initialPhoneRegistered = typeof this.callStatusData.phone_registered !== 'undefined'
+            ? this.callStatusData.phone_registered
+            : this.phoneStatusEl?.dataset.registered === 'true';
+        this.lastKnownSoftphoneRegistered = !!initialPhoneRegistered;
+
+        this._bindManualDial();
+        this._bindTransferForm();
+        this._bindDispositionEvents();
+        this._bindCallControlButtons();
+        this._updateStatusUI(this.currentStatus);
+        this._initCallState();
+        this._initRetroPhone(this.lastKnownSoftphoneRegistered);
+        this._updatePhoneRegistration(initialPhoneRegistered);
+        this._initRealtimeChannel();
+        this._initRealtimeChannel();
+    }
+
+    _getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) return meta.getAttribute('content');
+        // fallback to cookie
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        return match ? match[1] : '';
+    }
+
+    _parseJSON(id) {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        try {
+            return JSON.parse(el.textContent);
+        } catch {
+            return null;
+        }
+    }
+
+    _bindStatusButtons() {
+        const buttons = this.root.querySelectorAll('[data-status-trigger]');
+        buttons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const status = btn.dataset.statusTrigger;
+                if (!status) return;
+                if (['break', 'lunch'].includes(status) && this.breakCodes.length) {
+                    this._openBreakModal(status);
+                } else {
+                    const reason = btn.dataset.statusReason || '';
+                    this._sendStatus(status, reason);
+                }
+            });
+        });
+    }
+
+    _bindModalEvents() {
+        if (!this.breakModal) return;
+        const closeBtn = this.breakModal.querySelector('[data-break-cancel]');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this._closeBreakModal());
+        }
+        this.breakModal.addEventListener('click', (evt) => {
+            if (evt.target === this.breakModal) {
+                this._closeBreakModal();
+            }
+        });
+    }
+
+    _openBreakModal(targetStatus) {
+        if (!this.breakModal || !this.breakList) {
+            const note = prompt('Enter break reason (optional):') || '';
+            this._sendStatus(targetStatus, note);
+            return;
+        }
+
+        this.breakModal.dataset.targetStatus = targetStatus;
+        this.breakList.innerHTML = '';
+        this.breakCodes.forEach((code) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'break-chip';
+            btn.textContent = `${code.name}`;
+            btn.style.setProperty('--chip-color', code.color_code || '#6c757d');
+            btn.addEventListener('click', () => {
+                const notes = this.breakNotesInput ? this.breakNotesInput.value.trim() : '';
+                const reason = code.description || code.name;
+                this._sendStatus(targetStatus, notes || reason);
+                this._closeBreakModal();
+            });
+            this.breakList.appendChild(btn);
+        });
+
+        if (this.breakNotesInput) {
+            this.breakNotesInput.value = '';
+        }
+
+        this.breakModal.removeAttribute('hidden');
+    }
+
+    _closeBreakModal() {
+        if (this.breakModal) {
+            this.breakModal.setAttribute('hidden', 'hidden');
+        }
+    }
+
+    _sendStatus(status, reason) {
+        if (!this.statusUrl) return;
+        const payload = new URLSearchParams();
+        payload.append('status', status);
+        if (reason) {
+            payload.append('break_reason', reason);
+        }
+
+        fetch(this.statusUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload.toString(),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    this.currentStatus = status;
+                    if (status === 'available') {
+                        this.clearedCallId = this.activeCallId;
+                        this._setCallIdle();
+                        this.lastCompletedCallId = null;
+                    }
+                    this._updateStatusUI(status, reason);
+                    this._showToast(data.message || 'Status updated');
+                } else {
+                    this._showToast(data.error || 'Failed to update status', true);
+                }
+            })
+            .catch(() => this._showToast('Network error updating status', true));
+    }
+
+    _updateStatusUI(status, reason = '') {
+        if (this.statusDisplay) {
+            const label = this._lookupStatusLabel(status);
+            this.statusDisplay.textContent = label;
+            this.statusDisplay.dataset.status = status;
+            if (reason) {
+                this.statusDisplay.setAttribute('title', reason);
+            } else {
+                this.statusDisplay.removeAttribute('title');
+            }
+        }
+
+        this.root.dataset.status = status;
+        const buttons = this.root.querySelectorAll('[data-status-trigger]');
+        buttons.forEach((btn) => {
+            btn.classList.toggle('is-active', btn.dataset.statusTrigger === status);
+        });
+    }
+
+    _lookupStatusLabel(value) {
+        const match = this.statusOptions.find((opt) => opt.value === value);
+        return match ? match.label : value;
+    }
+
+    _showToast(message, isError = false) {
+        if (!this.statusToast) return;
+        this.statusToast.textContent = message;
+        this.statusToast.classList.toggle('is-error', isError);
+        this.statusToast.classList.add('is-visible');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => {
+            this.statusToast.classList.remove('is-visible');
+        }, 4000);
+    }
+
+    _bindDispositionEvents() {
+        if (this.callElements.dispositionBtn) {
+            this.callElements.dispositionBtn.addEventListener('click', () => {
+                const callId = this.activeCallId || this.lastCompletedCallId;
+                if (callId && this.dispositions.length) {
+                    this._openDispositionModal(callId);
+                } else if (!this.dispositions.length) {
+                    this._showToast('No dispositions configured for this campaign', true);
+                }
+            });
+        }
+
+        if (this.dispositionModal) {
+            const cancelBtn = this.dispositionModal.querySelector('[data-disposition-cancel]');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    this.isDisposing = false;
+                    this.pendingDispositionCallId = null;
+                    this._closeDispositionModal();
+                });
+            }
+            this.dispositionModal.addEventListener('click', (evt) => {
+                if (evt.target === this.dispositionModal) {
+                    this._closeDispositionModal();
+                }
+            });
+        }
+
+        if (this.dispositionForm) {
+            this.dispositionForm.addEventListener('submit', (evt) => {
+                evt.preventDefault();
+                this._submitDisposition();
+            });
+        }
+    }
+
+    _bindCallControlButtons() {
+        if (this.callElements.hangupBtn) {
+            this.callElements.hangupBtn.addEventListener('click', () => this._requestHangup());
+        }
+        if (this.callElements.holdBtn) {
+            this.callElements.holdBtn.addEventListener('click', () => this._toggleHoldApi());
+        }
+    }
+
+    _initCallState() {
+        const initialCall = this.callStatusData.current_call;
+        if (initialCall) {
+            this._applyCallState(initialCall);
+        } else {
+            this._setCallIdle();
+        }
+
+        if (this.callStatusUrl) {
+            this._pollCallStatus();
+            this.callPollInterval = setInterval(() => this._pollCallStatus(), 5000);
+        }
+    }
+
     _pollCallStatus() {
-        if (!this.urls.callStatus) return;
-        fetch(this.urls.callStatus, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then((r) => r.json())
-            .then((data) => this._handleStatusPayload(data))
+        fetch(this.callStatusUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((res) => res.json())
+            .then((data) => this._handleCallStatus(data))
             .catch(() => { });
     }
 
-    _initWebsocket() {
-        if (!this.agentId) return;
-        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const url = `${proto}//${window.location.host}/ws/agent/${this.agentId}/`;
-        try {
-            this.ws = new WebSocket(url);
-        } catch (e) {
-            return;
-        }
-        this.ws.onmessage = (evt) => {
-            try {
-                const payload = JSON.parse(evt.data);
-                this._handleStatusPayload(payload);
-            } catch (e) { }
-        };
-    }
-
-    _handleStatusPayload(data) {
-        if (!data) return;
-        // Always keep phone registration updated
-        if (Object.prototype.hasOwnProperty.call(data, 'phone_registered')) {
-            this._updateRegistration(data.phone_registered);
-        }
-        // If we are in the middle of disposition, ignore further call updates
-        if (this.state.isDisposing || this.state.dispositionComplete) return;
-        if (Object.prototype.hasOwnProperty.call(data, 'phone_registered')) {
-            this._updateRegistration(data.phone_registered);
-        }
-        const call = data.call || data.current_call || null;
-        if (call && call.id) {
-            const status = (call.status || '').toLowerCase();
-            const endedStates = ['completed', 'hangup', 'failed', 'busy', 'no_answer', 'congested'];
-            if (endedStates.includes(status)) {
-                this._endCallAndDispose(call.id);
-            } else {
-                this._applyCall(call);
+    _handleCallStatus(data) {
+        if (this.isDisposing) return; // Ignore updates while user is disposing
+        if (!data || data.success === false) {
+            // If polling fails but we had a call in progress, assume it ended
+            if (this.activeCallId) {
+                const completedCallId = this.activeCallId;
+                this._setCallIdle();
+                this.lastCompletedCallId = completedCallId;
+                if (this.dispositions.length) {
+                    this._openDispositionModal(completedCallId);
+                }
             }
             return;
         }
-        // Only clear the call when we get an explicit end event or hangup initiated locally
-        if (data.type === 'call_ended') {
-            this._endCallAndDispose(data.call_id);
+        if (Object.prototype.hasOwnProperty.call(data, 'phone_registered')) {
+            this._updatePhoneRegistration(data.phone_registered);
+        }
+        const newCall = data.current_call || null;
+        if (newCall && newCall.id) {
+            if (this.clearedCallId === newCall.id) {
+                return; // Ignore stale call that was manually cleared
+            }
+            if (this.activeCallId !== newCall.id) {
+                this._applyCallState(newCall);
+            } else {
+                this._updateCallDuration(newCall.duration || 0);
+                this._updateCallStateLabel(newCall.status);
+            }
+        } else if (this.activeCallId) {
+            // If backend didn't return a call but we have one locally, keep showing it
+            // to allow hangup/disposition without forcing a refresh.
+            this._updateCallStateLabel('initiated');
+            if (this.callElements.hangupBtn) {
+                this.callElements.hangupBtn.disabled = false;
+            }
+            if (this.callElements.dispositionBtn && !this.dispositions.length) {
+                this.callElements.dispositionBtn.disabled = true;
+            }
         }
     }
 
-    // ------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------
-    _getCsrf() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        if (meta) return meta.content;
-        const m = document.cookie.match(/csrftoken=([^;]+)/);
-        return m ? m[1] : '';
-    }
-
-    _formHeaders() {
-        return {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': this.csrfToken,
-            'Content-Type': 'application/x-www-form-urlencoded',
-        };
-    }
-
-    _updateRegistration(registered) {
-        this.state.phoneRegistered = !!registered;
-        if (this.el.phoneStatus) {
-            this.el.phoneStatus.dataset.registered = this.state.phoneRegistered ? 'true' : 'false';
-            this.el.phoneStatus.textContent = this.state.phoneRegistered ? 'Softphone registered' : 'Not registered';
+    _applyCallState(call) {
+        this.activeCallId = call.id;
+        this.lastCompletedCallId = null;
+        this._updateTransferButtonState();
+        this._setCallDisplay(true);
+        if (this.callElements.number) {
+            this.callElements.number.textContent = call.number || 'Unknown';
         }
-        const retroStatus = document.getElementById('phone-status-display');
-        if (retroStatus) {
-            retroStatus.textContent = this.state.phoneRegistered ? 'READY' : 'NOT REGISTERED';
+        this._updateCallStateLabel(call.status);
+        this._startDurationTimer(call.duration || 0);
+        if (this.callElements.dispositionBtn) {
+            this.callElements.dispositionBtn.disabled = true; // Lock dispose during call
+        }
+        if (this.retroPhone) {
+            this.retroPhone._toggleCallButtons(true);
+        } else if (this.callElements.hangupBtn) {
+            this.callElements.hangupBtn.style.display = 'block';
+            if (this.callElements.callBtn) this.callElements.callBtn.style.display = 'none';
+        }
+        if (this.callElements.hangupBtn) {
+            this.callElements.hangupBtn.disabled = false;
+        }
+        if (this.callElements.holdBtn) {
+            this.callElements.holdBtn.disabled = false;
+        }
+        if (call.lead_id && this.leadInfoUrl) {
+            this._fetchLeadInfo(call.lead_id);
+        } else {
+            this._clearLeadCard();
+        }
+    }
+
+    _setCallDisplay(hasCall) {
+        if (this.callElements.placeholder) {
+            this.callElements.placeholder.toggleAttribute('hidden', hasCall);
+        }
+        if (this.callElements.details) {
+            this.callElements.details.toggleAttribute('hidden', !hasCall);
+        }
+    }
+
+    _setCallIdle() {
+        this.activeCallId = null;
+        this._updateTransferButtonState();
+        this._stopDurationTimer();
+        if (this.callElements.number) this.callElements.number.textContent = '—';
+        this._updateCallStateLabel('idle');
+        if (this.callElements.duration) this.callElements.duration.textContent = '00:00';
+        if (this.callElements.dispositionBtn) {
+            this.callElements.dispositionBtn.disabled = !this.dispositions.length; // Unlock if dispositions exist
+        }
+        if (this.callElements.hangupBtn) {
+            this.callElements.hangupBtn.disabled = true;
+        }
+        if (this.retroPhone) {
+            this.retroPhone._toggleCallButtons(false);
+        } else if (this.callElements.hangupBtn) {
+            this.callElements.hangupBtn.style.display = 'none';
+            if (this.callElements.callBtn) this.callElements.callBtn.style.display = 'block';
+        }
+        if (this.callElements.holdBtn) {
+            this.callElements.holdBtn.disabled = true;
+            this.callElements.holdBtn.dataset.state = 'hold-off';
+            this.callElements.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Hold';
+        }
+        this._clearLeadCard();
+        this._setCallDisplay(false);
+    }
+
+    _updateCallStateLabel(state) {
+        if (this.callElements.state) {
+            const normalized = state || 'idle';
+            this.callElements.state.dataset.state = normalized;
+            this.callElements.state.textContent = normalized;
         }
     }
 
     _startDurationTimer(initialSeconds) {
         this._stopDurationTimer();
-        const start = Date.now() - (initialSeconds || 0) * 1000;
-        this.timers.startedAt = start;
-        if (this.el.callDuration) {
-            this.el.callDuration.textContent = this._formatDuration(initialSeconds || 0);
+        this.durationBase = Date.now() - initialSeconds * 1000;
+        if (this.callElements.duration) {
+            this.callElements.duration.textContent = this._formatDuration(initialSeconds);
         }
-        this.timers.duration = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - this.timers.startedAt) / 1000);
-            if (this.el.callDuration) {
-                this.el.callDuration.textContent = this._formatDuration(elapsed);
+        this.durationTimer = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.durationBase) / 1000);
+            if (this.callElements.duration) {
+                this.callElements.duration.textContent = this._formatDuration(elapsed);
             }
         }, 1000);
     }
 
-    _stopDurationTimer() {
-        if (this.timers.duration) {
-            clearInterval(this.timers.duration);
-            this.timers.duration = null;
+    _updateCallDuration(seconds) {
+        if (this.durationBase) return;
+        if (this.callElements.duration) {
+            this.callElements.duration.textContent = this._formatDuration(seconds);
         }
-        this.timers.startedAt = null;
     }
 
-    _formatDuration(totalSeconds) {
-        const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-        const secs = (totalSeconds % 60).toString().padStart(2, '0');
+    _stopDurationTimer() {
+        if (this.durationTimer) {
+            clearInterval(this.durationTimer);
+            this.durationTimer = null;
+            this.durationBase = null;
+        }
+    }
+
+    _formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60)
+            .toString()
+            .padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
         return `${mins}:${secs}`;
+    }
+
+    _fetchLeadInfo(leadId) {
+        const url = new URL(this.leadInfoUrl, window.location.origin);
+        url.searchParams.set('lead_id', leadId);
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((res) => res.json())
+            .then((res) => {
+                if (res.success && res.lead) {
+                    this._populateLeadCard(res.lead);
+                } else {
+                    this._clearLeadCard();
+                }
+            })
+            .catch(() => {
+                this._clearLeadCard();
+            });
+    }
+
+    _populateLeadCard(lead) {
+        if (!this.callElements.leadCard) return;
+        this.callElements.leadCard.removeAttribute('hidden');
+        this.callElements.leadName.textContent = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Lead';
+        this.callElements.leadStatus.textContent = lead.status || 'Unknown';
+        this.callElements.leadPhone.textContent = lead.phone_number || '—';
+        this.callElements.leadEmail.textContent = lead.email || '—';
+        this.callElements.leadCompany.textContent = lead.company || '—';
+        const location = [lead.city, lead.state].filter(Boolean).join(', ');
+        this.callElements.leadLocation.textContent = location || '—';
+    }
+
+    _clearLeadCard() {
+        if (!this.callElements.leadCard) return;
+        this.callElements.leadCard.setAttribute('hidden', 'hidden');
+        ['leadName', 'leadStatus', 'leadPhone', 'leadEmail', 'leadCompany', 'leadLocation'].forEach((key) => {
+            if (this.callElements[key]) {
+                this.callElements[key].textContent = key === 'leadStatus' ? 'Unknown' : '—';
+            }
+        });
+    }
+
+    _openDispositionModal(callId) {
+        if (!this.dispositionModal || !this.dispositions.length) return;
+        if (callId) {
+            this.pendingDispositionCallId = callId;
+        }
+        this.isDisposing = true;
+        if (this.dispositionCallInput) {
+            this.dispositionCallInput.value = callId || this.pendingDispositionCallId || '';
+        }
+        if (this.dispositionSelect) {
+            this.dispositionSelect.value = '';
+        }
+        if (this.dispositionNotes) {
+            this.dispositionNotes.value = '';
+        }
+        this.dispositionModal.removeAttribute('hidden');
+    }
+
+    _closeDispositionModal() {
+        if (this.dispositionModal) {
+            this.dispositionModal.setAttribute('hidden', 'hidden');
+        }
+        this.isDisposing = false;
+        this.pendingDispositionCallId = null;
+    }
+
+    _submitDisposition() {
+        if (!this.dispositionUrl || !this.dispositionForm) return;
+        const callId =
+            this.pendingDispositionCallId ||
+            this.dispositionCallInput?.value ||
+            this.activeCallId ||
+            this.lastCompletedCallId;
+        const dispositionId = this.dispositionSelect?.value;
+        const notes = this.dispositionNotes?.value || '';
+        if (!callId || !dispositionId) {
+            this._showToast('Select a disposition before saving', true);
+            return;
+        }
+
+        // Helper to save disposition
+        const saveDisposition = () => {
+            const payload = new URLSearchParams();
+            payload.append('call_id', callId);
+            payload.append('disposition_id', dispositionId);
+            payload.append('notes', notes);
+            return fetch(this.dispositionUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: payload.toString(),
+            }).then(res => res.json());
+        };
+
+        // Helper to hangup backend
+        const performHangup = () => {
+            if (!this.hangupUrl || !callId) return Promise.resolve({ success: true });
+            const payload = new URLSearchParams();
+            payload.append('call_id', callId);
+            return fetch(this.hangupUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: payload.toString(),
+            }).then(res => res.json()).catch(() => ({ success: true }));
+        };
+
+        // Chain: Disposition -> Hangup
+        saveDisposition()
+            .then((data) => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to save disposition');
+                }
+                return performHangup();
+            })
+            .then(() => {
+                this._showToast('Disposition saved');
+                this._closeDispositionModal();
+                this.pendingDispositionCallId = null;
+                this.lastCompletedCallId = null;
+                this.isDisposing = false;
+                this._setCallIdle();
+                this._sendStatus('available');
+            })
+            .catch((err) => {
+                const message = err?.message || 'Network error saving disposition';
+                this._showToast(message, true);
+                this.isDisposing = false;
+            });
+    }
+
+    _bindManualDial() {
+        if (!this.manualDialForm) return;
+        this.manualDialForm.addEventListener('submit', (evt) => {
+            evt.preventDefault();
+            this._manualDial().catch(() => { });
+        });
+    }
+
+    _manualDial(numberOverride = null) {
+        if (!this.manualDialUrl) {
+            this._showToast('Manual dialing disabled', true);
+            return Promise.reject(new Error('Manual dialing disabled'));
+        }
+        const rawInput =
+            numberOverride !== null && numberOverride !== undefined
+                ? String(numberOverride)
+                : (this.manualDialInput?.value || '').trim();
+        const sanitized = rawInput.replace(/[^\d\+\#\*]/g, '');
+        if (!sanitized) {
+            this._showToast('Enter a phone number', true);
+            return Promise.reject(new Error('Invalid number'));
+        }
+        const payload = new URLSearchParams();
+        payload.append('phone_number', sanitized);
+        if (this.manualDialCampaign) {
+            payload.append('campaign_id', this.manualDialCampaign.value || '');
+        }
+        this._setManualDialLoading(true);
+        return fetch(this.manualDialUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload.toString(),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success && (!numberOverride && this.manualDialInput)) {
+                    this.manualDialInput.value = '';
+                }
+                if (data.success) {
+                    if (data.call_id) {
+                        this.activeCallId = data.call_id;
+                    }
+                    if (!numberOverride) {
+                        this._showToast(data.message || 'Dial requested');
+                    }
+                } else {
+                    this._showToast(data.error || 'Dial failed', true);
+                    if (data.call_id) {
+                        this.lastCompletedCallId = data.call_id;
+                        if (this.callElements.dispositionBtn) {
+                            this.callElements.dispositionBtn.disabled = false;
+                        }
+                        this._openDispositionModal(data.call_id);
+                    }
+                }
+                return data;
+            })
+            .catch(() => {
+                this._showToast('Network error requesting dial', true);
+                throw new Error('Network error');
+            })
+            .finally(() => this._setManualDialLoading(false));
+    }
+
+    _setManualDialLoading(isLoading) {
+        if (this.manualDialButton) {
+            this.manualDialLoading = isLoading;
+            this.manualDialButton.disabled = isLoading || (this.manualDialDisabledByRegistration ?? false);
+            this.manualDialButton.textContent = isLoading ? 'Dialing…' : 'Dial Now';
+        }
+    }
+
+    _bindTransferForm() {
+        if (!this.transferForm || !this.transferButton) return;
+        this.transferForm.addEventListener('submit', (evt) => {
+            evt.preventDefault();
+            this._submitTransfer();
+        });
+        if (this.transferSelect) {
+            this.transferSelect.addEventListener('change', () => this._updateTransferButtonState());
+        }
+        this._updateTransferButtonState();
+    }
+
+    _updateTransferButtonState() {
+        if (!this.transferButton) return;
+        const hasTarget = !!(this.transferSelect && this.transferSelect.value);
+        const hasCall = !!this.activeCallId;
+        const disabled = !hasTarget || !hasCall || this.transferLoading;
+        this.transferButton.disabled = disabled;
+    }
+
+    _setTransferLoading(isLoading) {
+        if (!this.transferButton) return;
+        this.transferLoading = isLoading;
+        if (isLoading) {
+            this.transferButton.textContent = 'Transferring…';
+        } else if (this.transferButtonLabel) {
+            this.transferButton.textContent = this.transferButtonLabel;
+        }
+        this._updateTransferButtonState();
+    }
+
+    _submitTransfer() {
+        if (!this.transferUrl) {
+            this._showToast('Transfer unavailable', true);
+            return;
+        }
+        if (!this.activeCallId) {
+            this._showToast('No active call to transfer', true);
+            return;
+        }
+        const transferTo = this.transferSelect?.value;
+        if (!transferTo) {
+            this._showToast('Select an agent to transfer to', true);
+            return;
+        }
+        this._setTransferLoading(true);
+        const payload = new URLSearchParams();
+        payload.append('call_id', this.activeCallId);
+        payload.append('transfer_to', transferTo);
+        payload.append('transfer_type', 'warm');
+        fetch(this.transferUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload.toString(),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    this._showToast(data.message || 'Transfer initiated');
+                } else {
+                    this._showToast(data.error || 'Transfer failed', true);
+                }
+            })
+            .catch(() => this._showToast('Network error transferring call', true))
+            .finally(() => this._setTransferLoading(false));
+    }
+
+    _updatePhoneRegistration(isRegistered) {
+        this.lastKnownSoftphoneRegistered = !!isRegistered;
+        if (this.retroPhone && typeof this.retroPhone.setSoftphoneRegistration === 'function') {
+            this.retroPhone.setSoftphoneRegistration(this.lastKnownSoftphoneRegistered);
+        }
+        this._applyRegistrationState();
+    }
+
+    _applyRegistrationState() {
+        const registered = !!this.lastKnownSoftphoneRegistered;
+        const webRtcReady = typeof this.retroPhone?.hasActiveWebRTC === 'function'
+            ? this.retroPhone.hasActiveWebRTC()
+            : false;
+        const effectiveRegistered = registered || webRtcReady;
+        if (this.phoneStatusEl) {
+            this.phoneStatusEl.dataset.registered = effectiveRegistered ? 'true' : 'false';
+            if (effectiveRegistered) {
+                this.phoneStatusEl.textContent = webRtcReady
+                    ? 'WebRTC registered'
+                    : 'Softphone registered';
+            } else {
+                this.phoneStatusEl.textContent = 'Not registered — open your softphone client';
+            }
+        }
+        if (this.manualDialButton) {
+            this.manualDialDisabledByRegistration = !effectiveRegistered;
+            if (!this.manualDialLoading) {
+                this.manualDialButton.disabled = !effectiveRegistered;
+            }
+        }
+        this._updateTransferButtonState();
+    }
+
+    _requestHangup() {
+        if (!this.hangupUrl || !this.activeCallId) {
+            this._setCallIdle();
+            return;
+        }
+        const callId = this.activeCallId;
+
+        // Terminate WebRTC if active (UI update handled by RetroPhone events)
+        if (this.retroPhone && this.retroPhone.currentSession) {
+            try {
+                this.retroPhone.currentSession.terminate();
+            } catch (e) { console.warn(e); }
+        }
+
+        // Always notify backend to clear the call, then open disposition locally
+        const payload = new URLSearchParams();
+        payload.append('call_id', callId);
+        fetch(this.hangupUrl, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': this.csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload.toString(),
+        })
+            .catch(() => ({}))
+            .finally(() => {
+                this._setCallIdle();
+                if (this.dispositions.length) {
+                    this.isDisposing = true;
+                    this.pendingDispositionCallId = callId;
+                    this.lastCompletedCallId = callId;
+                    this._openDispositionModal(callId);
+                } else {
+                    this.lastCompletedCallId = null;
+                }
+            });
+    }
+
+    _initRealtimeChannel() {
+        if (!this.agentId) return;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/agent/${this.agentId}/`;
+        try {
+            this.realtimeSocket = new WebSocket(wsUrl);
+        } catch (err) {
+            console.warn('Failed to open realtime socket', err);
+            return;
+        }
+        this.realtimeSocket.onmessage = (evt) => {
+            try {
+                const payload = JSON.parse(evt.data);
+                this._handleRealtimeEvent(payload);
+            } catch (e) {
+                console.warn('Invalid realtime payload', e);
+            }
+        };
+        this.realtimeSocket.onclose = () => {
+            setTimeout(() => this._initRealtimeChannel(), 5000);
+        };
+    }
+
+    _handleRealtimeEvent(payload) {
+        const type = payload.type || '';
+
+        if (type === 'call_started' && payload.call) {
+            this._applyCallState(payload.call);
+            return;
+        }
+
+        if (type === 'call_connected') {
+            if (payload.call) {
+                this._applyCallState(payload.call);
+            }
+            if (payload.lead) {
+                this._populateLeadCard(payload.lead);
+            }
+            return;
+        }
+
+        if (type === 'call_ended') {
+            const completedCallId = payload.call_id || this.activeCallId;
+            this._setCallIdle();
+            if (completedCallId && this.dispositions.length) {
+                this.lastCompletedCallId = completedCallId;
+                if (payload.disposition_needed !== false) {
+                    this._openDispositionModal(completedCallId);
+                }
+            }
+            return;
+        }
+
+        if (type === 'call_update' && payload.call) {
+            this._applyCallState(payload.call);
+            return;
+        }
+
+        if (type === 'status_update') {
+            if (payload.status) {
+                this._updateStatusUI(payload.status, payload.message);
+                this.currentStatus = payload.status;
+            }
+            return;
+        }
+
+        if (type === 'registration' && typeof payload.registered !== 'undefined') {
+            this._updatePhoneRegistration(payload.registered);
+        }
+    }
+
+    _initRetroPhone(initialRegistered) {
+        const retroPhone = document.querySelector('[data-retro-phone]');
+        if (!retroPhone) return;
+        this.retroPhone = new RetroPhoneController(retroPhone, {
+            manualDialHandler: (number) => this._manualDial(number),
+            toast: (message, isError) => this._showToast(message, isError),
+            webrtcEnabled: this.webrtcEnabled,
+            webrtcConfig: this.webrtcConfig,
+            softphoneRegistered: initialRegistered,
+            onRegistrationChange: () => this._applyRegistrationState(),
+            onHangup: () => this._requestHangup(),
+        });
+
+        // Sync state if we have an active call
+        if (this.activeCallId) {
+            this.retroPhone._toggleCallButtons(true);
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const root = document.querySelector('[data-agent-dashboard]');
     if (root) {
-        window.AgentDashboard = new AgentDashboard(root);
+        window.AgentDashboardUI = new AgentDashboardUI(root);
     }
 });

@@ -478,10 +478,21 @@ class AgentTelephonyService:
                 }
             
             # Use Asterisk service to hangup if channel is active
-            if call_log.uniqueid and self.asterisk_server:
+            if self.asterisk_server:
                 asterisk_service = AsteriskService(self.asterisk_server)
-                # TODO: Implement channel hangup via ARI
-            
+                # Try to hang up agent bridge/session
+                session = AgentDialerSession.objects.filter(agent=self.agent, campaign=call_log.campaign).first()
+                if session:
+                    if session.agent_bridge_id:
+                        asterisk_service.destroy_bridge(session.agent_bridge_id)
+                    if session.agent_channel_id:
+                        asterisk_service.hangup_channel(session.agent_channel_id)
+                # Also hang up customer leg if we know the channel/uniqueid
+                if call_log.channel:
+                    asterisk_service.hangup_channel(call_log.channel)
+                if call_log.uniqueid:
+                    asterisk_service.hangup_channel(call_log.uniqueid)
+
             # Update call log
             call_log.call_status = 'completed'
             call_log.end_time = timezone.now()
@@ -499,11 +510,23 @@ class AgentTelephonyService:
                 )
             
             call_log.save()
-            
+
+            # Mark associated queue row as completed/wrapped
+            try:
+                from campaigns.models import OutboundQueue
+                OutboundQueue.objects.filter(id=call_log.id).update(
+                    status='completed',
+                    last_tried_at=timezone.now(),
+                    wrapup_at=timezone.now(),
+                    disposition=call_log.disposition.code if call_log.disposition else ''
+                )
+            except Exception:
+                pass
+
             # Update agent status back to available
             agent_status = getattr(self.agent, 'agent_status', None)
             if agent_status:
-                agent_status.set_status('available')
+                agent_status.set_status('wrapup')
                 agent_status.current_call_id = ''
                 agent_status.call_start_time = None
                 agent_status.save()
@@ -567,9 +590,9 @@ class AgentTelephonyService:
                 'error': f'Transfer failed: {str(e)}'
             }
     
-    def hold_call(self, call_id):
+    def hold_call(self, call_id, action='hold'):
         """
-        Put call on hold
+        Put call on hold or unhold
         """
         try:
             call_log = CallLog.objects.filter(id=call_id, agent=self.agent).first()
@@ -579,13 +602,32 @@ class AgentTelephonyService:
                     'error': 'Call not found'
                 }
             
-            # TODO: Implement hold via Asterisk ARI
+            asterisk_service = AsteriskService(self.asterisk_server)
             
-            return {
-                'success': True,
-                'call_id': call_id,
-                'message': 'Call placed on hold'
-            }
+            # We need to hold the CUSTOMER channel, not the agent channel usually.
+            # But in a bridge, holding the agent channel might just play music to the agent?
+            # No, we want to play music to the CUSTOMER.
+            # So we need the customer channel ID.
+            target_channel = call_log.channel # This is usually the customer channel in outbound calls
+            
+            if not target_channel:
+                 return {'success': False, 'error': 'No active channel for this call'}
+
+            if action == 'hold':
+                result = asterisk_service.hold_channel(target_channel)
+                msg = 'Call placed on hold'
+            else:
+                result = asterisk_service.stop_moh_channel(target_channel)
+                msg = 'Call resumed'
+            
+            if result.get('success'):
+                return {
+                    'success': True,
+                    'call_id': call_id,
+                    'message': msg,
+                    'is_on_hold': (action == 'hold')
+                }
+            return result
             
         except Exception as e:
             logger.error(f"Error holding call: {str(e)}")

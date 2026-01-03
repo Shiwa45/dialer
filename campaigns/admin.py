@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Campaign, CampaignAgent, Disposition, CampaignDisposition, Script, CampaignStats, CampaignHours, OutboundQueue, CampaignCarrier
+from django.utils.html import format_html
+from .models import Campaign, CampaignAgent, Disposition, CampaignDisposition, Script, CampaignStats, CampaignHours, OutboundQueue, CampaignCarrier, DialerHopper
 
 
 class CampaignAgentInline(admin.TabularInline):
@@ -25,8 +26,8 @@ class CampaignAdmin(admin.ModelAdmin):
         }),
         ('Dialing', {
             'fields': (
-                'max_attempts', 'call_timeout', 'retry_delay', 'dial_ratio', 'max_lines', 'abandon_rate',
-                'dial_speed', 'custom_dials_per_agent',
+                'max_attempts', 'call_timeout', 'retry_delay', 'dial_ratio', 'dial_level', 'max_lines', 'abandon_rate',
+                'dial_speed', 'custom_dials_per_agent', 'hopper_size', 'hopper_level', 'dial_timeout', 'local_call_time',
             )
         }),
         ('Routing', {
@@ -85,3 +86,43 @@ class OutboundQueueAdmin(admin.ModelAdmin):
     list_filter = ('campaign', 'status')
     search_fields = ('phone_number',)
 
+
+@admin.register(DialerHopper)
+class DialerHopperAdmin(admin.ModelAdmin):
+    list_display = ('campaign', 'phone_number', 'priority', 'status_badge', 'hopper_entry_time', 'dialed_at')
+    list_filter = ('campaign', 'status', 'priority')
+    search_fields = ('phone_number', 'lead__first_name', 'lead__last_name')
+    readonly_fields = ('hopper_entry_time', 'locked_at', 'dialed_at', 'completed_at', 'channel_id')
+    actions = ['reset_to_new', 'mark_as_failed', 'clear_selected']
+    
+    def status_badge(self, obj):
+        colors = {
+            'new': 'green',
+            'locked': 'orange',
+            'dialing': 'blue',
+            'completed': 'gray',
+            'dropped': 'red',
+            'failed': 'darkred'
+        }
+        color = colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color, obj.status.upper()
+        )
+    status_badge.short_description = 'Status'
+    
+    def reset_to_new(self, request, queryset):
+        count = queryset.update(status='new', locked_by=None, locked_at=None)
+        self.message_user(request, f'{count} entries reset to NEW status')
+    reset_to_new.short_description = 'Reset selected to NEW'
+    
+    def mark_as_failed(self, request, queryset):
+        count = queryset.update(status='failed')
+        self.message_user(request, f'{count} entries marked as FAILED')
+    mark_as_failed.short_description = 'Mark selected as FAILED'
+    
+    def clear_selected(self, request, queryset):
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f'{count} hopper entries deleted')
+    clear_selected.short_description = 'Delete selected entries'

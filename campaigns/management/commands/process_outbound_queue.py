@@ -5,6 +5,11 @@ from django.db.models import Q
 from campaigns.models import OutboundQueue, Campaign, CampaignCarrier
 from agents.models import AgentDialerSession
 from telephony.services import AsteriskService
+from telephony.routing import (
+    select_carrier_for_campaign,
+    build_dial_number,
+    build_call_variables,
+)
 
 class Command(BaseCommand):
     help = 'Process outbound queue: originate customer legs to ready agents (basic POC)'
@@ -24,15 +29,23 @@ class Command(BaseCommand):
             ).order_by('created_at').first()
             if not session:
                 continue
-            service = AsteriskService(session.asterisk_server)
+            carrier = select_carrier_for_campaign(item.campaign)
+            target_server = carrier.asterisk_server if carrier else session.asterisk_server
+            service = AsteriskService(target_server)
             # Originate via Local into from-campaign; dialplan selects carrier by prefix
-            number_to_dial = f"{item.campaign.dial_prefix}{item.phone_number}" if item.campaign.dial_prefix else item.phone_number
+            number_to_dial = build_dial_number(item.phone_number, campaign=item.campaign, carrier=carrier)
+            variables = build_call_variables(
+                call_type='customer_leg',
+                campaign=item.campaign,
+                queue_item=item,
+                carrier=carrier,
+            )
             res = service.originate_local_channel(
                 number=number_to_dial,
                 context='from-campaign',
                 app='autodialer',
                 callerid=f"OUT {item.phone_number}",
-                variables={'CALL_TYPE': 'customer_leg', 'BRIDGE_ID': session.agent_bridge_id, 'QUEUE_ID': str(item.id)}
+                variables=variables,
             )
             if res.get('success'):
                 item.status = 'dialing'

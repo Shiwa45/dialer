@@ -81,8 +81,34 @@ class Campaign(TimeStampedModel):
     
     # Dialing Parameters
     dial_ratio = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
+    dial_level = models.DecimalField(
+        max_digits=4, 
+        decimal_places=2, 
+        default=1.0,
+        help_text="Predictive dial multiplier: calls per available agent (e.g., 1.5 = 1.5 calls per agent)"
+    )
     max_lines = models.PositiveIntegerField(default=10)
     abandon_rate = models.DecimalField(max_digits=5, decimal_places=2, default=3.0)
+    hopper_size = models.PositiveIntegerField(
+        default=500,
+        help_text="Max leads to keep in the hopper/cache for this campaign"
+    )
+    hopper_level = models.PositiveIntegerField(
+        default=100,
+        help_text="Target number of leads to maintain in hopper (refills when below this)"
+    )
+    dial_timeout = models.PositiveIntegerField(
+        default=30,
+        help_text="Seconds to wait for call answer before considering failed"
+    )
+    local_call_time = models.BooleanField(
+        default=True,
+        help_text="Respect lead timezone for calling hours"
+    )
+    wrapup_timeout = models.PositiveIntegerField(
+        default=120,
+        help_text="Seconds an agent can remain in wrap-up before auto-available"
+    )
     
     # Recording and Monitoring
     enable_recording = models.BooleanField(default=True)
@@ -298,6 +324,10 @@ class CampaignStats(TimeStampedModel):
     calls_made = models.PositiveIntegerField(default=0)
     calls_answered = models.PositiveIntegerField(default=0)
     calls_dropped = models.PositiveIntegerField(default=0)
+    drop_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Calls answered by customer but no agent available (compliance metric)"
+    )
     
     # Lead Statistics
     leads_processed = models.PositiveIntegerField(default=0)
@@ -395,6 +425,88 @@ class OutboundQueue(TimeStampedModel):
     
     def __str__(self):
         return f"{self.campaign.name} - {self.phone_number} ({self.status})"
+
+
+class DialerHopper(TimeStampedModel):
+    """
+    Vicidial-style hopper for predictive/progressive dialing
+    Holds eligible leads ready to be dialed
+    """
+    HOPPER_STATUS = [
+        ('new', 'New'),
+        ('locked', 'Locked'),
+        ('dialing', 'Dialing'),
+        ('completed', 'Completed'),
+        ('dropped', 'Dropped'),
+        ('failed', 'Failed'),
+    ]
+    
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='hopper_entries')
+    lead = models.ForeignKey('leads.Lead', on_delete=models.CASCADE, related_name='hopper_entries')
+    phone_number = models.CharField(max_length=32)
+    
+    # Priority: 1-99, higher = dialed sooner
+    priority = models.PositiveIntegerField(default=50, validators=[MinValueValidator(1), MaxValueValidator(99)])
+    
+    status = models.CharField(max_length=20, choices=HOPPER_STATUS, default='new')
+    hopper_entry_time = models.DateTimeField(auto_now_add=True)
+    
+    # Tracking
+    locked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='locked_hopper_entries')
+    locked_at = models.DateTimeField(null=True, blank=True)
+    dialed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Call tracking
+    channel_id = models.CharField(max_length=100, blank=True)
+    call_log = models.ForeignKey('calls.CallLog', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['campaign', 'status', '-priority']),
+            models.Index(fields=['status', 'hopper_entry_time']),
+            models.Index(fields=['campaign', 'lead']),
+        ]
+        ordering = ['-priority', 'hopper_entry_time']
+        verbose_name = "Dialer Hopper Entry"
+        verbose_name_plural = "Dialer Hopper Entries"
+    
+    def __str__(self):
+        return f"{self.campaign.name} - {self.phone_number} (P:{self.priority}, {self.status})"
+    
+    def lock_for_dialing(self, user=None):
+        """Lock this hopper entry for dialing"""
+        self.status = 'locked'
+        self.locked_by = user
+        self.locked_at = timezone.now()
+        self.save(update_fields=['status', 'locked_by', 'locked_at', 'updated_at'])
+    
+    def mark_dialing(self, channel_id):
+        """Mark as currently dialing"""
+        self.status = 'dialing'
+        self.channel_id = channel_id
+        self.dialed_at = timezone.now()
+        self.save(update_fields=['status', 'channel_id', 'dialed_at', 'updated_at'])
+    
+    def mark_completed(self, call_log=None):
+        """Mark as successfully completed"""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        if call_log:
+            self.call_log = call_log
+        self.save(update_fields=['status', 'completed_at', 'call_log', 'updated_at'])
+    
+    def mark_dropped(self):
+        """Mark as dropped (answered but no agent available)"""
+        self.status = 'dropped'
+        self.completed_at = timezone.now()
+        self.save(update_fields=['status', 'completed_at', 'updated_at'])
+    
+    def mark_failed(self):
+        """Mark as failed"""
+        self.status = 'failed'
+        self.completed_at = timezone.now()
+        self.save(update_fields=['status', 'completed_at', 'updated_at'])
 
 # campaigns/apps.py
 from django.apps import AppConfig

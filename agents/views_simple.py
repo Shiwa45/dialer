@@ -12,6 +12,8 @@ from datetime import timedelta
 import logging
 
 from django.db.models import Q
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from .models import AgentCallbackTask, AgentScript, AgentQueue, AgentBreakCode
 from .telephony_service import AgentTelephonyService
 from campaigns.models import Campaign, Disposition
@@ -133,6 +135,7 @@ def agent_dashboard(request):
             'transfer_call_url': reverse('agents:transfer_call'),
             'phone_info': phone_info,
             'transfer_targets': transfer_targets,
+            'webrtc_config_url': reverse('agents:get_webrtc_config'),
         }
         
         return render(request, 'agents/simple_dashboard.html', context)
@@ -362,10 +365,11 @@ def transfer_call(request):
 @require_POST
 def hold_call(request):
     """
-    Put call on hold
+    Put call on hold or unhold
     """
     agent = request.user
     call_id = request.POST.get('call_id')
+    action = request.POST.get('action', 'hold') # 'hold' or 'unhold'
     
     if not call_id:
         return JsonResponse({
@@ -375,7 +379,7 @@ def hold_call(request):
     
     try:
         telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.hold_call(call_id)
+        result = telephony_service.hold_call(call_id, action=action)
         return JsonResponse(result)
         
     except Exception as e:
@@ -454,11 +458,11 @@ def update_status(request):
         'break': 'break',
         'lunch': 'lunch',
         'busy': 'busy',
+        'wrapup': 'wrapup',
         'training': 'training',
         'meeting': 'meeting',
         'system_issues': 'system_issues',
         'offline': 'offline',
-        'wrapup': 'busy'
     }
     
     if new_status not in status_mapping:
@@ -474,6 +478,48 @@ def update_status(request):
         # Update status
         mapped_status = status_mapping[new_status]
         agent_status.set_status(mapped_status, break_reason)
+
+        # Manage persistent agent session for autodialing
+        telephony_service = AgentTelephonyService(agent)
+        if mapped_status == 'available':
+            # Ensure we have a campaign for session binding
+            campaign = agent_status.current_campaign
+            if not campaign:
+                campaign = Campaign.objects.filter(
+                    assigned_users=agent,
+                    status='active'
+                ).first()
+                if campaign:
+                    agent_status.current_campaign = campaign
+                    agent_status.save(update_fields=['current_campaign'])
+            if campaign:
+                from agents.models import AgentDialerSession
+                existing_session = AgentDialerSession.objects.filter(
+                    agent=agent,
+                    status__in=['connecting', 'ready']
+                ).first()
+                if not existing_session:
+                    telephony_service.login_campaign(campaign.id)
+        elif mapped_status in ['break', 'lunch', 'training', 'meeting', 'system_issues', 'offline']:
+            # Disconnect agent leg when unavailable
+            telephony_service.logout_session()
+
+        # Broadcast status update to agent websocket channel for real-time UI
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"agent_{agent.id}",
+                {
+                    'type': 'call_event',
+                    'data': {
+                        'type': 'status_update',
+                        'status': mapped_status,
+                        'message': f'Status updated to {mapped_status}'
+                    }
+                }
+            )
+        except Exception:
+            pass
         
         return JsonResponse({
             'success': True,
@@ -488,6 +534,22 @@ def update_status(request):
             'error': 'Failed to update status'
         })
 
+
+@login_required
+@agent_required
+@require_http_methods(["GET"])
+def get_webrtc_config(request):
+    """
+    Return WebRTC config; if not enabled, return success False.
+    """
+    agent = request.user
+    try:
+        telephony_service = AgentTelephonyService(agent)
+        cfg = telephony_service.get_webrtc_config() or {}
+        return JsonResponse(cfg)
+    except Exception as e:
+        logger.error(f"Error getting WebRTC config for {agent.username}: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'WebRTC not available'})
 
 @login_required
 @agent_required
@@ -861,6 +923,18 @@ def set_disposition(request):
         call_log.disposition = disposition
         call_log.disposition_notes = notes
         call_log.save()
+
+        # If this was from outbound queue, mark wrap-up/disposition on the queue row
+        try:
+            from campaigns.models import OutboundQueue
+            OutboundQueue.objects.filter(id=call_log.id).update(
+                status='completed',
+                last_tried_at=timezone.now(),
+                disposition=disposition.code,
+                wrapup_at=timezone.now()
+            )
+        except Exception:
+            pass
         
         # Update lead status if applicable
         if call_log.lead and disposition.status_to_set:

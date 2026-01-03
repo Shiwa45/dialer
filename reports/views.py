@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Avg, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from datetime import timedelta, datetime
 import csv
 from io import BytesIO, StringIO
@@ -440,3 +440,73 @@ def realtime(request):
         'stats': stats,
     }
     return render(request, 'reports/realtime.html', context)
+
+
+@login_required
+def monitor_dashboard(request):
+    """
+    Full Supervisor Monitor Dashboard
+    """
+    context = {
+        'campaigns': Campaign.objects.filter(status='active'),
+    }
+    return render(request, 'reports/monitor_dashboard.html', context)
+
+
+@login_required
+def monitor_api(request):
+    """
+    API for real-time monitor updates
+    """
+    from users.models import AgentStatus
+    from campaigns.models import OutboundQueue
+    
+    # 1. Agent Stats
+    agents = AgentStatus.objects.select_related('user').all()
+    agent_data = []
+    for a in agents:
+        agent_data.append({
+            'id': a.user.id,
+            'name': a.user.username,
+            'status': a.status,
+            'campaign': a.current_campaign.name if a.current_campaign else '-',
+            'call_id': a.current_call_id,
+            'duration': int((timezone.now() - a.status_changed_at).total_seconds()) if a.status_changed_at else 0,
+        })
+        
+    # 2. Queue Stats (Active Campaigns)
+    campaigns = Campaign.objects.filter(status='active')
+    queue_data = []
+    for c in campaigns:
+        q_stats = OutboundQueue.objects.filter(campaign=c).aggregate(
+            pending=Count('id', filter=Q(status='new')),
+            dialing=Count('id', filter=Q(status='dialing')),
+            connected=Count('id', filter=Q(status='answered')),
+        )
+        queue_data.append({
+            'id': c.id,
+            'name': c.name,
+            'pending': q_stats['pending'],
+            'dialing': q_stats['dialing'],
+            'connected': q_stats['connected'],
+        })
+        
+    # 3. System Totals (Today)
+    today = timezone.now().date()
+    daily_stats = CallLog.objects.filter(start_time__date=today).aggregate(
+        total=Count('id'),
+        answered=Count('id', filter=Q(call_status='answered')),
+        sales=Count('id', filter=Q(disposition__is_sale=True))
+    )
+        
+    return JsonResponse({
+        'success': True,
+        'agents': agent_data,
+        'queues': queue_data,
+        'stats': {
+            'total_calls': daily_stats['total'],
+            'answered': daily_stats['answered'],
+            'sales': daily_stats['sales'],
+            'active_agents': agents.filter(status__in=['available', 'busy', 'wrapup']).count()
+        }
+    })

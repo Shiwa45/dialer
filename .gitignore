@@ -1,0 +1,16 @@
+# Virtual environment
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Logs and local artifacts
+*.log
+logs/
+celerybeat-schedule
+
+# OS metadata
+.DS_Store
+Thumbs.db

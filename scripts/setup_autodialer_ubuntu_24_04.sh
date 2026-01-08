@@ -86,7 +86,9 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'"
 
 # Restore database
 echo "📦 Restoring database from seed dump"
-PGPASSWORD="$DB_PASSWORD" pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c -d "$DB_NAME" "$DB_DUMP"
+# -c: clean (drop) database objects before recreating them
+# --if-exists: used with -c, prevents errors if the objects don't exist yet
+PGPASSWORD="$DB_PASSWORD" pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c --if-exists -d "$DB_NAME" "$DB_DUMP" || true
 
 # Restore media
 if [[ -f "$MEDIA_TAR" ]]; then

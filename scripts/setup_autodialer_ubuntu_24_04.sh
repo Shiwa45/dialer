@@ -68,7 +68,7 @@ sudo apt-get install -y \
   libpq-dev postgresql postgresql-contrib \
   redis-server \
   unixodbc odbc-postgresql \
-  asterisk asterisk-odbc
+  asterisk
 
 sudo systemctl enable --now redis-server
 sudo systemctl enable --now postgresql

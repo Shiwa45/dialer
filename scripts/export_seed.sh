@@ -54,4 +54,16 @@ print('ARI_PORT='+ str(s.ari_port if s else 8088));\
 print('ARI_APPLICATION='+ (s.ari_application if s else 'autodialer'));\
 print('ARI_HOST='+ (s.ari_host if s else 'localhost'))" > "$SEED_DIR/asterisk.env"
 
+echo "📦 Exporting .env and generated configs"
+if [[ -f .env ]]; then
+    cp .env "$SEED_DIR/.env.backup"
+    echo "  - Copied .env to seed/.env.backup"
+fi
+
+if [[ -d docs/generated ]]; then
+    tar -czf "$SEED_DIR/configs.tar.gz" -C docs generated
+    echo "  - Compressed docs/generated to seed/configs.tar.gz"
+fi
+
 echo "✅ Seed export complete"
+echo "Copy the 'seed' directory to your target machine."

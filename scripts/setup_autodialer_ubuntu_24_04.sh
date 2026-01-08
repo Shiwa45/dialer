@@ -202,7 +202,12 @@ sudo asterisk -rx "core reload" || true
 
 # Write a local .env if missing (for DB + redis)
 if [[ ! -f .env ]]; then
-  cat <<ENVFILE > .env
+  if [[ -f "$SEED_DIR/.env.backup" ]]; then
+    echo "📄 Restoring .env from seed backup"
+    cp "$SEED_DIR/.env.backup" .env
+  else
+    echo "📄 Generating fresh .env (no backup found)"
+    cat <<ENVFILE > .env
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
@@ -211,7 +216,29 @@ DB_PORT=${DB_PORT}
 REDIS_URL=redis://127.0.0.1:6379/0
 USE_REDIS=1
 ENVFILE
+  fi
 fi
+
+# Restore generated configs
+if [[ -f "$SEED_DIR/configs.tar.gz" ]]; then
+    echo "📦 Restoring generated configs"
+    mkdir -p docs
+    tar -xzf "$SEED_DIR/configs.tar.gz" -C docs
+    
+    # Copy again to /etc/asterisk just in case they were updated
+    if [[ -f docs/generated/pjsip_realtime.conf ]]; then
+        sudo cp -f docs/generated/pjsip_realtime.conf /etc/asterisk/pjsip_realtime.conf
+        sudo cp -f docs/generated/extconfig.conf /etc/asterisk/extconfig.conf
+        sudo cp -f docs/generated/res_odbc.conf /etc/asterisk/res_odbc.conf
+        sudo cp -f docs/generated/sorcery.conf /etc/asterisk/sorcery.conf
+    fi
+fi
+
+echo "⚙️  Collecting static files..."
+python manage.py collectstatic --noinput
+
+chmod +x start_autodialer.sh
+chmod +x scripts/*.sh
 
 echo "✅ Setup complete."
 echo "Next: run ./start_autodialer.sh"

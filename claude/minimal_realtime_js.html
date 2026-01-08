@@ -1,0 +1,502 @@
+<!-- Minimal Real-time Updates for Your Existing simple_dashboard.html -->
+<!-- ADD this script before </body> tag - preserves your existing UI design -->
+
+<script>
+// Minimal WebSocket integration for your existing simple_dashboard.html
+// Preserves your UI design, just adds real-time updates
+
+(function() {
+    // Configuration
+    let socket = null;
+    let currentCall = null;
+    let dispositionModal = null;
+    let timerInterval = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    
+    // Initialize WebSocket connection
+    function connectWebSocket() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            return;
+        }
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/agent/`;
+        
+        console.log('🔌 Connecting WebSocket to preserve your workflow...');
+        
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = function() {
+            console.log('✅ WebSocket connected - your workflow preserved');
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+        };
+        
+        socket.onclose = function() {
+            console.log('🔌 WebSocket disconnected');
+            updateConnectionStatus(false);
+            
+            // Auto-reconnect for better reliability
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 3000 * reconnectAttempts);
+            }
+        };
+        
+        socket.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (e) {
+                console.error('WebSocket message error:', e);
+            }
+        };
+        
+        socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+    
+    function handleWebSocketMessage(data) {
+        console.log('📨 Received:', data.type);
+        
+        // Handle your existing event structure
+        if (data.type === 'call_event' && data.data) {
+            const eventData = data.data;
+            
+            if (eventData.type === 'call_connected') {
+                handleCallConnected(eventData);
+            } else if (eventData.type === 'call_ended') {
+                handleCallEnded(eventData);
+            } else if (eventData.type === 'status_update') {
+                handleStatusUpdate(eventData);
+            }
+        }
+    }
+    
+    function handleCallConnected(callData) {
+        console.log('📞 Call connected - preserving your UI');
+        currentCall = callData;
+        
+        // Update your existing UI elements (data-* attributes from your template)
+        const callPanel = document.querySelector('[data-call-panel]');
+        const callPlaceholder = document.querySelector('[data-call-placeholder]');
+        const callDetails = document.querySelector('[data-call-details]');
+        
+        if (callPlaceholder) callPlaceholder.style.display = 'none';
+        if (callDetails) callDetails.hidden = false;
+        
+        // Update call information using your existing elements
+        const numberEl = document.querySelector('[data-call-number]');
+        const stateEl = document.querySelector('[data-call-state]');
+        
+        if (numberEl) {
+            numberEl.textContent = callData.lead?.phone_number || 'Unknown Number';
+        }
+        if (stateEl) {
+            stateEl.textContent = 'Connected';
+            stateEl.setAttribute('data-state', 'connected');
+        }
+        
+        // Show lead information in your existing lead card
+        if (callData.lead) {
+            showLeadInfoInYourUI(callData.lead);
+        }
+        
+        // Enable disposition button (your existing element)
+        const dispBtn = document.querySelector('[data-open-disposition]');
+        if (dispBtn) dispBtn.disabled = false;
+        
+        // Start call timer using your existing element
+        startCallTimer();
+        
+        console.log('✅ Call connected - your UI preserved');
+    }
+    
+    function handleCallEnded(callData) {
+        console.log('📴 Call ended - preserving your disposition flow');
+        
+        // Stop timer
+        stopCallTimer();
+        
+        // Show disposition modal after short delay (preserves your UX)
+        if (callData.disposition_required && currentCall) {
+            setTimeout(() => {
+                showDispositionModal(callData.call_id);
+            }, 500);
+        }
+        
+        // Update call state
+        const stateEl = document.querySelector('[data-call-state]');
+        if (stateEl) {
+            stateEl.textContent = 'Call Ended';
+            stateEl.setAttribute('data-state', 'idle');
+        }
+    }
+    
+    function showLeadInfoInYourUI(lead) {
+        // Update your existing lead card elements (preserves your design)
+        const leadCard = document.querySelector('[data-lead-card]');
+        if (leadCard) leadCard.hidden = false;
+        
+        // Use your existing data-* elements
+        const nameEl = document.querySelector('[data-lead-name]');
+        const phoneEl = document.querySelector('[data-lead-phone]');
+        const emailEl = document.querySelector('[data-lead-email]');
+        const companyEl = document.querySelector('[data-lead-company]');
+        
+        if (nameEl) {
+            const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+            nameEl.textContent = fullName || 'Unknown Name';
+        }
+        if (phoneEl) phoneEl.textContent = lead.phone_number || '—';
+        if (emailEl) emailEl.textContent = lead.email || '—';
+        if (companyEl) companyEl.textContent = lead.company || '—';
+        
+        console.log('✅ Lead info displayed in your existing UI');
+    }
+    
+    function showDispositionModal(callId) {
+        if (!dispositionModal) {
+            createDispositionModalForYourTheme();
+        }
+        
+        document.getElementById('modalCallId').value = callId;
+        loadDispositionsForYourUI();
+        dispositionModal.style.display = 'flex';
+        
+        console.log('📋 Disposition modal shown - your theme preserved');
+    }
+    
+    function createDispositionModalForYourTheme() {
+        // Create modal that matches your existing theme and CSS variables
+        const modalHTML = `
+            <div id="dispositionModal" style="
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                backdrop-filter: blur(8px);
+            ">
+                <div style="
+                    background: var(--card, #ffffff);
+                    border: 1px solid var(--border, #e2e8f0);
+                    border-radius: 8px;
+                    padding: 2rem;
+                    width: 90%;
+                    max-width: 500px;
+                    box-shadow: 0 20px 60px var(--shadow-heavy, rgba(0,0,0,0.3));
+                ">
+                    <h3 style="
+                        margin: 0 0 1rem; 
+                        color: var(--text, #1e293b);
+                        font-family: inherit;
+                        font-size: 1.25rem;
+                        font-weight: 700;
+                    ">Call Disposition</h3>
+                    
+                    <form id="dispositionForm">
+                        <div style="margin-bottom: 1rem;">
+                            <label style="
+                                display: block; 
+                                margin-bottom: 0.5rem; 
+                                font-weight: 600;
+                                color: var(--text-secondary, #475569);
+                                font-size: 0.875rem;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                            ">Disposition *</label>
+                            <select id="dispositionSelect" required style="
+                                width: 100%;
+                                padding: 0.75rem;
+                                border: 1px solid var(--border, #e2e8f0);
+                                border-radius: 6px;
+                                background: var(--card-light, #f8fafc);
+                                color: var(--text, #1e293b);
+                                font-family: inherit;
+                            ">
+                                <option value="">Select disposition...</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="
+                                display: block; 
+                                margin-bottom: 0.5rem; 
+                                font-weight: 600;
+                                color: var(--text-secondary, #475569);
+                                font-size: 0.875rem;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                            ">Notes</label>
+                            <textarea id="dispositionNotes" rows="3" placeholder="Add call notes..." style="
+                                width: 100%;
+                                padding: 0.75rem;
+                                border: 1px solid var(--border, #e2e8f0);
+                                border-radius: 6px;
+                                background: var(--card-light, #f8fafc);
+                                color: var(--text, #1e293b);
+                                resize: vertical;
+                                font-family: inherit;
+                            "></textarea>
+                        </div>
+                        
+                        <input type="hidden" id="modalCallId">
+                        
+                        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                            <button type="button" onclick="closeDispositionModal()" style="
+                                padding: 0.75rem 1.5rem;
+                                border: 1px solid var(--border, #e2e8f0);
+                                background: transparent;
+                                color: var(--text-secondary, #475569);
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-family: inherit;
+                                font-weight: 600;
+                                text-transform: uppercase;
+                                font-size: 0.875rem;
+                                letter-spacing: 0.05em;
+                            ">Cancel</button>
+                            <button type="submit" style="
+                                padding: 0.75rem 1.5rem;
+                                border: none;
+                                background: var(--accent, #dc2626);
+                                color: white;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-family: inherit;
+                                font-weight: 600;
+                                text-transform: uppercase;
+                                font-size: 0.875rem;
+                                letter-spacing: 0.05em;
+                            ">Submit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        dispositionModal = document.getElementById('dispositionModal');
+        
+        document.getElementById('dispositionForm').addEventListener('submit', submitDisposition);
+        
+        console.log('✅ Disposition modal created with your theme');
+    }
+    
+    async function loadDispositionsForYourUI() {
+        try {
+            const response = await fetch('/agents/api/dispositions/');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('dispositionSelect');
+                select.innerHTML = '<option value="">Select disposition...</option>';
+                
+                data.dispositions.forEach(disp => {
+                    const option = document.createElement('option');
+                    option.value = disp.id;
+                    option.textContent = disp.name;
+                    option.dataset.callback = disp.schedule_callback;
+                    select.appendChild(option);
+                });
+                
+                console.log('✅ Loaded dispositions for your workflow');
+            }
+        } catch (error) {
+            console.error('Failed to load dispositions:', error);
+        }
+    }
+    
+    async function submitDisposition(e) {
+        e.preventDefault();
+        
+        const callId = document.getElementById('modalCallId').value;
+        const dispositionId = document.getElementById('dispositionSelect').value;
+        const notes = document.getElementById('dispositionNotes').value;
+        
+        if (!dispositionId) {
+            alert('Please select a disposition');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/agents/api/submit-disposition/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    call_id: callId,
+                    disposition_id: dispositionId,
+                    notes: notes
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                closeDispositionModal();
+                clearCallDisplay();
+                console.log('✅ Disposition submitted successfully');
+            } else {
+                alert('Error: ' + data.error);
+            }
+            
+        } catch (error) {
+            console.error('Disposition submission error:', error);
+            alert('Failed to submit disposition');
+        }
+    }
+    
+    window.closeDispositionModal = function() {
+        if (dispositionModal) {
+            dispositionModal.style.display = 'none';
+            document.getElementById('dispositionForm').reset();
+        }
+    };
+    
+    function clearCallDisplay() {
+        currentCall = null;
+        
+        // Reset your existing UI elements to initial state
+        const callPlaceholder = document.querySelector('[data-call-placeholder]');
+        const callDetails = document.querySelector('[data-call-details]');
+        const leadCard = document.querySelector('[data-lead-card]');
+        const dispBtn = document.querySelector('[data-open-disposition]');
+        
+        if (callPlaceholder) callPlaceholder.style.display = 'block';
+        if (callDetails) callDetails.hidden = true;
+        if (leadCard) leadCard.hidden = true;
+        if (dispBtn) dispBtn.disabled = true;
+        
+        stopCallTimer();
+        
+        console.log('✅ Call display cleared - your UI restored');
+    }
+    
+    // Call timer using your existing element
+    function startCallTimer() {
+        stopCallTimer();
+        const timerEl = document.querySelector('[data-call-duration]');
+        if (!timerEl) return;
+        
+        let seconds = 0;
+        timerInterval = setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+    
+    function stopCallTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+    
+    function updateConnectionStatus(connected) {
+        // Update any connection indicator if you have one in your UI
+        const statusEl = document.querySelector('[data-connection-status]');
+        if (statusEl) {
+            statusEl.textContent = connected ? 'Connected' : 'Disconnected';
+            statusEl.className = connected ? 'connected' : 'disconnected';
+        }
+        console.log(connected ? '✅ Connected' : '❌ Disconnected');
+    }
+    
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+    
+    function handleStatusUpdate(data) {
+        console.log('📊 Status update:', data.new_status);
+        
+        // Update status chips in your existing UI
+        const statusChips = document.querySelectorAll('.status-chip');
+        statusChips.forEach(chip => {
+            chip.classList.remove('is-active');
+            if (chip.getAttribute('data-status') === data.new_status) {
+                chip.classList.add('is-active');
+            }
+        });
+        
+        // Update any status display elements in your UI
+        const statusDisplay = document.querySelector('[data-agent-status]');
+        if (statusDisplay) {
+            statusDisplay.textContent = data.new_status.charAt(0).toUpperCase() + data.new_status.slice(1);
+        }
+    }
+    
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🎯 Initializing minimal real-time updates for your existing UI...');
+        
+        connectWebSocket();
+        
+        // Add click handler for your existing disposition button
+        const dispBtn = document.querySelector('[data-open-disposition]');
+        if (dispBtn) {
+            dispBtn.addEventListener('click', function() {
+                if (currentCall && currentCall.channel_id) {
+                    showDispositionModal(currentCall.channel_id);
+                } else {
+                    // Manual disposition
+                    showDispositionModal('manual');
+                }
+            });
+        }
+        
+        // Add click handlers for your existing status chips
+        const statusChips = document.querySelectorAll('.status-chip[data-status]');
+        statusChips.forEach(chip => {
+            chip.addEventListener('click', function() {
+                const newStatus = this.getAttribute('data-status');
+                updateAgentStatus(newStatus);
+            });
+        });
+        
+        console.log('✅ Real-time updates initialized - your existing UI preserved');
+    });
+    
+    // Agent status update function
+    async function updateAgentStatus(newStatus) {
+        try {
+            const response = await fetch('/agents/api/update-status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log(`✅ Status updated to: ${newStatus}`);
+                // Status will be updated via WebSocket message
+            } else {
+                console.error('Status update failed:', data.error);
+                alert('Failed to update status: ' + data.error);
+            }
+            
+        } catch (error) {
+            console.error('Status update error:', error);
+            alert('Failed to update status');
+        }
+    }
+    
+})();
+
+console.log('✅ Minimal real-time JavaScript loaded - preserves your existing simple_dashboard.html design');
+</script>

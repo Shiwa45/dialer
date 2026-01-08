@@ -112,22 +112,22 @@ echo ""
 
 # Start ARI Worker
 echo "1️⃣  Starting ARI Worker..."
-start_service "ARI Worker" "/usr/bin/python3 -u manage.py ari_worker"
+start_service "ARI Worker" "./env/bin/python -u manage.py ari_worker"
 sleep 2
 
 # Start Hopper Fill
 echo "2️⃣  Starting Hopper Fill..."
-start_service "Hopper Fill" "/usr/bin/python3 -u manage.py hopper_fill"
+start_service "Hopper Fill" "./env/bin/python -u manage.py hopper_fill"
 sleep 1
 
 # Start Predictive Dialer
 echo "3️⃣  Starting Predictive Dialer..."
-start_service "Predictive Dialer" "/usr/bin/python3 -u manage.py predictive_dialer"
+start_service "Predictive Dialer" "./env/bin/python -u manage.py predictive_dialer"
 sleep 1
 
 # Start Django Server (ASGI/Channels)
 echo "4️⃣  Starting Django Server (Daphne)..."
-start_service "Django Server" "/usr/bin/daphne -b 0.0.0.0 -p 8000 autodialer.asgi:application"
+start_service "Django Server" "./env/bin/daphne -b 0.0.0.0 -p 8000 autodialer.asgi:application"
 sleep 2
 
 echo ""

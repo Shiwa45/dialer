@@ -25,12 +25,39 @@ class AgentTelephonyService:
     
     def __init__(self, agent):
         self.agent = agent
-        self.agent_phone = self.get_agent_phone()
         self.asterisk_server = self.get_asterisk_server()
+        self.agent_phone = self.get_agent_phone()
         
     def get_agent_phone(self):
         """Get agent's assigned phone/extension"""
-        return Phone.objects.filter(user=self.agent, is_active=True).first()
+        primary = Phone.objects.filter(user=self.agent, is_active=True).first()
+
+        profile_ext = ''
+        try:
+            profile_ext = (self.agent.profile.extension or '').strip()
+        except Exception:
+            profile_ext = ''
+
+        profile_phone = None
+        if profile_ext:
+            profile_phone = Phone.objects.filter(extension=profile_ext, is_active=True).first()
+
+        if primary and profile_phone and primary.extension != profile_phone.extension:
+            # Prefer a registered extension if the assigned phone isn't registered.
+            if self.asterisk_server:
+                service = AsteriskService(self.asterisk_server)
+                primary_reg = service.get_endpoint_status(primary.extension).get('registered', False)
+                profile_reg = service.get_endpoint_status(profile_phone.extension).get('registered', False)
+                if profile_reg and not primary_reg:
+                    logger.warning(
+                        "Agent %s phone mismatch: using registered profile extension %s instead of %s",
+                        self.agent.username,
+                        profile_phone.extension,
+                        primary.extension,
+                    )
+                    return profile_phone
+
+        return primary or profile_phone
     
     def get_asterisk_server(self):
         """Get active Asterisk server"""
@@ -316,6 +343,11 @@ class AgentTelephonyService:
             return {'success': False, 'error': 'Phone or Asterisk server not configured'}
 
         try:
+            if not self.is_extension_registered():
+                return {
+                    'success': False,
+                    'error': f'Extension {self.agent_phone.extension} is not registered. Please register your softphone.'
+                }
             campaign = Campaign.objects.filter(id=campaign_id).first()
             if not campaign:
                 return {'success': False, 'error': 'Campaign not found'}

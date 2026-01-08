@@ -258,12 +258,13 @@ class AsteriskService:
                 'timeout': timeout,
             }
             if variables:
-                payload['variables'] = variables
+                clean_vars = {k: str(v) for k, v in variables.items() if v not in (None, '')}
+                payload['variables'] = clean_vars
                 # Also pass critical routing info in appArgs so StasisStart args are populated
                 args = []
                 for key in ['CALL_TYPE', 'BRIDGE_ID', 'QUEUE_ID', 'CAMPAIGN_ID', 'AGENT_ID', 'CUSTOMER_NUMBER']:
-                    if key in variables:
-                        args.append(f"{key}={variables[key]}")
+                    if key in clean_vars:
+                        args.append(f"{key}={clean_vars[key]}")
                 if args:
                     payload['appArgs'] = ','.join(args)
             r = self._ari_post("/channels", json_body=payload, timeout=timeout+5)
@@ -294,11 +295,12 @@ class AsteriskService:
                 payload['app'] = app
                 
             if variables:
-                payload['variables'] = variables
+                clean_vars = {k: str(v) for k, v in variables.items() if v not in (None, '')}
+                payload['variables'] = clean_vars
                 args = []
                 for key in ['CALL_TYPE', 'BRIDGE_ID', 'QUEUE_ID', 'CAMPAIGN_ID', 'AGENT_ID', 'CUSTOMER_NUMBER']:
-                    if key in variables:
-                        args.append(f"{key}={variables[key]}")
+                    if key in clean_vars:
+                        args.append(f"{key}={clean_vars[key]}")
                 if args and 'app' in payload:
                     payload['appArgs'] = ','.join(args)
 

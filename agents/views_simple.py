@@ -492,14 +492,21 @@ def update_status(request):
                 if campaign:
                     agent_status.current_campaign = campaign
                     agent_status.save(update_fields=['current_campaign'])
-            if campaign:
+            # Only create persistent agent legs for WebRTC; softphones dial on demand.
+            if campaign and telephony_service.agent_phone and telephony_service.agent_phone.webrtc_enabled:
                 from agents.models import AgentDialerSession
                 existing_session = AgentDialerSession.objects.filter(
                     agent=agent,
                     status__in=['connecting', 'ready']
                 ).first()
                 if not existing_session:
-                    telephony_service.login_campaign(campaign.id)
+                    result = telephony_service.login_campaign(campaign.id)
+                    if not result.get('success'):
+                        agent_status.set_status('offline')
+                        return JsonResponse({
+                            'success': False,
+                            'error': result.get('error', 'Softphone not registered')
+                        })
         elif mapped_status in ['break', 'lunch', 'training', 'meeting', 'system_issues', 'offline']:
             # Disconnect agent leg when unavailable
             telephony_service.logout_session()
@@ -904,7 +911,22 @@ def set_disposition(request):
     
     try:
         # Get call log and disposition
-        call_log = CallLog.objects.filter(id=call_id, agent=agent).first()
+        call_log = None
+        try:
+            call_pk = int(call_id)
+        except (TypeError, ValueError):
+            call_pk = None
+
+        if call_pk is not None:
+            call_log = CallLog.objects.filter(id=call_pk, agent=agent).first()
+        if not call_log:
+            # Fallback for non-numeric IDs (e.g., uniqueid/channel id)
+            call_log = CallLog.objects.filter(
+                Q(channel=call_id) |
+                Q(uniqueid=call_id) |
+                Q(call_id=call_id),
+                agent=agent
+            ).first()
         disposition = Disposition.objects.filter(id=disposition_id).first()
         
         if not call_log:
@@ -937,11 +959,25 @@ def set_disposition(request):
             pass
         
         # Update lead status if applicable
-        if call_log.lead and disposition.status_to_set:
+        if call_log.lead:
             lead = call_log.lead
-            lead.status = disposition.status_to_set
-            lead.last_contact_date = timezone.now().date()
-            lead.save()
+            allowed_statuses = {key for key, _ in Lead.STATUS_CHOICES}
+            new_status = None
+            if disposition.adds_to_dnc:
+                new_status = 'dnc'
+            elif disposition.is_sale:
+                new_status = 'sale'
+            elif disposition.requires_callback:
+                new_status = 'callback'
+            elif disposition.category in allowed_statuses:
+                new_status = disposition.category
+            else:
+                new_status = 'contacted'
+
+            if new_status:
+                lead.status = new_status
+                lead.last_contact_date = timezone.now().date()
+                lead.save()
         
         # Return agent to available after wrapping call
         agent_status, _ = AgentStatus.objects.get_or_create(user=agent)

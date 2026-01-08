@@ -180,48 +180,21 @@ class Command(BaseCommand):
         4. Recent activity
         5. **Softphone registration status**
         """
-        # Agents must be:
-        # 1. Logged into this campaign (AgentDialerSession)
-        # 2. Status = 'ready' (ready to take calls)
-        # 3. Not in wrapup timeout
-        # 4. **Softphone must be registered**
-        
-        from django.utils import timezone
-        from datetime import timedelta
+        # Only count agents who are available, assigned to the campaign,
+        # and have a registered softphone extension.
         from agents.telephony_service import AgentTelephonyService
-        
-        # Get all ready sessions for this campaign
-        ready_sessions = AgentDialerSession.objects.filter(
-            campaign=campaign,
-            status='ready'
-        )
-        
-        # Filter out agents still in wrapup (if wrapup_timeout is set)
-        available_count = 0
-        for session in ready_sessions:
-            # Check if agent status is actually ready
-            agent_status = getattr(session.agent, 'agent_status', None)
-            if not agent_status or agent_status.status != 'available':
-                continue
-            
-            # **CRITICAL: Check if softphone is registered**
-            telephony_service = AgentTelephonyService(session.agent)
-            if not telephony_service.is_extension_registered():
-                logger.warning(
-                    f"Agent {session.agent.username} marked as ready but softphone not registered. "
-                    f"Skipping from available count."
-                )
-                continue
-            
-            # Check if agent is past wrapup timeout
-            if campaign.wrapup_timeout > 0 and session.last_call_end:
-                wrapup_end = session.last_call_end + timedelta(seconds=campaign.wrapup_timeout)
-                if timezone.now() < wrapup_end:
-                    continue
-            
-            available_count += 1
-        
-        return available_count
+
+        candidates = AgentStatus.objects.filter(
+            status='available',
+            user__assigned_campaigns=campaign
+        ).select_related('user')
+
+        count = 0
+        for agent_status in candidates:
+            telephony = AgentTelephonyService(agent_status.user)
+            if telephony.is_extension_registered():
+                count += 1
+        return count
 
     def calculate_dial_count(self, campaign, available_agents, active_calls):
         """

@@ -4,32 +4,287 @@
 {% block title %}Edit Campaign - {{ campaign.name }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Edit Campaign: {{ campaign.name }}</h1>
-    <form method="post" novalidate>
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-        {% for field in form %}
-            <div class="mb-3">
-                {{ field.label_tag }}
-                {{ field }}
-                {% if field.help_text %}
-                    <small class="form-text text-muted">{{ field.help_text }}</small>
-                {% endif %}
-                {{ field.errors }}
-            </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-secondary">Cancel</a>
-            <div class="mb-3">
-            <label class="form-label"><i class="fas fa-network-wired me-2"></i>Outbound Carrier</label>
-            {{ form.outbound_carrier }}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-edit text-primary me-2"></i>Edit Campaign
+            </h1>
+            <p class="text-muted mb-0">{{ campaign.name }}</p>
         </div>
-        <div class="mb-3">
-            <label class="form-label"><i class="fas fa-hashtag me-2"></i>Dial Prefix</label>
-            {{ form.dial_prefix }}
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'campaigns:list' %}">Campaigns</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'campaigns:detail' campaign.pk %}">Campaign</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </nav>
+    </div>
+
+    <form method="post" id="campaignForm" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tag me-2"></i>Basic Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.name.label_tag }}
+                            {{ form.name }}
+                            {{ form.name.errors }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.description.label_tag }}
+                            {{ form.description }}
+                            {{ form.description.errors }}
+                        </div>
+                        {% if form.campaign_type %}
+                        <div class="mb-3">
+                            {{ form.campaign_type.label_tag }}
+                            {{ form.campaign_type }}
+                            {{ form.campaign_type.errors }}
+                        </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            {{ form.dial_method.label_tag }}
+                            {{ form.dial_method }}
+                            {{ form.dial_method.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-gauge me-2"></i>Dialing & Routing
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {{ form.dial_speed.label_tag }}
+                                {{ form.dial_speed }}
+                                {{ form.dial_speed.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.custom_dials_per_agent.label_tag }}
+                                {{ form.custom_dials_per_agent }}
+                                {{ form.custom_dials_per_agent.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.outbound_carrier.label_tag }}
+                                {{ form.outbound_carrier }}
+                                {{ form.outbound_carrier.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.dial_prefix.label_tag }}
+                                {{ form.dial_prefix }}
+                                {{ form.dial_prefix.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.hopper_size.label_tag }}
+                                {{ form.hopper_size }}
+                                {{ form.hopper_size.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>Schedule & Timing
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {{ form.start_date.label_tag }}
+                                {{ form.start_date }}
+                                {{ form.start_date.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.end_date.label_tag }}
+                                {{ form.end_date }}
+                                {{ form.end_date.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.daily_start_time.label_tag }}
+                                {{ form.daily_start_time }}
+                                {{ form.daily_start_time.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.daily_end_time.label_tag }}
+                                {{ form.daily_end_time }}
+                                {{ form.daily_end_time.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.timezone.label_tag }}
+                                {{ form.timezone }}
+                                {{ form.timezone.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-phone-volume me-2"></i>Call Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                {{ form.max_attempts.label_tag }}
+                                {{ form.max_attempts }}
+                                {{ form.max_attempts.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.call_timeout.label_tag }}
+                                {{ form.call_timeout }}
+                                {{ form.call_timeout.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.retry_delay.label_tag }}
+                                {{ form.retry_delay }}
+                                {{ form.retry_delay.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.dial_ratio.label_tag }}
+                                {{ form.dial_ratio }}
+                                {{ form.dial_ratio.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.max_lines.label_tag }}
+                                {{ form.max_lines }}
+                                {{ form.max_lines.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.abandon_rate.label_tag }}
+                                {{ form.abandon_rate }}
+                                {{ form.abandon_rate.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.lead_order.label_tag }}
+                                {{ form.lead_order }}
+                                {{ form.lead_order.errors }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    {{ form.enable_recording }}
+                                    <label class="form-check-label" for="{{ form.enable_recording.id_for_label }}">
+                                        Enable Call Recording
+                                    </label>
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.recording_delay.label_tag }}
+                                    {{ form.recording_delay }}
+                                    {{ form.recording_delay.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    {{ form.monitor_agents }}
+                                    <label class="form-check-label" for="{{ form.monitor_agents.id_for_label }}">
+                                        Enable Agent Monitoring
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.use_internal_dnc }}
+                                    <label class="form-check-label" for="{{ form.use_internal_dnc.id_for_label }}">
+                                        Use Internal DNC List
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.use_campaign_dnc }}
+                                    <label class="form-check-label" for="{{ form.use_campaign_dnc.id_for_label }}">
+                                        Use Campaign DNC List
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.amd_enabled }}
+                                    <label class="form-check-label" for="{{ form.amd_enabled.id_for_label }}">
+                                        Enable Answering Machine Detection
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if form.lead_lists %}
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Lead Lists
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            {% for choice in form.lead_lists %}
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {{ form.lead_lists.errors }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">Campaign ID</p>
+                        <div class="fw-semibold mb-3">{{ campaign.campaign_id }}</div>
+
+                        <p class="small text-muted mb-2">Created By</p>
+                        <div class="fw-semibold mb-3">
+                            {{ campaign.created_by.get_full_name|default:campaign.created_by.username }}
+                        </div>
+
+                        <p class="small text-muted mb-2">Created At</p>
+                        <div class="fw-semibold mb-3">{{ campaign.created_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Save Changes
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
-

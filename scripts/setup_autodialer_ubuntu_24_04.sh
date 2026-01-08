@@ -162,13 +162,14 @@ if [[ -f generated_configs/extensions_custom.conf ]]; then
 fi
 
 # Ensure includes in base configs
-if ! grep -q "pjsip_realtime.conf" /etc/asterisk/pjsip.conf; then
+# Ensure includes in base configs
+if ! sudo grep -q "pjsip_realtime.conf" /etc/asterisk/pjsip.conf; then
   echo "#include pjsip_realtime.conf" | sudo tee -a /etc/asterisk/pjsip.conf >/dev/null
 fi
-if ! grep -q "pjsip_custom.conf" /etc/asterisk/pjsip.conf; then
+if ! sudo grep -q "pjsip_custom.conf" /etc/asterisk/pjsip.conf; then
   echo "#include pjsip_custom.conf" | sudo tee -a /etc/asterisk/pjsip.conf >/dev/null
 fi
-if ! grep -q "extensions_custom.conf" /etc/asterisk/extensions.conf; then
+if ! sudo grep -q "extensions_custom.conf" /etc/asterisk/extensions.conf; then
   echo "#include extensions_custom.conf" | sudo tee -a /etc/asterisk/extensions.conf >/dev/null
 fi
 

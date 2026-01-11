@@ -40,6 +40,9 @@ CREATE DATABASE autodialer_db OWNER postgres;
 
 ## 3. Asterisk Configuration
 
+> [!TIP]
+> **Example Configuration Files**: You can find a complete set of example configuration files in the `asterisk_configs_example/` directory of this repository. You can copy them to `/etc/asterisk/` and edit as needed.
+
 You need to create or edit the following files in `/etc/asterisk/`.
 
 ### 3.1. Database Connector (`/etc/asterisk/res_odbc.conf`)
@@ -98,7 +101,21 @@ Add this line at the end:
 #include extensions_custom.conf
 ```
 
-### 3.6. Custom Carrier Config (`/etc/asterisk/pjsip_custom.conf`)
+### 3.6. Custom Carrier Config & Dialplan (Automated)
+
+Instead of manually editing `pjsip_custom.conf` and `extensions_custom.conf`, you can use the built-in management command to generate them from your database carriers.
+
+**Command:**
+```bash
+cd /opt/autodialer/dialer
+source env/bin/activate
+python manage.py render_carrier_configs
+```
+*Reload Asterisk after running this command: `sudo asterisk -rx "core reload"`*
+
+If you prefer to configure manually, see the examples below.
+
+### 3.7. Custom Carrier Config (Manual Example) (`/etc/asterisk/pjsip_custom.conf`)
 Define your trunk/carrier here. Example for OpenVox:
 ```ini
 [openvox]

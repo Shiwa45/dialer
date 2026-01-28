@@ -199,20 +199,44 @@ class Command(BaseCommand):
             " same => n,GotoIf($[\"${AMD_ENABLED}\" = \"1\"]?find_carrier:dial_direct)",
             "",
             "; Find matching carrier by prefix",
+            " same => n(find_carrier),NoOp(Selecting carrier)",
         ]
 
-        # Add carrier-specific routing
+        # Group carriers by prefix so we can randomize within a prefix group.
+        prefix_groups = {}
+        prefix_order = []
         for idx, item in enumerate(items):
             carrier = item["carrier"]
-            section = item["section"]
             prefix = carrier.dial_prefix or ""
-            
-            if prefix:
-                lines.append(f" same => n,GotoIf($[\"${{EXTEN:0:{len(prefix)}}}\" = \"{prefix}\"]?carrier_{idx})")
+            if not prefix:
+                continue
+            if prefix not in prefix_groups:
+                prefix_groups[prefix] = []
+                prefix_order.append(prefix)
+            prefix_groups[prefix].append(idx)
+
+        # Add carrier-specific routing with random pick per prefix.
+        for prefix in prefix_order:
+            indexes = prefix_groups[prefix]
+            label = "pick_prefix_" + "".join(
+                ch if ch.isalnum() else "_" for ch in prefix
+            )
+            lines.append(
+                f" same => n,GotoIf($[\"${{EXTEN:0:{len(prefix)}}}\" = \"{prefix}\"]?{label})"
+            )
+            if len(indexes) == 1:
+                lines.append(f" same => n({label}),Goto(carrier_{indexes[0]})")
+            else:
+                lines.append(f" same => n({label}),Set(TRUNK=${{RAND(1,{len(indexes)})}})")
+                for pos, idx in enumerate(indexes, start=1):
+                    lines.append(
+                        f" same => n,GotoIf($[\"${{TRUNK}}\" = \"{pos}\"]?carrier_{idx})"
+                    )
+                lines.append(f" same => n,Goto(carrier_{indexes[0]})")
         
         # Default carrier (first one or fallback)
         if items:
-            lines.append(f" same => n,Goto(carrier_0)")
+            lines.append(" same => n,Goto(carrier_0)")
         else:
             lines.append(" same => n,Hangup()")
         
@@ -228,19 +252,26 @@ class Command(BaseCommand):
             host = carrier.server_ip
             port = carrier.port or 5060
             dial_uri = f"${{OUTNUM}}@{host}:{port}" if host else "${OUTNUM}"
+            dial_timeout = carrier.dial_timeout or 30
             
             lines.append(f"; Carrier {carrier.name} (priority {carrier.priority})")
             lines.append(f" same => n(carrier_{idx}),Set(OUTNUM={dial_number})")
+            lines.append(
+                " same => n,Set(EFFECTIVE_DIAL_TIMEOUT=${IF($[\"${DIAL_TIMEOUT}\"=\"\"]?"
+                f"{dial_timeout}:$" + "{DIAL_TIMEOUT})})"
+            )
             
             # Use U() option to run AMD/Stasis on the callee channel upon answer
             if host:
                 # Pass campaign metadata into the AMD handler so Stasis gets CALL_TYPE/CAMPAIGN_ID/LEAD_ID/HOPPER_ID
                 lines.append(
-                    f" same => n,Dial(PJSIP/{section}/sip:${{OUTNUM}}@{host}:{port},${{DIAL_TIMEOUT}},"
+                    f" same => n,Dial(PJSIP/{section}/sip:${{OUTNUM}}@{host}:{port},${{EFFECTIVE_DIAL_TIMEOUT}},"
                     f"U(amd-handler^${{CALL_TYPE:-autodial}}^${{CAMPAIGN_ID}}^${{LEAD_ID}}^${{HOPPER_ID}}))"
                 )
             else:
-                lines.append(f" same => n,Dial(PJSIP/{section}/${{OUTNUM}},${{DIAL_TIMEOUT}},U(amd-handler))")
+                lines.append(
+                    f" same => n,Dial(PJSIP/{section}/${{OUTNUM}},${{EFFECTIVE_DIAL_TIMEOUT}},U(amd-handler))"
+                )
             
             lines.append(" same => n,Goto(failed)")
             lines.append("")
@@ -251,7 +282,7 @@ class Command(BaseCommand):
             " same => n,Hangup()",
             "",
             "; Direct dial (no AMD)",
-            " same => n(dial_direct),Goto(carrier_0)",
+            " same => n(dial_direct),Goto(find_carrier)",
             "",
             "; Holding extension for Local channel",
             "exten => wait_for_call,1,Answer()",

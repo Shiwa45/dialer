@@ -2,6 +2,7 @@
 
 from django.urls import re_path
 from . import consumers
+from reports.consumers import MonitorDashboardConsumer
 
 websocket_urlpatterns = [
     # Agent real-time updates
@@ -9,4 +10,5 @@ websocket_urlpatterns = [
     
     # Campaign monitoring (for supervisors)
     re_path(r'ws/campaign/(?P<campaign_id>\w+)/$', consumers.CampaignMonitorConsumer.as_asgi()),
+    re_path(r'ws/monitor/$', MonitorDashboardConsumer.as_asgi()),
 ]

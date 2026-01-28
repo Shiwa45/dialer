@@ -139,9 +139,15 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const apiUrl = "{% url 'reports:monitor_api' %}";
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsUrl = `${wsProtocol}://${window.location.host}/ws/monitor/`;
         const agentTableBody = document.querySelector('#agent-table tbody');
         const queueTableBody = document.querySelector('#queue-table tbody');
         const lastUpdatedEl = document.getElementById('last-updated');
+        const connectionStatusEl = document.getElementById('connection-status');
+        let socket = null;
+        let pollTimer = null;
+        let wsTimer = null;
 
         function formatDuration(seconds) {
             const h = Math.floor(seconds / 3600);
@@ -150,55 +156,59 @@
             return [h, m, s].map(v => v < 10 ? "0" + v : v).filter((v, i) => v !== "00" || i > 0).join(":");
         }
 
-        function updateDashboard() {
-            fetch(apiUrl, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.success) return;
+        function applyPayload(payload) {
+            if (!payload) return;
+            connectionStatusEl.textContent = 'Live';
+            connectionStatusEl.className = 'badge bg-success me-2';
 
-                    // Update Top Stats
-                    document.getElementById('stat-active-agents').textContent = data.stats.active_agents;
-                    document.getElementById('stat-total-calls').textContent = data.stats.total_calls;
-                    document.getElementById('stat-answered').textContent = data.stats.answered;
-                    document.getElementById('stat-sales').textContent = data.stats.sales;
+            document.getElementById('stat-active-agents').textContent = payload.stats.active_agents;
+            document.getElementById('stat-total-calls').textContent = payload.stats.total_calls;
+            document.getElementById('stat-answered').textContent = payload.stats.answered;
+            document.getElementById('stat-sales').textContent = payload.stats.sales;
 
-                    // Update Agents
-                    agentTableBody.innerHTML = '';
-                    data.agents.forEach(agent => {
-                        const row = document.createElement('tr');
-                        let statusClass = 'text-secondary';
-                        if (agent.status === 'available') statusClass = 'text-success';
-                        if (agent.status === 'busy' || agent.status === 'incall') statusClass = 'text-danger';
-                        if (agent.status === 'wrapup') statusClass = 'text-warning';
-
-                        row.innerHTML = `
+            agentTableBody.innerHTML = '';
+            payload.agents.forEach(agent => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
                     <td>${agent.name}</td>
                     <td><span class="badge ${getBadgeClass(agent.status)}">${agent.status.toUpperCase()}</span></td>
                     <td>${agent.campaign}</td>
                     <td>${formatDuration(agent.duration)}</td>
                     <td>${agent.call_id || '-'}</td>
                 `;
-                        agentTableBody.appendChild(row);
-                    });
+                agentTableBody.appendChild(row);
+            });
 
-                    // Update Queues
-                    queueTableBody.innerHTML = '';
-                    data.queues.forEach(queue => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
+            queueTableBody.innerHTML = '';
+            payload.queues.forEach(queue => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
                     <td>${queue.name}</td>
                     <td>${queue.pending}</td>
                     <td>${queue.dialing}</td>
                     <td>${queue.connected}</td>
                 `;
-                        queueTableBody.appendChild(row);
-                    });
+                queueTableBody.appendChild(row);
+            });
 
-                    lastUpdatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+            lastUpdatedEl.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        }
+
+        function updateDashboard() {
+            fetch(apiUrl, {
+                cache: 'no-store',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) return;
+                    applyPayload(data);
                 })
-                .catch(err => console.error('Monitor update failed', err));
+                .catch(err => {
+                    console.error('Monitor update failed', err);
+                    connectionStatusEl.textContent = 'Offline';
+                    connectionStatusEl.className = 'badge bg-danger me-2';
+                });
         }
 
         function getBadgeClass(status) {
@@ -212,9 +222,68 @@
             }
         }
 
-        // Poll every 3 seconds
-        updateDashboard();
-        setInterval(updateDashboard, 3000);
+        function startPolling() {
+            if (pollTimer) return;
+            updateDashboard();
+            pollTimer = setInterval(updateDashboard, 3000);
+        }
+
+        function stopPolling() {
+            if (!pollTimer) return;
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+
+        function connectWebSocket() {
+            try {
+                socket = new WebSocket(wsUrl);
+            } catch (e) {
+                startPolling();
+                return;
+            }
+
+            socket.onopen = () => {
+                stopPolling();
+                connectionStatusEl.textContent = 'Live';
+                connectionStatusEl.className = 'badge bg-success me-2';
+                socket.send(JSON.stringify({ type: 'request_update' }));
+                wsTimer = setInterval(() => {
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'request_update' }));
+                    }
+                }, 3000);
+            };
+
+            socket.onmessage = (evt) => {
+                try {
+                    const data = JSON.parse(evt.data);
+                    if (data.type === 'monitor_snapshot') {
+                        applyPayload(data.payload);
+                    }
+                } catch (e) {
+                    console.warn('Invalid monitor payload', e);
+                }
+            };
+
+            socket.onclose = () => {
+                if (wsTimer) {
+                    clearInterval(wsTimer);
+                    wsTimer = null;
+                }
+                connectionStatusEl.textContent = 'Offline';
+                connectionStatusEl.className = 'badge bg-danger me-2';
+                startPolling();
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            socket.onerror = () => {
+                if (socket && socket.readyState !== WebSocket.CLOSED) {
+                    socket.close();
+                }
+            };
+        }
+
+        connectWebSocket();
     });
 </script>
 {% endblock %}

@@ -1,0 +1,1237 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Real-time Monitor{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        /* Modern Vibrant Palette */
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --success-color: #06d6a0;
+        /* Mint Green */
+        --warning-color: #ffd166;
+        /* Warm Yellow */
+        --danger-color: #ef476f;
+        /* Soft Red */
+        --info-color: #118ab2;
+        /* Blue */
+
+        --bg-body: #f3f4f6;
+        --bg-card: #ffffff;
+        --text-main: #2b2d42;
+        --text-muted: #8d99ae;
+        --border-color: #e9ecef;
+
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.08);
+        --shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.06), 0 4px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+        background: var(--bg-body);
+        color: var(--text-main);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* --- Header Styling --- */
+    .monitor-header {
+        background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+        padding: 1.25rem 1.75rem;
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+        box-shadow: 0 8px 20px rgba(67, 97, 238, 0.25);
+    }
+
+    .monitor-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Live Pulse */
+    .live-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 6px 12px;
+        border-radius: 20px;
+        backdrop-filter: blur(5px);
+    }
+
+    .live-dot {
+        width: 10px;
+        height: 10px;
+        background: #00ff9d;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #00ff9d;
+        animation: pulse-live 2s infinite;
+    }
+
+    @keyframes pulse-live {
+
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.8;
+            transform: scale(1.2);
+        }
+    }
+
+    /* --- Top Stats Cards --- */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid white;
+        box-shadow: var(--shadow-md);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    /* Subtle colored top border for visual categorization */
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: var(--text-muted);
+    }
+
+    .stat-card.calls::after {
+        background: var(--info-color);
+    }
+
+    .stat-card.answered::after {
+        background: var(--success-color);
+    }
+
+    .stat-card.dropped::after {
+        background: var(--danger-color);
+    }
+
+    .stat-card.sales::after {
+        background: var(--warning-color);
+    }
+
+    .stat-card.rate::after {
+        background: var(--secondary-color);
+    }
+
+    .stat-card .value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1.2;
+        color: var(--text-main);
+    }
+
+    .stat-card .label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+    }
+
+    /* Coloring values for emphasis */
+    .stat-card.calls .value {
+        color: var(--info-color);
+    }
+
+    .stat-card.answered .value {
+        color: var(--success-color);
+    }
+
+    .stat-card.dropped .value {
+        color: var(--danger-color);
+    }
+
+    .stat-card.sales .value {
+        color: var(--warning-color);
+    }
+
+    .stat-card.rate .value {
+        color: var(--secondary-color);
+    }
+
+
+    /* --- Main Layout Grid --- */
+    .monitor-grid {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 1.5rem;
+    }
+
+    /* --- Agent Grid Section --- */
+    .agent-grid-container {
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .agent-grid-header {
+        background: #ffffff;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .agent-grid-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+    }
+
+    .agent-counts {
+        display: flex;
+        gap: 1.25rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+
+    .agent-count {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .agent-count .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .agent-count .dot.available {
+        background: var(--success-color);
+        box-shadow: 0 0 5px var(--success-color);
+    }
+
+    .agent-count .dot.busy {
+        background: var(--danger-color);
+    }
+
+    .agent-count .dot.paused {
+        background: var(--warning-color);
+    }
+
+    .agent-count .dot.wrapup {
+        background: var(--info-color);
+    }
+
+    .agent-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem;
+        padding: 1.5rem;
+        max-height: 600px;
+        /* Increased height */
+        overflow-y: auto;
+        background: #f8f9fa;
+        /* Slight contrast for inner grid area */
+    }
+
+    /* Scrollbar styling */
+    .agent-grid::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .agent-grid::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .agent-grid::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+
+    /* --- Agent Card Styling --- */
+    .agent-card {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+    }
+
+    .agent-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Colored borders based on status */
+    .agent-card.available {
+        border-left: 4px solid var(--success-color);
+    }
+
+    .agent-card.busy {
+        border-left: 4px solid var(--danger-color);
+        background: #fff5f5;
+    }
+
+    .agent-card.break,
+    .agent-card.lunch,
+    .agent-card.paused {
+        border-left: 4px solid var(--warning-color);
+    }
+
+    .agent-card.wrapup {
+        border-left: 4px solid var(--info-color);
+    }
+
+    .agent-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: #eef2ff;
+        /* Light indigo background */
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: inset 0 0 0 1px rgba(67, 97, 238, 0.1);
+    }
+
+    .agent-card.busy .agent-avatar {
+        background: #fff0f3;
+        color: var(--danger-color);
+        animation: pulse-avatar 1.5s infinite;
+    }
+
+    @keyframes pulse-avatar {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 71, 111, 0.4);
+        }
+
+        50% {
+            box-shadow: 0 0 0 4px rgba(239, 71, 111, 0);
+        }
+    }
+
+    .agent-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .agent-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .agent-status-text {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-top: 2px;
+    }
+
+    .agent-timer {
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--text-main);
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .agent-call-info {
+        font-size: 0.75rem;
+        color: var(--info-color);
+        font-weight: 600;
+        margin-top: 0.25rem;
+        background: rgba(17, 138, 178, 0.1);
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 4px;
+    }
+
+    /* --- Side Panel --- */
+    .side-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .panel-card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+
+    .panel-header {
+        background: #fff;
+        padding: 1rem 1.25rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-main);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+    }
+
+    .panel-header i {
+        color: var(--primary-color);
+        opacity: 0.8;
+    }
+
+    .panel-body {
+        padding: 1.25rem;
+        background: #fff;
+    }
+
+    /* Charts */
+    .hourly-chart {
+        height: 120px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 4px;
+        padding-top: 0.5rem;
+        border-bottom: 1px dashed var(--border-color);
+    }
+
+    .chart-bar-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .chart-bar {
+        width: 100%;
+        max-width: 24px;
+        background: linear-gradient(to top, var(--primary-color), #7209b7);
+        border-radius: 4px 4px 0 0;
+        transition: height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        min-height: 4px;
+        opacity: 0.8;
+    }
+
+    .chart-bar:hover {
+        opacity: 1;
+        transform: scaleX(1.1);
+    }
+
+    .chart-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+        font-weight: 600;
+    }
+
+    /* Queue Stats */
+    .queue-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        text-align: center;
+    }
+
+    .queue-item {
+        background: #f8f9fa;
+        padding: 1rem 0.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .queue-item .value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .queue-item .label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-top: 4px;
+    }
+
+    .queue-item.pending .value {
+        color: var(--warning-color);
+    }
+
+    .queue-item.dialing .value {
+        color: var(--info-color);
+    }
+
+    /* Progress Bar */
+    .status-distribution {
+        display: flex;
+        height: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+        background: #e9ecef;
+    }
+
+    .status-segment {
+        transition: width 0.5s ease;
+    }
+
+    .status-segment.available {
+        background: var(--success-color);
+    }
+
+    .status-segment.busy {
+        background: var(--danger-color);
+    }
+
+    .status-segment.paused {
+        background: var(--warning-color);
+    }
+
+    .status-segment.wrapup {
+        background: var(--info-color);
+    }
+
+    .status-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.8rem;
+        color: var(--text-main);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 500;
+    }
+
+    /* Performance Rates */
+    .rate-display {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .rate-item {
+        text-align: center;
+        position: relative;
+        width: 33%;
+    }
+
+    .rate-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 20%;
+        height: 60%;
+        width: 1px;
+        background: var(--border-color);
+    }
+
+    .rate-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+    }
+
+    .rate-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .rate-item.contact .rate-value {
+        color: var(--success-color);
+    }
+
+    .rate-item.conversion .rate-value {
+        color: var(--warning-color);
+    }
+
+    .rate-item.drop .rate-value {
+        color: var(--danger-color);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .monitor-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .side-panel {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        .panel-card {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .agent-grid {
+            max-height: 400px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .monitor-header {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .agent-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .side-panel {
+            flex-direction: column;
+        }
+    }
+
+    /* Form Elements override */
+    .form-select-custom {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    }
+
+    .form-select-custom:focus {
+        background-color: rgba(255, 255, 255, 0.3);
+        color: white;
+        box-shadow: none;
+        border-color: white;
+    }
+
+    .form-select-custom option {
+        background-color: white;
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Header -->
+    <div class="monitor-header">
+        <div>
+            <h1 class="monitor-title">
+                <i class="fas fa-satellite-dish me-2"></i>Real-time Monitor
+            </h1>
+        </div>
+        <div class="d-flex align-items-center gap-3 flex-wrap justify-content-center">
+            <select class="form-select form-select-sm form-select-custom" id="campaignFilter"
+                style="width: 200px; border-radius: 20px;">
+                <option value="">All Campaigns</option>
+                {% for campaign in campaigns %}
+                <option value="{{ campaign.id }}" {% if selected_campaign and selected_campaign.id == campaign.id %}
+                    selected {% endif %}>
+                    {{ campaign.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <div class="live-indicator">
+                <span class="live-dot"></span>
+                <span class="fw-bold">LIVE</span>
+                <span class="ms-2 opacity-75" id="lastUpdate">--:--:--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card calls">
+            <div class="value" id="statTotalCalls">0</div>
+            <div class="label">Total Calls</div>
+        </div>
+        <div class="stat-card answered">
+            <div class="value" id="statAnswered">0</div>
+            <div class="label">Answered</div>
+        </div>
+        <div class="stat-card dropped">
+            <div class="value" id="statDropped">0</div>
+            <div class="label">Dropped</div>
+        </div>
+        <div class="stat-card sales">
+            <div class="value" id="statSales">0</div>
+            <div class="label">Sales</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="statCallsPerHour">0</div>
+            <div class="label">Calls/Hour</div>
+        </div>
+        <div class="stat-card rate">
+            <div class="value" id="statAvgDuration">0:00</div>
+            <div class="label">Avg Duration</div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="monitor-grid">
+        <!-- Agent Grid -->
+        <div class="agent-grid-container">
+            <div class="agent-grid-header">
+                <span class="agent-grid-title">
+                    <i class="fas fa-users me-2 text-primary"></i>Agents
+                    <span class="badge bg-primary rounded-pill ms-2" id="agentTotal">0</span>
+                </span>
+                <div class="agent-counts">
+                    <div class="agent-count">
+                        <span class="dot available"></span>
+                        <span id="countAvailable">0</span> Avail
+                    </div>
+                    <div class="agent-count">
+                        <span class="dot busy"></span>
+                        <span id="countBusy">0</span> Busy
+                    </div>
+                    <div class="agent-count">
+                        <span class="dot paused"></span>
+                        <span id="countPaused">0</span> Paused
+                    </div>
+                    <div class="agent-count">
+                        <span class="dot wrapup"></span>
+                        <span id="countWrapup">0</span> Wrap
+                    </div>
+                </div>
+            </div>
+            <div class="agent-grid" id="agentGrid">
+                <div class="text-center py-5 text-muted" style="grid-column: 1 / -1;">
+                    <i class="fas fa-circle-notch fa-spin fa-2x mb-3 text-primary"></i>
+                    <p class="mb-0">Connecting to live feed...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side Panel -->
+        <div class="side-panel">
+            <!-- Calls Per Hour Chart -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <i class="fas fa-chart-column me-2"></i>Calls Per Hour
+                </div>
+                <div class="panel-body">
+                    <div class="hourly-chart" id="hourlyChart">
+                        <!-- Chart bars will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Status Distribution -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <i class="fas fa-chart-pie me-2"></i>Agent Status
+                </div>
+                <div class="panel-body">
+                    <div class="status-distribution" id="statusDistribution">
+                        <div class="status-segment available" style="width: 25%"></div>
+                        <div class="status-segment busy" style="width: 25%"></div>
+                        <div class="status-segment paused" style="width: 25%"></div>
+                        <div class="status-segment wrapup" style="width: 25%"></div>
+                    </div>
+                    <div class="status-legend">
+                        <div class="legend-item">
+                            <span class="dot available"
+                                style="width:10px; height:10px; background:var(--success-color); border-radius:50%"></span>
+                            Available
+                        </div>
+                        <div class="legend-item">
+                            <span class="dot busy"
+                                style="width:10px; height:10px; background:var(--danger-color); border-radius:50%"></span>
+                            Busy
+                        </div>
+                        <div class="legend-item">
+                            <span class="dot paused"
+                                style="width:10px; height:10px; background:var(--warning-color); border-radius:50%"></span>
+                            Paused
+                        </div>
+                        <div class="legend-item">
+                            <span class="dot wrapup"
+                                style="width:10px; height:10px; background:var(--info-color); border-radius:50%"></span>
+                            Wrapup
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Rates -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <i class="fas fa-percent me-2"></i>Performance
+                </div>
+                <div class="panel-body">
+                    <div class="rate-display">
+                        <div class="rate-item contact">
+                            <div class="rate-value" id="rateContact">0%</div>
+                            <div class="rate-label">Contact</div>
+                        </div>
+                        <div class="rate-item conversion">
+                            <div class="rate-value" id="rateConversion">0%</div>
+                            <div class="rate-label">Conversion</div>
+                        </div>
+                        <div class="rate-item drop">
+                            <div class="rate-value" id="rateDrop">0%</div>
+                            <div class="rate-label">Drop</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call Queue -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <i class="fas fa-list-ol me-2"></i>Call Queue
+                </div>
+                <div class="panel-body">
+                    <div class="queue-stats">
+                        <div class="queue-item">
+                            <div class="value" id="queueTotal">0</div>
+                            <div class="label">Total</div>
+                        </div>
+                        <div class="queue-item pending">
+                            <div class="value" id="queuePending">0</div>
+                            <div class="label">Pending</div>
+                        </div>
+                        <div class="queue-item dialing">
+                            <div class="value" id="queueDialing">0</div>
+                            <div class="label">Dialing</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // State
+    let ws = null;
+    let reconnectTimer = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        initWebSocket();
+        loadAllData(); // Initial load
+
+        // Campaign filter change
+        document.getElementById('campaignFilter').addEventListener('change', function () {
+            // Reload data immediately
+            loadAllData();
+
+            // Update WebSocket subscription
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const campaignId = this.value || 'all';
+                ws.send(JSON.stringify({
+                    'type': 'change_campaign',
+                    'campaign_id': campaignId
+                }));
+            } else {
+                // Reconnect if needed
+                initWebSocket();
+            }
+        });
+    });
+
+    /**
+     * Initialize WebSocket for real-time updates
+     */
+    function initWebSocket() {
+        if (ws) {
+            ws.close();
+        }
+
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+
+        const campaignId = document.getElementById('campaignFilter').value || 'all';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws/reports/realtime/${campaignId}/`;
+
+        console.log('Connecting to WebSocket:', wsUrl);
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function () {
+            console.log('Realtime WebSocket connected');
+            // Visual indicator
+            const dot = document.querySelector('.live-dot');
+            if (dot) dot.style.animation = 'pulse-live 2s infinite';
+        };
+
+        ws.onmessage = function (event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleRealtimeUpdate(data);
+            } catch (e) {
+                console.error('Error parsing WS message:', e);
+            }
+        };
+
+        ws.onclose = function () {
+            console.log('Realtime WebSocket disconnected');
+            const dot = document.querySelector('.live-dot');
+            if (dot) dot.style.animation = 'none';
+
+            // Try to reconnect
+            reconnectTimer = setTimeout(initWebSocket, 5000);
+        };
+
+        ws.onerror = function (error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    /**
+     * Handle real-time updates from WebSocket
+     */
+    function handleRealtimeUpdate(data) {
+        switch (data.type) {
+            case 'full_update':
+                if (data.agents) updateAgentGrid(data.agents);
+                if (data.stats) updateStats(data.stats);
+                if (data.queue) updateQueue(data.queue);
+                break;
+
+            case 'agent_update':
+                // Trigger refresh of agent grid to get full calculated fields
+                loadAgents();
+                break;
+
+            case 'call_update':
+                // Call started/ended - refresh stats
+                loadStats();
+                // Also refresh agents to show "In Call" status if not covered by agent_update
+                loadAgents();
+                break;
+
+            case 'stats_update':
+                updateStats(data.stats);
+                break;
+
+            case 'queue_update':
+                updateQueue(data.queue);
+                break;
+        }
+
+        updateLastUpdateTime();
+    }
+
+    /**
+     * Load all data (API Fallback)
+     */
+    function loadAllData() {
+        loadAgents();
+        loadStats();
+        loadQueue();
+    }
+
+    /**
+     * Load agents data
+     */
+    function loadAgents() {
+        const campaignId = document.getElementById('campaignFilter').value;
+        let url = '{% url "reports:realtime_agents_api" %}';
+        if (campaignId) {
+            url += `?campaign=${campaignId}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateAgentGrid(data.agents);
+                }
+            })
+            .catch(err => console.error('Error loading agents:', err));
+    }
+
+    /**
+     * Load campaign stats
+     */
+    function loadStats() {
+        const campaignId = document.getElementById('campaignFilter').value;
+        let url = '{% url "reports:realtime_stats_api" %}';
+        if (campaignId) {
+            url += `?campaign=${campaignId}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateStats(data.stats);
+                }
+            })
+            .catch(err => console.error('Error loading stats:', err));
+    }
+
+    /**
+     * Load queue data
+     */
+    function loadQueue() {
+        const campaignId = document.getElementById('campaignFilter').value;
+        let url = '{% url "reports:realtime_queue_api" %}';
+        if (campaignId) {
+            url += `?campaign=${campaignId}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateQueue(data.queue);
+                }
+            })
+            .catch(err => console.error('Error loading queue:', err));
+    }
+
+    /**
+     * Update agent grid
+     */
+    function updateAgentGrid(agents) {
+        const grid = document.getElementById('agentGrid');
+
+        if (!agents || agents.length === 0) {
+            grid.innerHTML = `
+            <div class="text-center py-5 text-muted" style="grid-column: 1 / -1;">
+                <i class="fas fa-user-slash fa-2x mb-3 text-secondary"></i>
+                <p>No agents currently online</p>
+            </div>
+        `;
+            updateAgentCounts({ available: 0, busy: 0, paused: 0, wrapup: 0, total: 0 });
+            updateStatusDistribution({ available: 0, busy: 0, paused: 0, wrapup: 0, total: 0 });
+            return;
+        }
+
+        // Count statuses
+        const counts = { available: 0, busy: 0, paused: 0, wrapup: 0, total: agents.length };
+
+        let html = '';
+        agents.forEach(agent => {
+            const initials = getInitials(agent.name);
+            const statusClass = getStatusClass(agent.status);
+
+            // Count
+            if (agent.status === 'available') counts.available++;
+            else if (agent.status === 'busy') counts.busy++;
+            else if (agent.status === 'wrapup') counts.wrapup++;
+            else counts.paused++;
+
+            html += `
+            <div class="agent-card ${statusClass}" data-agent-id="${agent.id}">
+                <div class="agent-avatar">${initials}</div>
+                <div class="agent-info">
+                    <div class="agent-name" title="${agent.name}">${agent.name}</div>
+                    <div class="agent-status-text">
+                        ${capitalizeFirst(agent.status)}
+                        ${agent.campaign ? ` • ${agent.campaign}` : ''}
+                    </div>
+                    ${agent.current_call ? `
+                        <div class="agent-call-info">
+                            <i class="fas fa-phone-alt me-1"></i>${agent.current_call.number}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="agent-timer">${agent.status_time_formatted || '0:00'}</div>
+            </div>
+        `;
+        });
+
+        grid.innerHTML = html;
+        updateAgentCounts(counts);
+        updateStatusDistribution(counts);
+    }
+
+    /**
+     * Update agent counts
+     */
+    function updateAgentCounts(counts) {
+        document.getElementById('agentTotal').textContent = counts.total;
+        document.getElementById('countAvailable').textContent = counts.available;
+        document.getElementById('countBusy').textContent = counts.busy;
+        document.getElementById('countPaused').textContent = counts.paused;
+        document.getElementById('countWrapup').textContent = counts.wrapup;
+    }
+
+    /**
+     * Update status distribution bar
+     */
+    function updateStatusDistribution(counts) {
+        const total = counts.total || 1;
+        const dist = document.getElementById('statusDistribution');
+
+        if (!dist) return;
+
+        dist.innerHTML = `
+        <div class="status-segment available" style="width: ${counts.available / total * 100}%"></div>
+        <div class="status-segment busy" style="width: ${counts.busy / total * 100}%"></div>
+        <div class="status-segment paused" style="width: ${counts.paused / total * 100}%"></div>
+        <div class="status-segment wrapup" style="width: ${counts.wrapup / total * 100}%"></div>
+    `;
+    }
+
+    /**
+     * Update stats display
+     */
+    function updateStats(stats) {
+        if (!stats) return;
+        document.getElementById('statTotalCalls').textContent = stats.total_calls || 0;
+        document.getElementById('statAnswered').textContent = stats.answered_calls || 0;
+        document.getElementById('statDropped').textContent = stats.dropped_calls || 0;
+        document.getElementById('statSales').textContent = stats.sales || 0;
+        document.getElementById('statCallsPerHour').textContent = stats.calls_per_hour || 0;
+        document.getElementById('statAvgDuration').textContent = stats.avg_duration_formatted || '0:00';
+
+        // Rates
+        document.getElementById('rateContact').textContent = (stats.contact_rate || 0) + '%';
+        document.getElementById('rateConversion').textContent = (stats.conversion_rate || 0) + '%';
+        document.getElementById('rateDrop').textContent = (stats.drop_rate || 0) + '%';
+
+        // Update hourly chart
+        if (stats.calls_trend) {
+            updateHourlyChart(stats.calls_trend);
+        }
+    }
+
+    /**
+     * Update hourly chart
+     */
+    function updateHourlyChart(trend) {
+        const container = document.getElementById('hourlyChart');
+        if (!container) return;
+
+        const maxCount = Math.max(...trend.map(t => t.count), 1);
+
+        let html = '';
+        trend.forEach(item => {
+            const height = (item.count / maxCount) * 100;
+            html += `
+            <div class="chart-bar-container">
+                <div class="chart-bar" style="height: ${height}%" title="${item.count} calls"></div>
+                <div class="chart-label">${item.hour}</div>
+            </div>
+        `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * Update queue display
+     */
+    function updateQueue(queue) {
+        if (!queue) return;
+        document.getElementById('queueTotal').textContent = queue.total || 0;
+        document.getElementById('queuePending').textContent = queue.pending || 0;
+        document.getElementById('queueDialing').textContent = queue.dialing || 0;
+    }
+
+    /**
+     * Update last update timestamp
+     */
+    function updateLastUpdateTime() {
+        const now = new Date();
+        const el = document.getElementById('lastUpdate');
+        if (el) el.textContent = now.toLocaleTimeString();
+    }
+
+    /**
+     * Helper: Get initials from name
+     */
+    function getInitials(name) {
+        if (!name) return '?';
+        const parts = name.split(' ');
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    }
+
+    /**
+     * Helper: Get status class
+     */
+    function getStatusClass(status) {
+        const statusMap = {
+            'available': 'available',
+            'busy': 'busy',
+            'break': 'paused',
+            'lunch': 'paused',
+            'training': 'paused',
+            'meeting': 'paused',
+            'wrapup': 'wrapup'
+        };
+        return statusMap[status] || 'paused';
+    }
+
+    /**
+     * Helper: Capitalize first letter
+     */
+    function capitalizeFirst(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function () {
+        if (ws) ws.close();
+    });
+</script>
+{% endblock %}

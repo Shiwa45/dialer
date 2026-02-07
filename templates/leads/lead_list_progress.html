@@ -1,0 +1,520 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ lead_list.name }} - Lead List Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .list-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .progress-ring-container {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        margin: 0 auto;
+    }
+    
+    .progress-ring {
+        width: 180px;
+        height: 180px;
+        transform: rotate(-90deg);
+    }
+    
+    .progress-ring-circle {
+        fill: transparent;
+        stroke: rgba(255,255,255,0.2);
+        stroke-width: 12;
+    }
+    
+    .progress-ring-progress {
+        fill: transparent;
+        stroke: #28a745;
+        stroke-width: 12;
+        stroke-linecap: round;
+        stroke-dasharray: 440;
+        stroke-dashoffset: 440;
+        transition: stroke-dashoffset 1s ease-out;
+    }
+    
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+    
+    .progress-percentage {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    
+    .progress-label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .stat-item {
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    
+    .stat-item:hover {
+        transform: translateY(-2px);
+        background: rgba(255,255,255,0.15);
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.8;
+    }
+    
+    .status-breakdown {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .status-bar {
+        height: 24px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #e9ecef;
+        display: flex;
+        margin-bottom: 1.5rem;
+    }
+    
+    .status-segment {
+        height: 100%;
+        transition: width 0.5s ease-out;
+    }
+    
+    .status-segment.new { background: #28a745; }
+    .status-segment.contacted { background: #17a2b8; }
+    .status-segment.callback { background: #ffc107; }
+    .status-segment.sale { background: #6f42c1; }
+    .status-segment.no_answer { background: #fd7e14; }
+    .status-segment.busy { background: #6c757d; }
+    .status-segment.dnc { background: #dc3545; }
+    .status-segment.not_interested { background: #343a40; }
+    
+    .status-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .legend-color {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+    }
+    
+    .legend-count {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        height: 100%;
+    }
+    
+    .recycle-rules {
+        margin-top: 1rem;
+    }
+    
+    .recycle-rule-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .recycle-rule-item.inactive {
+        border-left-color: #6c757d;
+        opacity: 0.7;
+    }
+    
+    .rule-status {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+    }
+    
+    .refresh-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: rgba(255,255,255,0.7);
+    }
+    
+    .refresh-indicator.updating {
+        color: #ffc107;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .updating .spinner-icon {
+        animation: pulse 1s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Progress Ring -->
+    <div class="list-header">
+        <div class="row align-items-center">
+            <div class="col-lg-4 text-center text-lg-start mb-4 mb-lg-0">
+                <div class="progress-ring-container">
+                    <svg class="progress-ring" viewBox="0 0 150 150">
+                        <circle class="progress-ring-circle" cx="75" cy="75" r="70"></circle>
+                        <circle class="progress-ring-progress" cx="75" cy="75" r="70" id="progressCircle"></circle>
+                    </svg>
+                    <div class="progress-text">
+                        <div class="progress-percentage" id="progressPercent">{{ progress.progress_percentage|floatformat:0 }}%</div>
+                        <div class="progress-label">Used</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-8">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h1 class="h3 mb-1">{{ lead_list.name }}</h1>
+                        <p class="mb-0 opacity-75">{{ lead_list.description|default:"No description" }}</p>
+                    </div>
+                    <div class="refresh-indicator" id="refreshIndicator">
+                        <i class="fas fa-sync-alt spinner-icon"></i>
+                        <span>Auto-refresh: <span id="refreshTimer">30</span>s</span>
+                    </div>
+                </div>
+                
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statTotal">{{ progress.total_leads|intcomma }}</div>
+                        <div class="stat-label">Total Leads</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statNew">{{ progress.new_leads|intcomma }}</div>
+                        <div class="stat-label">New</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statRemaining">{{ progress.remaining_leads|intcomma }}</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statSales">{{ progress.sale_leads|intcomma }}</div>
+                        <div class="stat-label">Sales</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statDnc">{{ progress.dnc_leads|intcomma }}</div>
+                        <div class="stat-label">DNC</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statCompletion">{{ progress.completion_percentage|floatformat:0 }}%</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Status Breakdown -->
+        <div class="col-lg-8 mb-4">
+            <div class="status-breakdown">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-bar me-2 text-primary"></i>Status Breakdown
+                </h5>
+                
+                <!-- Stacked Progress Bar -->
+                <div class="status-bar" id="statusBar">
+                    {% with total=progress.total_leads %}
+                    {% if total > 0 %}
+                    <div class="status-segment new" style="width: {{ progress.new_leads|divisibleby:total }}%" title="New: {{ progress.new_leads }}"></div>
+                    <div class="status-segment contacted" style="width: {{ progress.contacted_leads|divisibleby:total }}%" title="Contacted: {{ progress.contacted_leads }}"></div>
+                    <div class="status-segment callback" style="width: {{ progress.callback_leads|divisibleby:total }}%" title="Callback: {{ progress.callback_leads }}"></div>
+                    <div class="status-segment sale" style="width: {{ progress.sale_leads|divisibleby:total }}%" title="Sale: {{ progress.sale_leads }}"></div>
+                    <div class="status-segment no_answer" style="width: {{ progress.no_answer_leads|divisibleby:total }}%" title="No Answer: {{ progress.no_answer_leads }}"></div>
+                    <div class="status-segment busy" style="width: {{ progress.busy_leads|divisibleby:total }}%" title="Busy: {{ progress.busy_leads }}"></div>
+                    <div class="status-segment dnc" style="width: {{ progress.dnc_leads|divisibleby:total }}%" title="DNC: {{ progress.dnc_leads }}"></div>
+                    <div class="status-segment not_interested" style="width: {{ progress.not_interested_leads|divisibleby:total }}%" title="Not Interested: {{ progress.not_interested_leads }}"></div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                
+                <!-- Legend -->
+                <div class="status-legend" id="statusLegend">
+                    <div class="legend-item">
+                        <div class="legend-color new"></div>
+                        <span>New</span>
+                        <span class="legend-count" id="legendNew">{{ progress.new_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color contacted"></div>
+                        <span>Contacted</span>
+                        <span class="legend-count" id="legendContacted">{{ progress.contacted_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color callback"></div>
+                        <span>Callback</span>
+                        <span class="legend-count" id="legendCallback">{{ progress.callback_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color sale"></div>
+                        <span>Sale</span>
+                        <span class="legend-count" id="legendSale">{{ progress.sale_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color no_answer"></div>
+                        <span>No Answer</span>
+                        <span class="legend-count" id="legendNoAnswer">{{ progress.no_answer_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color busy"></div>
+                        <span>Busy</span>
+                        <span class="legend-count" id="legendBusy">{{ progress.busy_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color dnc"></div>
+                        <span>DNC</span>
+                        <span class="legend-count" id="legendDnc">{{ progress.dnc_leads }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color not_interested"></div>
+                        <span>Not Interested</span>
+                        <span class="legend-count" id="legendNotInterested">{{ progress.not_interested_leads }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions & Recycle Rules -->
+        <div class="col-lg-4 mb-4">
+            <div class="action-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-cogs me-2 text-primary"></i>Actions
+                </h5>
+                
+                <div class="d-grid gap-2 mb-4">
+                    <a href="{% url 'leads:list_leads' lead_list.id %}" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>View All Leads
+                    </a>
+                    <a href="{% url 'leads:import' %}?list={{ lead_list.id }}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Import More Leads
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="exportLeads()">
+                        <i class="fas fa-download me-2"></i>Export Leads
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="recycleLeads()">
+                        <i class="fas fa-recycle me-2"></i>Recycle Eligible Leads
+                    </button>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mb-3">
+                    <i class="fas fa-recycle me-2"></i>Recycle Rules
+                </h6>
+                
+                <div class="recycle-rules">
+                    {% for rule in recycle_rules %}
+                    <div class="recycle-rule-item {% if not rule.is_active %}inactive{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong>{{ rule.name }}</strong>
+                            <span class="rule-status badge {% if rule.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if rule.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            {{ rule.source_status }} → {{ rule.target_status }} 
+                            | After {{ rule.recycle_after_hours }}h
+                            | Max {{ rule.max_attempts }} attempts
+                        </small>
+                        <div class="mt-1">
+                            <small class="text-muted">Recycled: {{ rule.total_recycled }}</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted small">No recycle rules configured for this list.</p>
+                    <a href="{% url 'leads:create_recycle_rule' %}?list={{ lead_list.id }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>Create Rule
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let refreshInterval;
+let countdown = 30;
+
+$(document).ready(function() {
+    // Set initial progress ring
+    updateProgressRing({{ progress.progress_percentage|default:0 }});
+    
+    // Start auto-refresh
+    startAutoRefresh();
+});
+
+function startAutoRefresh() {
+    // Countdown timer
+    refreshInterval = setInterval(function() {
+        countdown--;
+        $('#refreshTimer').text(countdown);
+        
+        if (countdown <= 0) {
+            refreshStats();
+            countdown = 30;
+        }
+    }, 1000);
+}
+
+function refreshStats() {
+    $('#refreshIndicator').addClass('updating');
+    
+    fetch('{% url "leads:list_progress_api" lead_list.id %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateUI(data.progress);
+            }
+        })
+        .catch(err => console.error('Error refreshing stats:', err))
+        .finally(() => {
+            $('#refreshIndicator').removeClass('updating');
+        });
+}
+
+function updateUI(progress) {
+    // Update stats
+    $('#statTotal').text(progress.total_leads.toLocaleString());
+    $('#statNew').text(progress.new_leads.toLocaleString());
+    $('#statRemaining').text(progress.remaining_leads.toLocaleString());
+    $('#statSales').text(progress.sale_leads.toLocaleString());
+    $('#statDnc').text(progress.dnc_leads.toLocaleString());
+    $('#statCompletion').text(progress.completion_percentage + '%');
+    
+    // Update progress ring
+    $('#progressPercent').text(Math.round(progress.progress_percentage) + '%');
+    updateProgressRing(progress.progress_percentage);
+    
+    // Update legend counts
+    $('#legendNew').text(progress.new_leads);
+    $('#legendContacted').text(progress.contacted_leads);
+    $('#legendCallback').text(progress.callback_leads);
+    $('#legendSale').text(progress.sale_leads);
+    $('#legendNoAnswer').text(progress.no_answer_leads);
+    $('#legendBusy').text(progress.busy_leads);
+    $('#legendDnc').text(progress.dnc_leads);
+    $('#legendNotInterested').text(progress.not_interested_leads);
+    
+    // Update status bar
+    updateStatusBar(progress);
+}
+
+function updateProgressRing(percentage) {
+    const circle = document.getElementById('progressCircle');
+    const circumference = 2 * Math.PI * 70; // radius = 70
+    const offset = circumference - (percentage / 100) * circumference;
+    circle.style.strokeDashoffset = offset;
+}
+
+function updateStatusBar(progress) {
+    const total = progress.total_leads || 1;
+    const bar = $('#statusBar');
+    
+    bar.find('.new').css('width', (progress.new_leads / total * 100) + '%');
+    bar.find('.contacted').css('width', (progress.contacted_leads / total * 100) + '%');
+    bar.find('.callback').css('width', (progress.callback_leads / total * 100) + '%');
+    bar.find('.sale').css('width', (progress.sale_leads / total * 100) + '%');
+    bar.find('.no_answer').css('width', (progress.no_answer_leads / total * 100) + '%');
+    bar.find('.busy').css('width', (progress.busy_leads / total * 100) + '%');
+    bar.find('.dnc').css('width', (progress.dnc_leads / total * 100) + '%');
+    bar.find('.not_interested').css('width', (progress.not_interested_leads / total * 100) + '%');
+}
+
+function recycleLeads() {
+    if (!confirm('This will recycle eligible leads according to active rules. Continue?')) {
+        return;
+    }
+    
+    fetch('{% url "leads:recycle_list_leads" lead_list.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Successfully recycled ${data.recycled_count} leads.`);
+            refreshStats();
+        } else {
+            alert(data.error || 'Failed to recycle leads');
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Failed to recycle leads');
+    });
+}
+
+function exportLeads() {
+    window.location.href = '{% url "leads:export_list" lead_list.id %}?format=csv';
+}
+
+// Cleanup on page unload
+$(window).on('beforeunload', function() {
+    clearInterval(refreshInterval);
+});
+</script>
+{% endblock %}

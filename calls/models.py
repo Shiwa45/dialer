@@ -122,6 +122,13 @@ class CallLog(TimeStampedModel):
         blank=True
     )
     
+    # Quality fields (Phase 4.2)
+    quality_score = models.FloatField(null=True, blank=True)
+    hold_duration = models.IntegerField(null=True, blank=True)
+    amd_result = models.CharField(max_length=20, blank=True)
+    amd_action = models.CharField(max_length=20, blank=True)
+    ring_duration = models.IntegerField(null=True, blank=True)
+    
     class Meta:
         verbose_name = "Call Log"
         verbose_name_plural = "Call Logs"
@@ -147,6 +154,34 @@ class CallLog(TimeStampedModel):
     def was_answered(self):
         """Check if call was answered"""
         return self.call_status == 'answered' and self.answer_time is not None
+
+class CallQualityScore(models.Model):
+    """
+    Automated and manual quality scoring for calls (Phase 4.2)
+    """
+    call = models.OneToOneField(
+        'CallLog',
+        on_delete=models.CASCADE,
+        related_name='quality_details'
+    )
+    duration_score = models.FloatField(default=0)
+    hold_score = models.FloatField(default=0)
+    disposition_score = models.FloatField(default=0)
+    resolution_score = models.FloatField(default=0)
+    total_score = models.FloatField(default=0)
+    category = models.CharField(max_length=20, default='average')
+    flagged_for_review = models.BooleanField(default=False)
+    flag_reason = models.CharField(max_length=200, blank=True)
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Score for {self.call.call_id}: {self.total_score}"
 
 class CallEvent(TimeStampedModel):
     """

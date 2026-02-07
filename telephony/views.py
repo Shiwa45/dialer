@@ -854,6 +854,99 @@ def cleanup_asterisk_orphans(request):
         messages.error(request, f'Cleanup failed: {str(e)}')
     
     return redirect('telephony:phones')
+@login_required
+@user_passes_test(is_manager_or_admin)
+def sync_asterisk_configs(request):
+    """
+    Sync carrier configurations and dialplan to Asterisk
+    Renders configs and reloads PJSIP and dialplan modules
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        from io import StringIO
+        import subprocess
+        
+        # Capture command output
+        output = StringIO()
+        error_output = StringIO()
+        
+        # Step 1: Render carrier configs
+        try:
+            call_command(
+                'render_carrier_configs',
+                pjsip_out='/etc/asterisk/pjsip_custom.conf',
+                dialplan_out='/etc/asterisk/extensions_custom.conf',
+                context='from-campaign',
+                stdout=output,
+                stderr=error_output
+            )
+            render_success = True
+            render_message = output.getvalue()
+        except Exception as e:
+            render_success = False
+            render_message = f"Config render failed: {str(e)}\n{error_output.getvalue()}"
+        
+        if not render_success:
+            return JsonResponse({
+                'success': False,
+                'error': render_message
+            }, status=500)
+        
+        # Step 2: Reload PJSIP
+        pjsip_result = {'success': False, 'output': ''}
+        try:
+            result = subprocess.run(
+                ['sudo', 'asterisk', '-rx', 'pjsip reload'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            pjsip_result['output'] = result.stdout
+            pjsip_result['success'] = result.returncode == 0
+        except subprocess.TimeoutExpired:
+            pjsip_result['output'] = 'PJSIP reload timed out'
+        except Exception as e:
+            pjsip_result['output'] = f'PJSIP reload error: {str(e)}'
+        
+        # Step 3: Reload Dialplan
+        dialplan_result = {'success': False, 'output': ''}
+        try:
+            result = subprocess.run(
+                ['sudo', 'asterisk', '-rx', 'dialplan reload'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            dialplan_result['output'] = result.stdout
+            dialplan_result['success'] = result.returncode == 0
+        except subprocess.TimeoutExpired:
+            dialplan_result['output'] = 'Dialplan reload timed out'
+        except Exception as e:
+            dialplan_result['output'] = f'Dialplan reload error: {str(e)}'
+        
+        # Determine overall success
+        overall_success = pjsip_result['success'] and dialplan_result['success']
+        
+        return JsonResponse({
+            'success': overall_success,
+            'message': 'Asterisk configs synced successfully!' if overall_success else 'Sync completed with warnings',
+            'details': {
+                'config_render': {
+                    'success': render_success,
+                    'output': render_message
+                },
+                'pjsip_reload': pjsip_result,
+                'dialplan_reload': dialplan_result
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Sync failed: {str(e)}'
+        }, status=500)
 
 
 # ============================================================================

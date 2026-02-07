@@ -29,10 +29,10 @@ export PGUSER=postgres
 export PGPASSWORD=Shiwansh@123
 # Check if migrations are applied
 echo "📋 Checking database migrations..."
-python manage.py showmigrations campaigns | grep -q "\[X\] 0015_hopper_system" || {
+./env/bin/python manage.py showmigrations campaigns | grep -q "\[X\] 0015_hopper_system" || {
     echo "⚠️  Hopper system migration not applied!"
     echo "Running migrations..."
-    python manage.py migrate
+    ./env/bin/python manage.py migrate
 }
 
 echo "✅ Database ready"
@@ -41,7 +41,7 @@ echo ""
 
 # Check for Redis
 echo "📋 Checking Redis..."
-if ! python -c "import redis; print(redis.Redis().ping())" &> /dev/null; then
+if ! ./env/bin/python -c "import redis; print(redis.Redis().ping())" &> /dev/null; then
     echo "❌ Redis is not potentially reachable or installed."
     echo "Please ensure Redis is running: sudo systemctl start redis"
     # Attempt to start if linux
@@ -63,6 +63,7 @@ if [ -f "./generated_configs/pjsip_custom.conf" ]; then
     sudo cp ./generated_configs/pjsip_custom.conf "$PJSIP_CONF"
     sudo cp ./generated_configs/extensions_custom.conf "$EXT_CONF"
     sudo asterisk -rx "core reload"
+    sudo asterisk -rx "dialplan reload"
     echo "✅ Asterisk Config Refreshed"
 else
     echo "⚠️  Generated configs not found. Skipping deployment."
@@ -125,9 +126,20 @@ echo "3️⃣  Starting Predictive Dialer..."
 start_service "Predictive Dialer" "./env/bin/python -u manage.py predictive_dialer"
 sleep 1
 
+# Start Celery Worker
+echo "4️⃣  Starting Celery Worker..."
+start_service "Celery Worker" "./env/bin/celery -A autodialer worker -l info"
+sleep 1
+
+# Start Celery Beat
+echo "5️⃣  Starting Celery Beat..."
+start_service "Celery Beat" "./env/bin/celery -A autodialer beat -l info"
+sleep 1
+
 # Start Django Server (ASGI/Channels)
-echo "4️⃣  Starting Django Server (Daphne)..."
-start_service "Django Server" "./env/bin/daphne -b 0.0.0.0 -p 8000 autodialer.asgi:application"
+echo "6️⃣  Starting Django Server (Daphne)..."
+# Port 80 requires sudo
+start_service "Django Server" "sudo ./env/bin/daphne -b 0.0.0.0 -p 80 autodialer.asgi:application"
 sleep 2
 
 echo ""
@@ -136,8 +148,8 @@ echo "  ✅ All Services Started!"
 echo "========================================="
 echo ""
 echo "📊 Access Points:"
-echo "  • Agent Dashboard:    http://localhost:8000/agents/dashboard/"
-echo "  • Admin Panel:        http://localhost:8000/admin/"
+echo "  • Agent Dashboard:    http://localhost/agents/dashboard/"
+echo "  • Admin Panel:        http://localhost/admin/"
 echo ""
 echo "Logs are being written to the 'logs/' directory."
 echo "Press Ctrl+C to stop all services."

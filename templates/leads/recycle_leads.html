@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Recycle Leads - {{ lead_list.name }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'leads:list' %}">Leads</a></li>
+<li class="breadcrumb-item"><a href="{% url 'leads:lead_lists' %}">Lead Lists</a></li>
+<li class="breadcrumb-item"><a href="{% url 'leads:lead_list_detail' lead_list.pk %}">{{ lead_list.name }}</a></li>
+<li class="breadcrumb-item active">Recycle Leads</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-recycle me-2"></i>Recycle Leads
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Recycling leads will reset their status to <strong>New</strong>, making them available to be dialed
+                    again.
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5>Current Status Counts:</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for status, count in stats.items %}
+                            <span class="badge bg-light text-dark border">
+                                {{ status|title }}: <strong>{{ count }}</strong>
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Statuses to Recycle:</label>
+                        <div class="card card-body bg-light">
+                            {{ form.source_statuses }}
+                        </div>
+                        {% if form.source_statuses.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.source_statuses.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.reset_call_count }}
+                            <label class="form-check-label" for="{{ form.reset_call_count.id_for_label }}">
+                                {{ form.reset_call_count.help_text }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'leads:lead_list_detail' lead_list.pk %}" class="btn btn-secondary me-md-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-recycle me-2"></i>Recycle Selected Leads
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             /* Light Mode Colors (Default) */
@@ -193,8 +195,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .agent-layout {
@@ -350,8 +359,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .call-panel {
@@ -580,18 +596,18 @@
             background: linear-gradient(145deg, var(--phone-body), #c5c8cf);
             border-radius: 20px;
             padding: 1.5rem;
-            box-shadow: 
+            box-shadow:
                 0 20px 60px var(--shadow-heavy),
-                inset 0 1px 0 rgba(255,255,255,0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
             position: relative;
-            border: 3px solid rgba(0,0,0,0.3);
+            border: 3px solid rgba(0, 0, 0, 0.3);
         }
 
         .phone-header {
             text-align: center;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .phone-brand {
@@ -609,10 +625,10 @@
             padding: 1.25rem;
             margin-bottom: 1.5rem;
             min-height: 140px;
-            border: 2px solid rgba(0,0,0,0.5);
-            box-shadow: 
-                inset 0 2px 8px rgba(0,0,0,0.5),
-                0 1px 0 rgba(255,255,255,0.1);
+            border: 2px solid rgba(0, 0, 0, 0.5);
+            box-shadow:
+                inset 0 2px 8px rgba(0, 0, 0, 0.5),
+                0 1px 0 rgba(255, 255, 255, 0.1);
             font-family: 'Orbitron', monospace;
         }
 
@@ -622,7 +638,7 @@
             font-weight: 700;
             text-align: center;
             margin-bottom: 0.75rem;
-            text-shadow: 0 0 10px rgba(0,255,65,0.5);
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
             min-height: 2rem;
             letter-spacing: 0.1em;
         }
@@ -640,7 +656,7 @@
             font-size: 1.125rem;
             text-align: center;
             font-weight: 500;
-            text-shadow: 0 0 8px rgba(0,212,255,0.5);
+            text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
             margin-top: 0.5rem;
         }
 
@@ -654,7 +670,7 @@
         .phone-key {
             aspect-ratio: 1;
             background: linear-gradient(145deg, var(--phone-button), #2c3e50);
-            border: 2px solid rgba(0,0,0,0.3);
+            border: 2px solid rgba(0, 0, 0, 0.3);
             border-radius: 50%;
             color: var(--phone-text);
             font-family: 'Orbitron', monospace;
@@ -662,9 +678,9 @@
             font-size: 1.25rem;
             cursor: pointer;
             transition: all 0.15s ease;
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.3),
-                inset 0 1px 0 rgba(255,255,255,0.1);
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -675,16 +691,16 @@
         .phone-key:hover {
             background: linear-gradient(145deg, var(--phone-button-hover), #3d5266);
             transform: translateY(-2px);
-            box-shadow: 
-                0 6px 12px rgba(0,0,0,0.4),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+            box-shadow:
+                0 6px 12px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .phone-key:active {
             transform: translateY(0);
-            box-shadow: 
-                0 2px 4px rgba(0,0,0,0.3),
-                inset 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .phone-key-sub {
@@ -705,7 +721,7 @@
         .phone-control-btn {
             padding: 1rem;
             border-radius: 8px;
-            border: 2px solid rgba(0,0,0,0.3);
+            border: 2px solid rgba(0, 0, 0, 0.3);
             background: linear-gradient(145deg, var(--phone-button), #2c3e50);
             color: var(--phone-text);
             font-weight: 700;
@@ -718,17 +734,17 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-            box-shadow: 
-                0 4px 8px rgba(0,0,0,0.3),
-                inset 0 1px 0 rgba(255,255,255,0.1);
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .phone-control-btn:hover {
             background: linear-gradient(145deg, var(--phone-button-hover), #3d5266);
             transform: translateY(-2px);
-            box-shadow: 
-                0 6px 12px rgba(0,0,0,0.4),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+            box-shadow:
+                0 6px 12px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .phone-control-btn.call {
@@ -750,7 +766,7 @@
         }
 
         .phone-input-display {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
             padding: 0.75rem;
             border-radius: 6px;
             margin-bottom: 0.75rem;
@@ -949,7 +965,7 @@
             .agent-layout {
                 grid-template-columns: 1fr 1fr;
             }
-            
+
             .retro-phone {
                 grid-column: span 2;
                 max-width: 400px;
@@ -988,26 +1004,28 @@
         }
     </style>
 </head>
+
 <body>
-    <div class="agent-app"
-         data-agent-dashboard
-         data-agent-id="{{ agent.id }}"
-         data-status="{{ agent_status.status }}"
-         data-status-url="{% url 'agents:update_status' %}"
-         data-call-status-url="{{ call_status_url }}"
-         data-lead-info-url="{{ lead_info_url }}"
-         data-disposition-url="{{ disposition_url }}"
-         data-manual-dial-url="{{ manual_dial_url }}"
-         data-hangup-url="{{ hangup_url }}"
-         data-transfer-url="{{ transfer_call_url }}"
-         data-webrtc-enabled="{{ phone_info.webrtc_enabled|yesno:'true,false' }}"
-         data-webrtc-config-url="{% url 'agents:get_webrtc_config' %}"
-         data-webrtc-enabled-flag="{{ phone_info.webrtc_enabled|yesno:'true,false' }}"
-         data-wrapup-timeout="{{ current_campaign.wrapup_timeout|default:120 }}">
+    <div class="agent-app" data-agent-dashboard data-agent-id="{{ agent.id }}" data-status="{{ agent_status.status }}"
+        data-status-url="{% url 'agents:update_status' %}" data-call-status-url="{{ call_status_url }}"
+        data-lead-info-url="{{ lead_info_url }}" data-disposition-url="{{ disposition_url }}"
+        data-manual-dial-url="{{ manual_dial_url }}" data-hangup-url="{{ hangup_url }}"
+        data-transfer-url="{{ transfer_call_url }}"
+        data-webrtc-enabled="{{ phone_info.webrtc_enabled|yesno:'true,false' }}"
+        data-webrtc-config-url="{% url 'agents:get_webrtc_config' %}"
+        data-webrtc-enabled-flag="{{ phone_info.webrtc_enabled|yesno:'true,false' }}"
+        data-wrapup-timeout="{{ current_campaign.wrapup_timeout|default:120 }}">
         <header class="agent-header">
             <div>
                 <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
-                <p class="agent-subtitle">Stay available to receive the next {{ assigned_campaigns|length }} campaign{% if assigned_campaigns|length != 1 %}s{% endif %}.</p>
+                <p class="agent-subtitle">Stay available to receive the next {{ assigned_campaigns|length }} campaign{{
+                    assigned_campaigns|length|pluralize }}.</p>
+                <div style="margin-top: 10px;">
+                    <a href="{% url 'agents:call_history_page' %}" class="btn btn-outline-primary"
+                        style="text-decoration: none; color: var(--accent); border: 1px solid var(--border); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
+                        <i class="fas fa-history"></i> Call History
+                    </a>
+                </div>
             </div>
             <div class="header-right">
                 <div class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">
@@ -1026,22 +1044,22 @@
                 <h2>Availability</h2>
                 <p class="agent-subtitle">Update your state so the dialer knows when to connect calls.</p>
                 <div class="status-actions">
-                    <button class="status-chip" data-status-trigger="available">
+                    <button type="button" class="status-chip" data-status-trigger="available">
                         <i class="fa-solid fa-headset"></i> Available
                     </button>
-                    <button class="status-chip" data-status-trigger="break" data-status-reason="Break">
+                    <button type="button" class="status-chip" data-status-trigger="break" data-status-reason="Break">
                         <i class="fa-solid fa-mug-hot"></i> Break
                     </button>
-                    <button class="status-chip" data-status-trigger="lunch" data-status-reason="Lunch">
+                    <button type="button" class="status-chip" data-status-trigger="lunch" data-status-reason="Lunch">
                         <i class="fa-solid fa-utensils"></i> Lunch
                     </button>
-                    <button class="status-chip" data-status-trigger="training">
+                    <button type="button" class="status-chip" data-status-trigger="training">
                         <i class="fa-solid fa-graduation-cap"></i> Training
                     </button>
-                    <button class="status-chip" data-status-trigger="meeting">
+                    <button type="button" class="status-chip" data-status-trigger="meeting">
                         <i class="fa-solid fa-people-group"></i> Meeting
                     </button>
-                    <button class="status-chip" data-status-trigger="offline">
+                    <button type="button" class="status-chip" data-status-trigger="offline">
                         <i class="fa-solid fa-power-off"></i> Offline
                     </button>
                 </div>
@@ -1050,17 +1068,16 @@
                     <div class="info-card">
                         <label>Extension</label>
                         <strong>{{ phone_info.extension|default:"Not assigned" }}</strong>
-                        <p class="agent-subtitle"
-                           data-phone-registration
-                           data-registered="{{ phone_info.registered|yesno:'true,false' }}">
+                        <p class="agent-subtitle" data-phone-registration
+                            data-registered="{{ phone_info.registered|yesno:'true,false' }}">
                             {% if phone_info.extension %}
-                                {% if phone_info.registered %}
-                                    Softphone registered
-                                {% else %}
-                                    Not registered — open your softphone client
-                                {% endif %}
+                            {% if phone_info.registered %}
+                            Softphone registered
                             {% else %}
-                                No phone assigned. Contact your supervisor.
+                            Not registered — open your softphone client
+                            {% endif %}
+                            {% else %}
+                            No phone assigned. Contact your supervisor.
                             {% endif %}
                         </p>
                     </div>
@@ -1068,19 +1085,19 @@
                         <label>Assigned Campaigns</label>
                         <strong>
                             {% if assigned_campaigns %}
-                                {{ assigned_campaigns|length }} active
+                            {{ assigned_campaigns|length }} active
                             {% else %}
-                                None
+                            None
                             {% endif %}
                         </strong>
                         <ul class="list" style="margin-top: 0.5rem;">
                             {% for campaign in assigned_campaigns %}
-                                <li class="list-item">
-                                    <strong>{{ campaign.name }}</strong>
-                                    <small>{{ campaign.get_dial_method_display|default:"Dial mode not set" }}</small>
-                                </li>
+                            <li class="list-item">
+                                <strong>{{ campaign.name }}</strong>
+                                <small>{{ campaign.get_dial_method_display|default:"Dial mode not set" }}</small>
+                            </li>
                             {% empty %}
-                                <li class="list-item">You are not assigned to a campaign yet.</li>
+                            <li class="list-item">You are not assigned to a campaign yet.</li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -1089,12 +1106,13 @@
                         <strong>{{ pending_callbacks|length }}</strong>
                         <ul class="list" style="margin-top: 0.5rem;">
                             {% for callback in pending_callbacks %}
-                                <li class="list-item">
-                                    <strong>{{ callback.lead.first_name }} {{ callback.lead.last_name }}</strong>
-                                    <small>{{ callback.scheduled_time|date:"M d, H:i" }} · {{ callback.campaign.name }}</small>
-                                </li>
+                            <li class="list-item">
+                                <strong>{{ callback.lead.first_name }} {{ callback.lead.last_name }}</strong>
+                                <small>{{ callback.scheduled_time|date:"M d, H:i" }} · {{ callback.campaign.name
+                                    }}</small>
+                            </li>
                             {% empty %}
-                                <li class="list-item">No callbacks scheduled.</li>
+                            <li class="list-item">No callbacks scheduled.</li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -1102,26 +1120,30 @@
 
                 <div class="panel" style="margin-top: 1.5rem;">
                     <h2>Call Transfer</h2>
-                    <p class="agent-subtitle">Send the active call to another available agent without leaving the retro phone.</p>
+                    <p class="agent-subtitle">Send the active call to another available agent without leaving the retro
+                        phone.</p>
                     {% if transfer_targets %}
-                        <form id="transfer-call-form" style="margin-top:1rem;">
-                            <label for="transfer-target-select">Available Agents</label>
-                            <select id="transfer-target-select" class="select-control" data-transfer-target>
-                                <option value="" disabled selected>Select agent</option>
-                                {% for target in transfer_targets %}
-                                    <option value="{{ target.extension }}">{{ target.name }} ({{ target.extension }})</option>
-                                {% endfor %}
-                            </select>
-                            <small class="agent-subtitle" style="display:block; margin-top:0.5rem;">Transfer button enables when you are on a live call.</small>
-                            <div class="call-actions" style="margin-top:1rem;">
-                                <button type="submit" class="btn-primary" data-transfer-submit disabled>Transfer Call</button>
-                            </div>
-                        </form>
-                    {% else %}
-                        <div class="info-card" style="margin-top:1rem;">
-                            <strong>No agents available</strong>
-                            <p class="agent-subtitle" style="margin-top:0.5rem;">Once another agent is online, you can transfer calls to them from here.</p>
+                    <form id="transfer-call-form" style="margin-top:1rem;">
+                        <label for="transfer-target-select">Available Agents</label>
+                        <select id="transfer-target-select" class="select-control" data-transfer-target>
+                            <option value="" disabled selected>Select agent</option>
+                            {% for target in transfer_targets %}
+                            <option value="{{ target.extension }}">{{ target.name }} ({{ target.extension }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="agent-subtitle" style="display:block; margin-top:0.5rem;">Transfer button enables
+                            when you are on a live call.</small>
+                        <div class="call-actions" style="margin-top:1rem;">
+                            <button type="submit" class="btn-primary" data-transfer-submit disabled>Transfer
+                                Call</button>
                         </div>
+                    </form>
+                    {% else %}
+                    <div class="info-card" style="margin-top:1rem;">
+                        <strong>No agents available</strong>
+                        <p class="agent-subtitle" style="margin-top:0.5rem;">Once another agent is online, you can
+                            transfer calls to them from here.</p>
+                    </div>
                     {% endif %}
                 </div>
             </section>
@@ -1147,7 +1169,8 @@
                             <div class="call-panel__header">
                                 <div>
                                     <h3>Current Call</h3>
-                                    <p class="agent-subtitle" style="margin:0;">The dialer connects you automatically when a lead answers.</p>
+                                    <p class="agent-subtitle" style="margin:0;">The dialer connects you automatically
+                                        when a lead answers.</p>
                                 </div>
                                 <button class="btn-primary" data-open-disposition disabled>
                                     <i class="fa-regular fa-clipboard"></i> Disposition
@@ -1211,8 +1234,10 @@
                     <div class="tab-content" id="tab-quick-notes">
                         <div class="panel">
                             <h2>Quick Notes</h2>
-                            <p class="agent-subtitle">Capture key info during or after the call. Disposition prompts will appear automatically when the call ends.</p>
-                            <textarea class="agent-note-input" placeholder="e.g. Customer asked for pricing details..." style="min-height: 300px;"></textarea>
+                            <p class="agent-subtitle">Capture key info during or after the call. Disposition prompts
+                                will appear automatically when the call ends.</p>
+                            <textarea class="agent-note-input" placeholder="e.g. Customer asked for pricing details..."
+                                style="min-height: 300px;"></textarea>
                         </div>
                     </div>
                 </div>
@@ -1331,13 +1356,14 @@
                 <select id="disposition-select" name="disposition_id" class="select-control" required>
                     <option value="" disabled selected>Select outcome</option>
                     {% for disposition in available_dispositions %}
-                        <option value="{{ disposition.id }}">{{ disposition.name }}</option>
+                    <option value="{{ disposition.id }}">{{ disposition.name }}</option>
                     {% endfor %}
                 </select>
                 <label for="disposition-notes" style="margin-top:0.75rem;">Notes</label>
-                <textarea id="disposition-notes" name="notes" class="agent-note-input" placeholder="Add remarks..."></textarea>
+                <textarea id="disposition-notes" name="notes" class="agent-note-input"
+                    placeholder="Add remarks..."></textarea>
                 <div class="modal-actions">
-                    <button class="btn-muted" type="button" data-disposition-cancel>Cancel</button>
+                    <button class="btn-muted" type="button" data-cancel-disposition>Cancel</button>
                     <button class="btn-primary" type="submit">Save</button>
                 </div>
             </form>
@@ -1345,48 +1371,48 @@
     </div>
 
     {% if break_codes %}
-        {{ break_codes|json_script:"agent-break-codes-data" }}
+    {{ break_codes|json_script:"agent-break-codes-data" }}
     {% else %}
-        <script id="agent-break-codes-data" type="application/json">[]</script>
+    <script id="agent-break-codes-data" type="application/json">[]</script>
     {% endif %}
     {% if status_options %}
-        {{ status_options|json_script:"agent-status-options" }}
+    {{ status_options|json_script:"agent-status-options" }}
     {% else %}
-        <script id="agent-status-options" type="application/json">[]</script>
+    <script id="agent-status-options" type="application/json">[]</script>
     {% endif %}
     {% if call_status %}
-        {{ call_status|json_script:"agent-call-status-data" }}
+    {{ call_status|json_script:"agent-call-status-data" }}
     {% else %}
-        <script id="agent-call-status-data" type="application/json">{}</script>
+    <script id="agent-call-status-data" type="application/json">{}</script>
     {% endif %}
     {% if available_dispositions %}
-        {{ available_dispositions|json_script:"agent-dispositions-data" }}
+    {{ available_dispositions|json_script:"agent-dispositions-data" }}
     {% else %}
-        <script id="agent-dispositions-data" type="application/json">[]</script>
+    <script id="agent-dispositions-data" type="application/json">[]</script>
     {% endif %}
     {{ webrtc_config|json_script:"agent-webrtc-config" }}
 
     <script>
         // Theme Toggle Functionality
-        (function() {
+        (function () {
             const themeToggle = document.getElementById('theme-toggle');
             const themeIcon = document.getElementById('theme-icon');
             const html = document.documentElement;
-            
+
             // Check for saved theme preference or default to light mode
             const currentTheme = localStorage.getItem('theme') || 'light';
             html.setAttribute('data-theme', currentTheme);
             updateThemeIcon(currentTheme);
-            
-            themeToggle.addEventListener('click', function() {
+
+            themeToggle.addEventListener('click', function () {
                 const currentTheme = html.getAttribute('data-theme');
                 const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                
+
                 html.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
                 updateThemeIcon(newTheme);
             });
-            
+
             function updateThemeIcon(theme) {
                 if (theme === 'dark') {
                     themeIcon.className = 'fas fa-moon';
@@ -1397,18 +1423,18 @@
         })();
 
         // Tab Switching Functionality
-        (function() {
+        (function () {
             const tabButtons = document.querySelectorAll('.tab-button');
             const tabContents = document.querySelectorAll('.tab-content');
-            
+
             tabButtons.forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function () {
                     const targetTab = this.getAttribute('data-tab');
-                    
+
                     // Remove active class from all buttons and contents
                     tabButtons.forEach(btn => btn.classList.remove('active'));
                     tabContents.forEach(content => content.classList.remove('active'));
-                    
+
                     // Add active class to clicked button and corresponding content
                     this.classList.add('active');
                     document.getElementById('tab-' + targetTab).classList.add('active');
@@ -1420,6 +1446,7 @@
     {% if phone_info.webrtc_enabled %}
     <script src="https://cdn.jsdelivr.net/npm/jssip@3/dist/jssip.min.js" crossorigin="anonymous"></script>
     {% endif %}
-    <script src="{% static 'js/agent_dashboard.js' %}"></script>
+    <script src="{% static 'js/agent_dashboard.js' %}?v=2"></script>
 </body>
+
 </html>

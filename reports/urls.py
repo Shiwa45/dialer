@@ -24,3 +24,31 @@ urlpatterns = [
     # Exports
     path('export/<str:report>/<str:fmt>/', views.export_report, name='export'),
 ]
+
+# Phase 3.2: Real-time Reports
+from . import realtime_views
+
+urlpatterns += [
+    path('realtime-new/', realtime_views.realtime_dashboard, name='realtime_dashboard'),
+    path('api/realtime/agents/', realtime_views.realtime_agents_api, name='realtime_agents_api'),
+    path('api/realtime/stats/', realtime_views.realtime_campaign_stats_api, name='realtime_stats_api'),
+    path('api/realtime/queue/', realtime_views.realtime_call_queue_api, name='realtime_queue_api'),
+]
+
+# Phase 4.2: Supervisor Monitoring
+urlpatterns += [
+    # path('monitoring/', views.monitoring_dashboard, name='monitoring_dashboard'), # Using existing monitor_dashboard for now or new one? Guide says monitoring_dashboard.
+    # The existing 'monitor/' uses 'monitor_dashboard'. I'll stick to the existing one for the main dashboard view if it overlaps, 
+    # but the Phase 4 guide specifies 'monitoring_dashboard'. I will add it.
+    path('supervisor/monitoring/', views.monitoring_dashboard, name='supervisor_monitoring'),
+    path('api/monitoring/start/', views.start_monitoring, name='start_monitoring'),
+    # path('api/monitoring/stop/', views.stop_monitoring, name='stop_monitoring'), # Only start is commonly needed if stop is implicit or explicit
+    # path('api/monitoring/mode/', views.switch_monitoring_mode, name='switch_monitoring_mode'),
+]
+
+# Phase 4.3: Advanced Analytics
+urlpatterns += [
+    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    path('analytics/export/', views.export_report_v2, name='export_report_v2'),
+    # path('api/leaderboard/', views.leaderboard_api, name='leaderboard_api'), # If I implemented it
+]

@@ -1,444 +1,151 @@
-# agents/views_simple.py
+"""
+Agent Views (Simple Dashboard) - IMPROVED with Phase 1 Fixes
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.utils import timezone
-from django.views.decorators.http import require_POST, require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from datetime import timedelta
+Phase 1 Fixes Applied:
+- 1.2: Broadcast call_cleared event after disposition
+- 1.3: Force hangup and cleanup after disposition
+"""
+
+import json
 import logging
+from datetime import timedelta
 
-from django.db.models import Q
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST, require_http_methods
+from django.utils import timezone
+from django.db.models import Q, Sum
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .models import AgentCallbackTask, AgentScript, AgentQueue, AgentBreakCode
-from .telephony_service import AgentTelephonyService
-from campaigns.models import Campaign, Disposition
-from leads.models import Lead
+
+from agents.decorators import agent_required
+from agents.models import AgentDialerSession, AgentCallbackTask
+from agents.telephony_service import AgentTelephonyService
 from calls.models import CallLog
+from campaigns.models import Campaign, Disposition, OutboundQueue
+from leads.models import Lead
 from users.models import AgentStatus
-from core.decorators import agent_required
-from telephony.models import Phone
+from telephony.models import Phone, AsteriskServer
+from telephony.services import AsteriskService
 
 logger = logging.getLogger(__name__)
 
 
-@login_required
-@agent_required
-def agent_dashboard(request):
-    """
-    Enhanced agent dashboard with telephony integration
-    """
-    agent = request.user
+def _get_dashboard_context(request, agent, agent_status, phone):
+    """Helper to build consistent dashboard context"""
+    from campaigns.models import Campaign, Disposition
+    from agents.models import AgentCallbackTask
+    from agents.telephony_service import AgentTelephonyService
     
-    try:
-        # Get agent's current status
-        agent_status, created = AgentStatus.objects.get_or_create(user=agent)
+    # Get assigned campaigns
+    assigned_campaigns = Campaign.objects.filter(
+        assigned_users=agent,
+        status='active'
+    )
+    
+    # Get current campaign
+    current_campaign = agent_status.current_campaign
+    if not current_campaign and assigned_campaigns.exists():
+        current_campaign = assigned_campaigns.first()
         
-        # Get pending callbacks for this agent
-        pending_callbacks = AgentCallbackTask.objects.filter(
-            agent=agent,
-            status__in=['pending', 'scheduled'],
-            scheduled_time__lte=timezone.now() + timedelta(hours=24)
-        ).select_related('lead', 'campaign').order_by('scheduled_time')[:10]
-        
-        # Get default script content
-        default_script = AgentScript.objects.filter(
-            is_global=True,
-            script_type='opening',
-            is_active=True
-        ).first()
-        
-        script_content = default_script.content if default_script else "Hello, this is [Agent Name] calling from [Company]. How are you today?"
-        
-        # Get agent's telephony info
+    # Get phone info
+    phone_info = {
+        'extension': phone.extension if phone else None,
+        'is_active': phone.is_active if phone else False,
+        'webrtc_enabled': getattr(phone, 'webrtc_enabled', False) if phone else False,
+        'registered': False
+    }
+    
+    if phone:
         telephony_service = AgentTelephonyService(agent)
-        webrtc_config = telephony_service.get_webrtc_config() or {}
-        call_status = telephony_service.get_agent_call_status()
-        phone_info = {
-            'extension': telephony_service.agent_phone.extension if telephony_service.agent_phone else None,
-            'registered': telephony_service.is_extension_registered() if telephony_service.agent_phone else False,
-            'webrtc_enabled': telephony_service.agent_phone.webrtc_enabled if telephony_service.agent_phone else False,
-        }
-        
-        # Get agent's assigned campaigns
-        assigned_campaigns = Campaign.objects.filter(
-            assigned_users=agent,
-            status='active',
-            campaignagent__is_active=True
-        ).distinct()
-
-        break_codes = list(AgentBreakCode.objects.filter(
-            is_active=True
-        ).order_by('display_order').values(
-            'id', 'code', 'name', 'description', 'color_code', 'max_duration', 'requires_approval'
-        ))
-
-        status_options = [
-            {'value': value, 'label': label}
-            for value, label in AgentStatus.STATUS_CHOICES
-        ]
-        
-        current_campaign = agent_status.current_campaign or assigned_campaigns.first()
-        available_dispositions = []
-        if current_campaign:
-            campaign_dispositions = current_campaign.dispositions.filter(
+        try:
+            phone_info['registered'] = telephony_service.is_extension_registered()
+        except:
+            phone_info['registered'] = False
+            
+    # Get available dispositions
+    available_dispositions = Disposition.objects.filter(is_active=True)
+    if current_campaign:
+        campaign_dispositions = current_campaign.dispositions.filter(is_active=True).select_related('disposition')
+        if campaign_dispositions.exists():
+            # Get the actual Disposition IDs from CampaignDisposition objects
+            disposition_ids = [cd.disposition_id for cd in campaign_dispositions]
+            available_dispositions = Disposition.objects.filter(
+                id__in=disposition_ids,
                 is_active=True
-            ).select_related('disposition').order_by('sort_order')
-            available_dispositions = [
-                {
-                    'id': cd.disposition.id,
-                    'name': cd.disposition.name,
-                    'color': cd.disposition.color,
-                    'is_sale': cd.disposition.is_sale,
-                    'category': cd.disposition.category,
-                }
-                for cd in campaign_dispositions
-            ]
+            ).order_by('name')
+            
+    # Get script content
+    script_content = ""
+    if current_campaign and hasattr(current_campaign, 'script') and current_campaign.script:
+        script_content = current_campaign.script.content
+
+    # Get pending callbacks
+    pending_callbacks = AgentCallbackTask.objects.filter(
+        agent=agent,
+        status__in=['pending', 'scheduled']
+    ).order_by('scheduled_time')[:5]
+    
+    # Get other agents for transfer
+    other_agents = AgentStatus.objects.filter(
+        status='available'
+    ).exclude(user=agent).select_related('user')[:10]
         
-        transfer_targets = []
-        phone_candidates = Phone.objects.filter(
-            is_active=True,
-            user__agent_status__status='available'
-        ).exclude(user=agent).select_related('user').order_by('extension')
-        for phone in phone_candidates:
-            if not phone.user:
-                continue
-            display_name = phone.user.get_full_name() or phone.user.username
-            transfer_targets.append({
-                'extension': phone.extension,
-                'name': display_name,
-            })
+    return {
+        'agent': agent,
+        'agent_status': agent_status,
+        'assigned_campaigns': assigned_campaigns,
+        'current_campaign': current_campaign,
+        'phone_info': phone_info,
+        'available_dispositions': list(available_dispositions.values('id', 'name', 'code', 'category')),
+        'transfer_targets': [
+             {'name': a.user.username, 'extension': a.extension} 
+             for a in other_agents if hasattr(a, 'extension') and a.extension
+        ],
+        'script_content': script_content,
+        'pending_callbacks': pending_callbacks,
+        'other_agents': other_agents,
+        'call_status_url': '/agents/api/call-status/',
+        'lead_info_url': '/agents/api/lead-info/',
+        'disposition_url': '/agents/api/set-disposition/',
+        'manual_dial_url': '/agents/api/manual-dial/',
+        'hangup_url': '/agents/api/hangup/',
+        'transfer_call_url': '/agents/api/transfer/',
+    }
+
+@login_required
+@agent_required
+def simple_dashboard(request):
+    """
+    Main agent dashboard view
+    Routes to WebRTC or standard interface based on phone configuration
+    """
+    agent = request.user
+    agent_status, _ = AgentStatus.objects.get_or_create(user=agent)
+    phone = Phone.objects.filter(user=agent, is_active=True).first()
+    
+    # Calculate context immediately
+    context = _get_dashboard_context(request, agent, agent_status, phone)
+    
+    # Phase 3.1: Route to WebRTC Dashboard if enabled
+    if phone and getattr(phone, 'webrtc_enabled', False):
+        from django.conf import settings
         
-        context = {
-            'agent': agent,
-            'agent_status': agent_status,
-            'pending_callbacks': pending_callbacks,
-            'script_content': script_content,
-            'webrtc_config': webrtc_config,
-            'call_status': call_status,
-            'assigned_campaigns': assigned_campaigns,
-            'dialer_session': None,
-            'break_codes': break_codes,
-            'status_options': status_options,
-            'current_campaign': current_campaign,
-            'available_dispositions': available_dispositions,
-            'call_status_url': reverse('agents:call_status'),
-            'lead_info_url': reverse('agents:get_lead_info'),
-            'disposition_url': reverse('agents:set_disposition'),
-            'manual_dial_url': reverse('agents:manual_dial'),
-            'hangup_url': reverse('agents:hangup_call'),
-            'hold_url': reverse('agents:hold_call'),
-            'transfer_call_url': reverse('agents:transfer_call'),
-            'phone_info': phone_info,
-            'transfer_targets': transfer_targets,
-            'webrtc_config_url': reverse('agents:get_webrtc_config'),
+        webrtc_config = {
+            'ws_server': settings.WEBRTC_CONFIG['ws_server'],
+            'sip_uri': f'sip:{phone.extension}@{settings.WEBRTC_CONFIG["domain"]}',
+            'password': getattr(phone, 'sip_password', phone.secret),
+            'displayName': agent.get_full_name() or agent.username,
+            'debug': settings.WEBRTC_CONFIG.get('debug', False),
+            'extension': phone.extension,
         }
-        
-        return render(request, 'agents/simple_dashboard.html', context)
-        
-    except Exception as e:
-        logger.error(f"Error in agent dashboard: {str(e)}")
-        messages.error(request, 'Error loading dashboard. Please try again.')
-        fallback_context = {
-            'agent': agent,
-            'webrtc_config': {},
-            'assigned_campaigns': [],
-            'pending_callbacks': [],
-            'script_content': '',
-            'manual_dial_url': reverse('agents:manual_dial'),
-            'hangup_url': reverse('agents:hangup_call'),
-            'hold_url': reverse('agents:hold_call'),
-            'transfer_call_url': reverse('agents:transfer_call'),
-            'transfer_targets': [],
-            'phone_info': {'extension': None, 'registered': False},
-        }
-        return render(request, 'agents/simple_dashboard.html', fallback_context)
-
-
-# Removed persistent session flow and push_call to simplify UX
-
-
-@login_required
-@agent_required
-@require_POST
-def manual_dial(request):
-    """Manual dial: originate customer only when the agent requests, then auto-bridge to agent."""
-    agent = request.user
-    number = request.POST.get('phone_number', '').strip()
-    campaign_id = request.POST.get('campaign_id')
-    if not number:
-        return JsonResponse({'success': False, 'error': 'phone_number required'}, status=400)
-    try:
-        campaign = Campaign.objects.filter(id=campaign_id).first() if campaign_id else None
-        if not campaign:
-            campaign = Campaign.objects.filter(assigned_users=agent).filter(Q(status='active') | Q(is_active=True)).first()
-        if not campaign:
-            return JsonResponse({'success': False, 'error': 'No campaign available'}, status=400)
-        if not campaign.assigned_users.filter(id=agent.id).exists():
-            return JsonResponse({'success': False, 'error': 'You are not assigned to that campaign'}, status=403)
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.make_call(
-            phone_number=number,
-            campaign_id=campaign.id,
-            force_manual=True,
-        )
-        if result.get('success'):
-            return JsonResponse({
-                'success': True,
-                'message': 'Dial requested',
-                'channel_id': result.get('channel_id'),
-                'call_id': result.get('call_id'),
-            })
-        return JsonResponse({
-            'success': False,
-            'error': result.get('error', 'Failed to dial'),
-            'call_id': result.get('call_id')
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
-@login_required
-@agent_required
-@require_POST
-def register_phone(request):
-    """
-    Register agent's WebRTC phone
-    """
-    agent = request.user
+        context['webrtc_config'] = webrtc_config
+        return render(request, 'agents/webrtc_dashboard.html', context)
     
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.register_webrtc_phone()
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error registering phone for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Phone registration failed. Please try again.'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def make_call(request):
-    """
-    Initiate a call using telephony service
-    """
-    agent = request.user
-    phone_number = request.POST.get('phone_number', '').strip()
-    campaign_id = request.POST.get('campaign_id')
-    lead_id = request.POST.get('lead_id')
+    return render(request, 'agents/simple_dashboard.html', context)
     
-    if not phone_number:
-        return JsonResponse({
-            'success': False,
-            'error': 'Phone number is required'
-        })
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.make_call(
-            phone_number=phone_number,
-            campaign_id=campaign_id,
-            lead_id=lead_id
-        )
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error making call for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Call failed. Please try again.'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def answer_call(request):
-    """
-    Answer incoming call
-    """
-    agent = request.user
-    call_id = request.POST.get('call_id')
-    
-    if not call_id:
-        return JsonResponse({
-            'success': False,
-            'error': 'Call ID is required'
-        })
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.answer_call(call_id)
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error answering call for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to answer call'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def hangup_call(request):
-    """
-    Hangup current call
-    """
-    agent = request.user
-    call_id = request.POST.get('call_id')
-    reason = request.POST.get('reason', 'agent_hangup')
-    
-    if not call_id:
-        return JsonResponse({
-            'success': False,
-            'error': 'Call ID is required'
-        })
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        # First try to update our own call log directly in case backend lookup fails
-        call_log = CallLog.objects.filter(id=call_id, agent=agent).first()
-        if call_log:
-            call_log.call_status = 'completed'
-            call_log.end_time = timezone.now()
-            if call_log.answer_time:
-                call_log.talk_duration = int((call_log.end_time - call_log.answer_time).total_seconds())
-            if call_log.start_time:
-                call_log.total_duration = int((call_log.end_time - call_log.start_time).total_seconds())
-            call_log.hangup_cause_text = reason
-            call_log.save()
-        result = telephony_service.hangup_call(call_id, reason)
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error hanging up call for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to hangup call'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def transfer_call(request):
-    """
-    Transfer call to another extension/number
-    """
-    agent = request.user
-    call_id = request.POST.get('call_id')
-    transfer_to = request.POST.get('transfer_to', '').strip()
-    transfer_type = request.POST.get('transfer_type', 'warm')
-    
-    if not call_id or not transfer_to:
-        return JsonResponse({
-            'success': False,
-            'error': 'Call ID and transfer destination are required'
-        })
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.transfer_call(call_id, transfer_to, transfer_type)
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error transferring call for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Transfer failed'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def hold_call(request):
-    """
-    Put call on hold or unhold
-    """
-    agent = request.user
-    call_id = request.POST.get('call_id')
-    action = request.POST.get('action', 'hold') # 'hold' or 'unhold'
-    
-    if not call_id:
-        return JsonResponse({
-            'success': False,
-            'error': 'Call ID is required'
-        })
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.hold_call(call_id, action=action)
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error holding call for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Hold failed'
-        })
-
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def get_next_lead(request):
-    """
-    Get next lead for preview dialing
-    """
-    agent = request.user
-    campaign_id = request.GET.get('campaign_id')
-    
-    if not campaign_id:
-        return JsonResponse({
-            'success': False,
-            'error': 'Campaign ID is required'
-        })
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.get_next_lead(campaign_id)
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error getting next lead for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to get next lead'
-        })
-
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def call_status(request):
-    """
-    Get current call status
-    """
-    agent = request.user
-    
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        result = telephony_service.get_agent_call_status()
-        return JsonResponse(result)
-        
-    except Exception as e:
-        logger.error(f"Error getting call status for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to get call status'
-        })
+    return render(request, 'agents/simple_dashboard.html', context)
 
 
 @login_required
@@ -446,59 +153,51 @@ def call_status(request):
 @require_POST
 def update_status(request):
     """
-    Update agent status (break, lunch, available, etc.)
+    Update agent status
     """
     agent = request.user
-    new_status = request.POST.get('status', '').lower().strip()
-    break_reason = request.POST.get('break_reason', '').strip()
+    new_status = request.POST.get('status', '').strip().lower()
     
-    # Valid status mapping
-    status_mapping = {
-        'available': 'available',
-        'break': 'break',
-        'lunch': 'lunch',
-        'busy': 'busy',
-        'wrapup': 'wrapup',
-        'training': 'training',
-        'meeting': 'meeting',
-        'system_issues': 'system_issues',
-        'offline': 'offline',
-    }
-    
-    if new_status not in status_mapping:
+    if not new_status:
         return JsonResponse({
             'success': False,
-            'error': 'Invalid status'
+            'error': 'Status is required'
         })
     
+    # Map frontend status to backend
+    status_map = {
+        'available': 'available',
+        'ready': 'available',
+        'break': 'break',
+        'lunch': 'lunch',
+        'meeting': 'meeting',
+        'training': 'training',
+        'offline': 'offline',
+        'busy': 'busy',
+        'wrapup': 'wrapup'
+    }
+    
+    mapped_status = status_map.get(new_status, new_status)
+    
     try:
-        # Get or create agent status
-        agent_status, created = AgentStatus.objects.get_or_create(user=agent)
+        agent_status, _ = AgentStatus.objects.get_or_create(user=agent)
         
-        # Update status
-        mapped_status = status_mapping[new_status]
-        agent_status.set_status(mapped_status, break_reason)
-
-        # Manage persistent agent session for autodialing
+        # Get campaign and telephony service
+        campaign = agent_status.current_campaign
+        if not campaign:
+            campaign = Campaign.objects.filter(assigned_users=agent, status='active').first()
+        
         telephony_service = AgentTelephonyService(agent)
+        
+        # Handle status-specific logic
         if mapped_status == 'available':
-            # Ensure we have a campaign for session binding
-            campaign = agent_status.current_campaign
-            if not campaign:
-                campaign = Campaign.objects.filter(
-                    assigned_users=agent,
-                    status='active'
-                ).first()
-                if campaign:
-                    agent_status.current_campaign = campaign
-                    agent_status.save(update_fields=['current_campaign'])
-            # Only create persistent agent legs for WebRTC; softphones dial on demand.
+            # Login to campaign if WebRTC enabled
             if campaign and telephony_service.agent_phone and telephony_service.agent_phone.webrtc_enabled:
-                from agents.models import AgentDialerSession
                 existing_session = AgentDialerSession.objects.filter(
                     agent=agent,
                     status__in=['connecting', 'ready']
                 ).first()
+                
                 if not existing_session:
                     result = telephony_service.login_campaign(campaign.id)
                     if not result.get('success'):
@@ -507,11 +206,15 @@ def update_status(request):
                             'success': False,
                             'error': result.get('error', 'Softphone not registered')
                         })
+        
         elif mapped_status in ['break', 'lunch', 'training', 'meeting', 'system_issues', 'offline']:
             # Disconnect agent leg when unavailable
             telephony_service.logout_session()
-
-        # Broadcast status update to agent websocket channel for real-time UI
+        
+        # Update status
+        agent_status.set_status(mapped_status)
+        
+        # Broadcast status update
         try:
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
@@ -525,369 +228,20 @@ def update_status(request):
                     }
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to broadcast status update: {e}")
         
         return JsonResponse({
             'success': True,
-            'status': new_status,
-            'message': f'Status updated to {new_status}'
+            'status': mapped_status,
+            'message': f'Status updated to {mapped_status}'
         })
         
     except Exception as e:
-        logger.error(f"Error updating status for {agent.username}: {str(e)}")
+        logger.error(f"Error updating status for {agent.username}: {e}")
         return JsonResponse({
             'success': False,
             'error': 'Failed to update status'
-        })
-
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def get_webrtc_config(request):
-    """
-    Return WebRTC config; if not enabled, return success False.
-    """
-    agent = request.user
-    try:
-        telephony_service = AgentTelephonyService(agent)
-        cfg = telephony_service.get_webrtc_config() or {}
-        return JsonResponse(cfg)
-    except Exception as e:
-        logger.error(f"Error getting WebRTC config for {agent.username}: {str(e)}")
-        return JsonResponse({'success': False, 'error': 'WebRTC not available'})
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def pending_callbacks(request):
-    """
-    Get pending callbacks for the agent (AJAX endpoint)
-    """
-    agent = request.user
-    
-    try:
-        callbacks = AgentCallbackTask.objects.filter(
-            agent=agent,
-            status__in=['pending', 'scheduled']
-        ).select_related('lead', 'campaign').order_by('scheduled_time')[:20]
-        
-        data = {
-            'callbacks': [
-                {
-                    'id': callback.id,
-                    'lead_name': f"{callback.lead.first_name} {callback.lead.last_name}",
-                    'lead_phone': callback.lead.phone_number,
-                    'scheduled_time': callback.scheduled_time.strftime('%Y-%m-%d %H:%M'),
-                    'notes': callback.notes,
-                    'is_overdue': callback.is_overdue(),
-                    'campaign': callback.campaign.name,
-                    'priority': callback.get_priority_display(),
-                }
-                for callback in callbacks
-            ]
-        }
-        
-        return JsonResponse(data)
-        
-    except Exception as e:
-        logger.error(f"Error getting callbacks for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to get callbacks'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def complete_callback(request):
-    """
-    Mark a callback as completed
-    """
-    agent = request.user
-    callback_id = request.POST.get('callback_id')
-    completion_notes = request.POST.get('completion_notes', '').strip()
-    
-    if not callback_id:
-        return JsonResponse({
-            'success': False,
-            'error': 'Callback ID is required'
-        })
-    
-    try:
-        callback = AgentCallbackTask.objects.get(
-            id=callback_id,
-            agent=agent,
-            status__in=['pending', 'scheduled']
-        )
-        
-        callback.status = 'completed'
-        callback.completed_time = timezone.now()
-        callback.completion_notes = completion_notes
-        callback.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Callback marked as completed'
-        })
-        
-    except AgentCallbackTask.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Callback not found'
-        })
-    except Exception as e:
-        logger.error(f"Error completing callback for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to complete callback'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def reschedule_callback(request):
-    """
-    Reschedule a callback
-    """
-    agent = request.user
-    callback_id = request.POST.get('callback_id')
-    new_time = request.POST.get('new_time', '').strip()
-    
-    if not callback_id or not new_time:
-        return JsonResponse({
-            'success': False,
-            'error': 'Callback ID and new time are required'
-        })
-    
-    try:
-        # Parse the new time
-        try:
-            new_datetime = timezone.datetime.fromisoformat(new_time.replace('Z', '+00:00'))
-            if timezone.is_naive(new_datetime):
-                new_datetime = timezone.make_aware(new_datetime)
-        except ValueError:
-            # Try parsing different format
-            new_datetime = timezone.datetime.strptime(new_time, '%Y-%m-%d %H:%M')
-            new_datetime = timezone.make_aware(new_datetime)
-        
-        callback = AgentCallbackTask.objects.get(
-            id=callback_id,
-            agent=agent
-        )
-        
-        callback.scheduled_time = new_datetime
-        callback.status = 'scheduled'
-        callback.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Callback rescheduled successfully'
-        })
-        
-    except AgentCallbackTask.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Callback not found'
-        })
-    except ValueError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid time format. Use YYYY-MM-DD HH:MM'
-        })
-    except Exception as e:
-        logger.error(f"Error rescheduling callback for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to reschedule callback'
-        })
-
-
-@login_required
-@agent_required
-@require_POST
-def save_lead_info(request):
-    """
-    Save lead information during call
-    """
-    agent = request.user
-    phone_number = request.POST.get('phone_number', '').strip()
-    
-    if not phone_number:
-        return JsonResponse({
-            'success': False,
-            'error': 'Phone number is required'
-        })
-    
-    # Lead data
-    lead_data = {
-        'first_name': request.POST.get('first_name', '').strip(),
-        'last_name': request.POST.get('last_name', '').strip(),
-        'email': request.POST.get('email', '').strip(),
-        'company': request.POST.get('company', '').strip(),
-        'address': request.POST.get('address', '').strip(),
-        'city': request.POST.get('city', '').strip(),
-        'state': request.POST.get('state', '').strip(),
-        'zip_code': request.POST.get('zip_code', '').strip(),
-        'comments': request.POST.get('comments', '').strip(),
-    }
-    
-    try:
-        # Try to find existing lead
-        lead = Lead.objects.filter(phone_number=phone_number).first()
-        
-        if lead:
-            # Update existing lead
-            for field, value in lead_data.items():
-                if value and hasattr(lead, field):
-                    setattr(lead, field, value)
-            lead.save()
-            message = 'Lead information updated successfully'
-        else:
-            # Create new lead
-            lead_data['phone_number'] = phone_number
-            # Remove empty values
-            lead_data = {k: v for k, v in lead_data.items() if v}
-            lead = Lead.objects.create(**lead_data)
-            message = 'New lead created successfully'
-        
-        return JsonResponse({
-            'success': True,
-            'message': message,
-            'lead_id': lead.id
-        })
-        
-    except Exception as e:
-        logger.error(f"Error saving lead info for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to save lead information'
-        })
-
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def get_lead_info(request):
-    """
-    Get lead information by phone number or lead ID
-    """
-    phone_number = request.GET.get('phone_number', '').strip()
-    lead_id = request.GET.get('lead_id', '').strip()
-    
-    if not phone_number and not lead_id:
-        return JsonResponse({
-            'success': False,
-            'error': 'Phone number or lead ID is required'
-        })
-    
-    try:
-        # Try to find lead by ID first, then by phone number
-        lead = None
-        if lead_id:
-            lead = Lead.objects.filter(id=lead_id).first()
-        elif phone_number:
-            lead = Lead.objects.filter(phone_number=phone_number).first()
-        
-        if lead:
-            data = {
-                'success': True,
-                'lead': {
-                    'id': lead.id,
-                    'first_name': lead.first_name,
-                    'last_name': lead.last_name,
-                    'phone_number': lead.phone_number,
-                    'email': lead.email,
-                    'company': lead.company,
-                    'address': lead.address,
-                    'city': lead.city,
-                    'state': lead.state,
-                    'zip_code': lead.zip_code,
-                    'comments': lead.comments,
-                    'status': lead.status,
-                    'last_contact_date': lead.last_contact_date.isoformat() if lead.last_contact_date else None,
-                }
-            }
-        else:
-            data = {
-                'success': True,
-                'lead': None,
-                'message': 'Lead not found'
-            }
-        
-        return JsonResponse(data)
-        
-    except Exception as e:
-        logger.error(f"Error getting lead info: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to retrieve lead information'
-        })
-
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def agent_statistics(request):
-    """
-    Get agent's current statistics
-    """
-    agent = request.user
-    
-    try:
-        today = timezone.now().date()
-        
-        # Today's calls
-        today_calls = CallLog.objects.filter(agent=agent, start_time__date=today)
-        
-        # This week's calls
-        week_start = today - timedelta(days=today.weekday())
-        week_calls = CallLog.objects.filter(
-            agent=agent,
-            start_time__date__gte=week_start
-        )
-        
-        # Calculate statistics
-        today_total = today_calls.count()
-        today_answered = today_calls.filter(call_status='answered').count()
-        today_talk_time = sum((call.talk_duration or 0) for call in today_calls)
-        
-        week_total = week_calls.count()
-        week_answered = week_calls.filter(call_status='answered').count()
-        week_talk_time = sum((call.talk_duration or 0) for call in week_calls)
-        
-        # Pending callbacks count
-        pending_callbacks_count = AgentCallbackTask.objects.filter(
-            agent=agent,
-            status__in=['pending', 'scheduled']
-        ).count()
-        
-        stats = {
-            'today': {
-                'total_calls': today_total,
-                'answered_calls': today_answered,
-                'talk_time': today_talk_time,
-                'contact_rate': round((today_answered / today_total * 100) if today_total > 0 else 0, 1),
-            },
-            'week': {
-                'total_calls': week_total,
-                'answered_calls': week_answered,
-                'talk_time': week_talk_time,
-                'contact_rate': round((week_answered / week_total * 100) if week_total > 0 else 0, 1),
-            },
-            'pending_callbacks': pending_callbacks_count
-        }
-        
-        return JsonResponse(stats)
-        
-    except Exception as e:
-        logger.error(f"Error getting statistics for {agent.username}: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Failed to get statistics'
         })
 
 
@@ -897,6 +251,9 @@ def agent_statistics(request):
 def set_disposition(request):
     """
     Set call disposition
+    
+    PHASE 1.2 FIX: Broadcast call_cleared event after disposition
+    PHASE 1.3 FIX: Force hangup and cleanup agent session
     """
     agent = request.user
     call_id = request.POST.get('call_id')
@@ -910,29 +267,78 @@ def set_disposition(request):
         })
     
     try:
-        # Get call log and disposition
+        logger.info(f"Setting disposition - Agent: {agent.username}, Call ID: {call_id}, Disposition ID: {disposition_id}")
+        
+        # Find call log - try multiple methods
         call_log = None
+        
+        # Method 1: Try as primary key (integer ID)
         try:
             call_pk = int(call_id)
-        except (TypeError, ValueError):
-            call_pk = None
-
-        if call_pk is not None:
             call_log = CallLog.objects.filter(id=call_pk, agent=agent).first()
+            if call_log:
+                logger.info(f"Found call by primary key: {call_pk}")
+        except (TypeError, ValueError):
+            pass
+        
+        # Method 2: Try as call_id UUID field
         if not call_log:
-            # Fallback for non-numeric IDs (e.g., uniqueid/channel id)
+            call_log = CallLog.objects.filter(call_id=call_id, agent=agent).first()
+            if call_log:
+                logger.info(f"Found call by call_id UUID: {call_id}")
+        
+        # Method 3: Try as channel, uniqueid, or other identifiers
+        if not call_log:
             call_log = CallLog.objects.filter(
-                Q(channel=call_id) |
-                Q(uniqueid=call_id) |
-                Q(call_id=call_id),
+                Q(channel=call_id) | Q(uniqueid=call_id),
                 agent=agent
             ).first()
+            if call_log:
+                logger.info(f"Found call by channel/uniqueid: {call_id}")
+        
+        # Method 4: Try without agent filter (in case agent wasn't set properly)
+        if not call_log:
+            try:
+                call_pk = int(call_id)
+                call_log = CallLog.objects.filter(id=call_pk).first()
+                if call_log:
+                    # Verify it's for this agent or update it
+                    if not call_log.agent:
+                        call_log.agent = agent
+                        call_log.save(update_fields=['agent'])
+                        logger.info(f"Found call without agent, assigned to {agent.username}")
+                    elif call_log.agent == agent:
+                        logger.info(f"Found call by primary key without agent filter: {call_pk}")
+                    else:
+                        call_log = None  # Don't allow setting disposition for other agent's calls
+            except (TypeError, ValueError):
+                pass
+        
+        # Method 5: Try call_id UUID without agent filter
+        if not call_log:
+            call_log = CallLog.objects.filter(call_id=call_id).first()
+            if call_log:
+                # Verify it's for this agent or update it
+                if not call_log.agent:
+                    call_log.agent = agent
+                    call_log.save(update_fields=['agent'])
+                    logger.info(f"Found call by UUID without agent, assigned to {agent.username}")
+                elif call_log.agent == agent:
+                    logger.info(f"Found call by UUID without agent filter: {call_id}")
+                else:
+                    call_log = None  # Don't allow setting disposition for other agent's calls
+        
+        # Get disposition
         disposition = Disposition.objects.filter(id=disposition_id).first()
         
         if not call_log:
+            logger.error(f"Call not found - Agent: {agent.username}, Call ID: {call_id}, Disposition ID: {disposition_id}")
+            # Log recent calls for this agent for debugging
+            recent_calls = CallLog.objects.filter(agent=agent).order_by('-start_time')[:5]
+            logger.error(f"Recent calls for agent: {[(c.id, c.call_id, c.called_number) for c in recent_calls]}")
             return JsonResponse({
                 'success': False,
-                'error': 'Call not found'
+                'error': f'Call not found. Call ID: {call_id}. Please ensure the call is associated with your account.'
             })
         
         if not disposition:
@@ -941,138 +347,562 @@ def set_disposition(request):
                 'error': 'Disposition not found'
             })
         
-        # Update call with disposition
+        # Update call log with disposition
         call_log.disposition = disposition
         call_log.disposition_notes = notes
-        call_log.save()
-
-        # If this was from outbound queue, mark wrap-up/disposition on the queue row
+        call_log.save(update_fields=['disposition', 'disposition_notes'])
+        
+        # Update lead status based on disposition
+        if call_log.lead:
+            lead = call_log.lead
+            if disposition.category == 'sale':
+                lead.status = 'sale'
+            elif disposition.category == 'callback':
+                lead.status = 'callback'
+            elif disposition.category == 'dnc':
+                lead.status = 'dnc'
+            elif disposition.category == 'not_interested':
+                lead.status = 'not_interested'
+            elif disposition.category in ['no_answer', 'busy']:
+                lead.status = disposition.category
+            else:
+                lead.status = 'contacted'
+            
+            lead.last_contact_date = timezone.now()
+            lead.save(update_fields=['status', 'last_contact_date'])
+        
+        # Update outbound queue if applicable
         try:
-            from campaigns.models import OutboundQueue
             OutboundQueue.objects.filter(id=call_log.id).update(
                 status='completed',
                 last_tried_at=timezone.now(),
-                disposition=disposition.code,
-                wrapup_at=timezone.now()
+                disposition=disposition.code
             )
         except Exception:
             pass
         
-        # Update lead status if applicable
-        if call_log.lead:
-            lead = call_log.lead
-            allowed_statuses = {key for key, _ in Lead.STATUS_CHOICES}
-            new_status = None
-            if disposition.adds_to_dnc:
-                new_status = 'dnc'
-            elif disposition.is_sale:
-                new_status = 'sale'
-            elif disposition.requires_callback:
-                new_status = 'callback'
-            elif disposition.category in allowed_statuses:
-                new_status = disposition.category
-            else:
-                new_status = 'contacted'
-
-            if new_status:
-                lead.status = new_status
-                lead.last_contact_date = timezone.now().date()
-                lead.save()
+        # PHASE 1.3 FIX: Force hangup any active channels
+        _force_cleanup_call(agent, call_log)
         
-        # Return agent to available after wrapping call
-        agent_status, _ = AgentStatus.objects.get_or_create(user=agent)
-        if agent_status.status != 'available':
-            agent_status.set_status('available')
+        # Update agent status
+        agent_status = getattr(agent, 'agent_status', None)
+        if agent_status:
+            if disposition.auto_available if hasattr(disposition, 'auto_available') else True:
+                agent_status.set_status('available')
+                agent_status.current_call_id = ''
+                agent_status.call_start_time = None
+                agent_status.save()
+            else:
+                agent_status.set_status('wrapup')
+        
+        # PHASE 1.2 FIX: Broadcast call_cleared event to wipe UI
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"agent_{agent.id}",
+                {
+                    'type': 'call_event',
+                    'data': {
+                        'type': 'call_cleared',  # NEW event type
+                        'call_id': call_log.id,
+                        'disposition': disposition.name,
+                        'clear_ui': True,  # Signal to clear all call data from UI
+                        'message': f'Call dispositioned as {disposition.name}'
+                    }
+                }
+            )
+            
+            # Also send status update
+            async_to_sync(channel_layer.group_send)(
+                f"agent_{agent.id}",
+                {
+                    'type': 'call_event',
+                    'data': {
+                        'type': 'status_update',
+                        'status': 'available',
+                        'message': 'Ready for next call'
+                    }
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to broadcast call_cleared: {e}")
+        
+        logger.info(f"Disposition set for call {call_log.id}: {disposition.name}")
         
         return JsonResponse({
             'success': True,
             'disposition': disposition.name,
-            'message': 'Disposition set successfully'
+            'call_id': call_log.id,
+            'message': f'Call dispositioned as {disposition.name}'
         })
         
     except Exception as e:
-        logger.error(f"Error setting disposition for {agent.username}: {str(e)}")
+        logger.error(f"Error setting disposition: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'error': 'Failed to set disposition'
         })
 
 
+def _force_cleanup_call(agent, call_log):
+    """
+    PHASE 1.3: Force cleanup of call and agent session
+    Ensures softphone doesn't show stale call
+    """
+    logger.info(f"CLEANUP: Starting force cleanup for agent {agent.username}, call {call_log.id if call_log else 'None'}")
+    try:
+        # Get Asterisk server
+        server = AsteriskServer.objects.filter(is_active=True).first()
+        if not server:
+            return
+        
+        asterisk_service = AsteriskService(server)
+        
+        # Find and destroy any active bridges for this call
+        try:
+            import requests
+            ari_base_url = f"http://{server.ari_host}:{server.ari_port}/ari"
+            
+            # Get all bridges
+            response = requests.get(
+                f"{ari_base_url}/bridges",
+                auth=(server.ari_username, server.ari_password),
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                bridges = response.json()
+                for bridge in bridges:
+                    bridge_id = bridge.get('id')
+                    channels = bridge.get('channels', [])
+                    
+                    # If this bridge contains our call channel, destroy it
+                    if call_log.channel in channels:
+                        logger.info(f"Destroying bridge {bridge_id} containing channel {call_log.channel}")
+                        asterisk_service.destroy_bridge(bridge_id)
+                        
+                        # Hangup all channels in the bridge
+                        for channel_id in channels:
+                            try:
+                                asterisk_service.hangup_channel(channel_id)
+                                logger.info(f"Hung up channel {channel_id}")
+                            except Exception as e:
+                                logger.debug(f"Channel {channel_id} already hung up: {e}")
+        except Exception as e:
+            logger.error(f"Error destroying bridges: {e}")
+        
+        # Hangup any active channels associated with this call (fallback)
+        if call_log.channel:
+            try:
+                asterisk_service.hangup_channel(call_log.channel)
+            except Exception as e:
+                logger.debug(f"Channel {call_log.channel} already hung up: {e}")
+        
+        if call_log.uniqueid and call_log.uniqueid != call_log.channel:
+            try:
+                asterisk_service.hangup_channel(call_log.uniqueid)
+            except Exception:
+                pass
+        
+        # Clean up agent dialer session
+        sessions = AgentDialerSession.objects.filter(agent=agent)
+        for session in sessions:
+            # Destroy bridge if exists
+            if session.agent_bridge_id:
+                try:
+                    asterisk_service.destroy_bridge(session.agent_bridge_id)
+                except Exception:
+                    pass
+            
+            # Hangup agent channel to disconnect softphone
+            if session.agent_channel_id:
+                try:
+                    asterisk_service.hangup_channel(session.agent_channel_id)
+                    logger.info(f"Hung up agent channel {session.agent_channel_id}")
+                except Exception:
+                    pass
+        
+        # Reset session state (but keep session for next call)
+        AgentDialerSession.objects.filter(
+            agent=agent,
+            status__in=['busy', 'wrapup']
+        ).update(status='ready')
+        
+        logger.info(f"Cleaned up call for agent {agent.username}")
+        
+    except Exception as e:
+        logger.error(f"Error in force cleanup: {e}")
+
+
 @login_required
 @agent_required
 @require_POST
-def schedule_callback(request):
+def hangup_call(request):
     """
-    Schedule a callback for a lead
+    Hangup current call
+    
+    PHASE 1.3 FIX: Ensure proper cleanup
     """
     agent = request.user
-    lead_id = request.POST.get('lead_id')
-    callback_time = request.POST.get('callback_time', '').strip()
-    notes = request.POST.get('notes', '').strip()
-    priority = request.POST.get('priority', '2')
+    call_id = request.POST.get('call_id')
     
-    if not lead_id or not callback_time:
+    if not call_id:
         return JsonResponse({
             'success': False,
-            'error': 'Lead ID and callback time are required'
+            'error': 'Call ID required'
         })
     
     try:
-        # Parse callback time
+        # Find call
+        call_log = None
         try:
-            callback_datetime = timezone.datetime.fromisoformat(callback_time.replace('Z', '+00:00'))
-            if timezone.is_naive(callback_datetime):
-                callback_datetime = timezone.make_aware(callback_datetime)
-        except ValueError:
-            callback_datetime = timezone.datetime.strptime(callback_time, '%Y-%m-%d %H:%M')
-            callback_datetime = timezone.make_aware(callback_datetime)
+            call_pk = int(call_id)
+            call_log = CallLog.objects.filter(id=call_pk, agent=agent).first()
+        except (TypeError, ValueError):
+            pass
         
-        # Get lead
+        if not call_log:
+            call_log = CallLog.objects.filter(
+                Q(channel=call_id) | Q(uniqueid=call_id),
+                agent=agent
+            ).first()
+        
+        if not call_log:
+            return JsonResponse({
+                'success': False,
+                'error': 'Call not found'
+            })
+        
+        # Update call log
+        call_log.call_status = 'hangup'
+        call_log.end_time = timezone.now()
+        
+        if call_log.answer_time:
+            call_log.talk_duration = int(
+                (call_log.end_time - call_log.answer_time).total_seconds()
+            )
+        
+        if call_log.start_time:
+            call_log.total_duration = int(
+                (call_log.end_time - call_log.start_time).total_seconds()
+            )
+        
+        call_log.save()
+        
+        # Force cleanup
+        _force_cleanup_call(agent, call_log)
+        
+        # Update agent status to wrapup (needs disposition)
+        agent_status = getattr(agent, 'agent_status', None)
+        if agent_status:
+            agent_status.set_status('wrapup')
+            agent_status.current_call_id = str(call_log.id)  # Keep for disposition
+        
+        # Broadcast
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"agent_{agent.id}",
+                {
+                    'type': 'call_event',
+                    'data': {
+                        'type': 'call_ended',
+                        'call_id': call_log.id,
+                        'disposition_needed': True,
+                        'message': 'Call ended - Please select disposition'
+                    }
+                }
+            )
+        except Exception:
+            pass
+        
+        return JsonResponse({
+            'success': True,
+            'call_id': call_log.id,
+            'message': 'Call ended'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error hanging up call: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to hangup call'
+        })
+
+
+@login_required
+@agent_required
+@require_http_methods(["GET"])
+def get_lead_info(request):
+    """
+    Get lead information for screen pop
+    """
+    lead_id = request.GET.get('lead_id')
+    
+    if not lead_id:
+        return JsonResponse({
+            'success': False,
+            'error': 'Lead ID required'
+        })
+    
+    try:
         lead = Lead.objects.filter(id=lead_id).first()
+        
         if not lead:
             return JsonResponse({
                 'success': False,
                 'error': 'Lead not found'
             })
         
-        # Get current campaign (or use first available)
-        current_campaign = Campaign.objects.filter(
-            assigned_users=agent,
-            status='active',
-            campaignagent__is_active=True
-        ).first()
-        
-        if not current_campaign:
-            return JsonResponse({
-                'success': False,
-                'error': 'No active campaign found'
-            })
-        
-        # Create callback task
-        callback_task = AgentCallbackTask.objects.create(
-            agent=agent,
-            lead=lead,
-            campaign=current_campaign,
-            scheduled_time=callback_datetime,
-            notes=notes,
-            priority=int(priority),
-            created_by=agent
-        )
+        # Get call history for this lead
+        call_history = CallLog.objects.filter(lead=lead).order_by('-start_time')[:5]
         
         return JsonResponse({
             'success': True,
-            'callback_id': callback_task.id,
-            'message': 'Callback scheduled successfully'
+            'lead': {
+                'id': lead.id,
+                'first_name': lead.first_name,
+                'last_name': lead.last_name,
+                'phone': lead.phone_number,
+                'email': lead.email or '',
+                'company': lead.company or '',
+                'address': lead.address or '',
+                'city': lead.city or '',
+                'state': lead.state or '',
+                'zip_code': lead.zip_code or '',
+                'status': lead.status,
+                'call_count': lead.call_count,
+                'notes': lead.notes or '',
+                'created_at': lead.created_at.isoformat() if lead.created_at else None,
+                'last_contact_date': lead.last_contact_date.isoformat() if lead.last_contact_date else None
+            },
+            'call_history': [
+                {
+                    'id': call.id,
+                    'date': call.start_time.isoformat() if call.start_time else None,
+                    'duration': call.talk_duration or 0,
+                    'disposition': call.disposition.name if call.disposition else 'N/A',
+                    'agent': call.agent.username if call.agent else 'N/A'
+                }
+                for call in call_history
+            ]
         })
         
-    except ValueError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid time format. Use YYYY-MM-DD HH:MM'
-        })
     except Exception as e:
-        logger.error(f"Error scheduling callback for {agent.username}: {str(e)}")
+        logger.error(f"Error getting lead info: {e}")
         return JsonResponse({
             'success': False,
-            'error': 'Failed to schedule callback'
+            'error': 'Failed to retrieve lead information'
+        })
+
+
+@login_required
+@agent_required
+@require_http_methods(["GET"])
+def get_call_status(request):
+    """
+    Get current call status for agent
+    """
+    agent = request.user
+    
+    try:
+        agent_status = getattr(agent, 'agent_status', None)
+        
+        current_call = None
+        if agent_status and agent_status.current_call_id:
+            try:
+                call_id = int(agent_status.current_call_id)
+                call_log = CallLog.objects.filter(id=call_id).first()
+                if call_log:
+                    duration = 0
+                    if call_log.answer_time:
+                        duration = int((timezone.now() - call_log.answer_time).total_seconds())
+                    
+                    current_call = {
+                        'id': call_log.id,
+                        'number': call_log.called_number,
+                        'status': call_log.call_status,
+                        'duration': duration,
+                        'lead_id': call_log.lead_id
+                    }
+            except (TypeError, ValueError):
+                pass
+        
+        return JsonResponse({
+            'success': True,
+            'status': agent_status.status if agent_status else 'offline',
+            'current_call': current_call
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting call status: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to get call status'
+        })
+
+
+@login_required
+@agent_required
+@require_http_methods(["GET"])
+def get_webrtc_config(request):
+    """
+    Get WebRTC configuration for agent's phone
+    """
+    agent = request.user
+    
+    try:
+        phone = Phone.objects.filter(user=agent, is_active=True).first()
+        
+        if not phone or not phone.webrtc_enabled:
+            return JsonResponse({
+                'success': False,
+                'error': 'WebRTC not enabled for this phone'
+            })
+        
+        server = phone.asterisk_server
+        
+        return JsonResponse({
+            'success': True,
+            'config': {
+                'extension': phone.extension,
+                'secret': phone.secret,
+                'domain': server.server_ip if server else 'localhost',
+                'ws_server': f"wss://{server.server_ip}:8089/ws" if server else None,
+                'stun_server': phone.ice_host or 'stun:stun.l.google.com:19302',
+                'codecs': phone.codec.split(',') if phone.codec else ['ulaw', 'alaw']
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting WebRTC config: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to get WebRTC configuration'
+        })
+
+
+@login_required
+@agent_required
+@require_http_methods(["GET"])
+def agent_statistics(request):
+    """
+    Get agent statistics
+    """
+    agent = request.user
+    
+    try:
+        today = timezone.now().date()
+        
+        # Today's calls
+        today_calls = CallLog.objects.filter(agent=agent, start_time__date=today)
+        
+        # Week's calls
+        week_start = today - timedelta(days=today.weekday())
+        week_calls = CallLog.objects.filter(
+            agent=agent,
+            start_time__date__gte=week_start
+        )
+        
+        # Calculate stats
+        today_total = today_calls.count()
+        today_answered = today_calls.filter(call_status='answered').count()
+        today_talk_time = today_calls.aggregate(total=Sum('talk_duration'))['total'] or 0
+        
+        week_total = week_calls.count()
+        week_answered = week_calls.filter(call_status='answered').count()
+        week_talk_time = week_calls.aggregate(total=Sum('talk_duration'))['total'] or 0
+        
+        # Pending callbacks
+        pending_callbacks = AgentCallbackTask.objects.filter(
+            agent=agent,
+            status__in=['pending', 'scheduled']
+        ).count()
+        
+        return JsonResponse({
+            'success': True,
+            'today': {
+                'total_calls': today_total,
+                'answered_calls': today_answered,
+                'talk_time': today_talk_time,
+                'contact_rate': round((today_answered / today_total * 100) if today_total > 0 else 0, 1)
+            },
+            'week': {
+                'total_calls': week_total,
+                'answered_calls': week_answered,
+                'talk_time': week_talk_time,
+                'contact_rate': round((week_answered / week_total * 100) if week_total > 0 else 0, 1)
+            },
+            'pending_callbacks': pending_callbacks
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting statistics: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to get statistics'
+        })
+
+
+@login_required
+@agent_required
+@require_http_methods(["GET"])
+def agent_call_history(request):
+    """
+    PHASE 2.2: Get agent's call history
+    """
+    agent = request.user
+    page = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 25))
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    disposition_filter = request.GET.get('disposition')
+    
+    try:
+        calls = CallLog.objects.filter(agent=agent).select_related(
+            'lead', 'disposition', 'campaign'
+        ).order_by('-start_time')
+        
+        # Apply filters
+        if date_from:
+            calls = calls.filter(start_time__date__gte=date_from)
+        if date_to:
+            calls = calls.filter(start_time__date__lte=date_to)
+        if disposition_filter:
+            calls = calls.filter(disposition_id=disposition_filter)
+        
+        # Paginate
+        total = calls.count()
+        offset = (page - 1) * per_page
+        calls = calls[offset:offset + per_page]
+        
+        return JsonResponse({
+            'success': True,
+            'calls': [
+                {
+                    'id': call.id,
+                    'date': call.start_time.isoformat() if call.start_time else None,
+                    'number': call.called_number,
+                    'lead_name': f"{call.lead.first_name} {call.lead.last_name}" if call.lead else 'Unknown',
+                    'lead_id': call.lead_id,
+                    'duration': call.talk_duration or 0,
+                    'disposition': call.disposition.name if call.disposition else 'N/A',
+                    'campaign': call.campaign.name if call.campaign else 'N/A',
+                    'recording_available': bool(call.recording_file)
+                }
+                for call in calls
+            ],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': (total + per_page - 1) // per_page
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting call history: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to get call history'
         })

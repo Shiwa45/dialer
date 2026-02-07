@@ -139,7 +139,6 @@ class Command(BaseCommand):
         available_agents = self.get_available_agents(campaign)
         
         if available_agents == 0:
-            logger.info(f'{campaign.name}: No available agents')
             return
 
         # 2. Count current active calls for this campaign (Redis)

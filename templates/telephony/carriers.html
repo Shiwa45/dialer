@@ -16,6 +16,9 @@
             <p class="mb-0 text-muted">Manage your telephony carriers and trunks</p>
         </div>
         <div>
+            <button id="syncAsteriskBtn" class="btn btn-success mr-2" onclick="syncAsteriskConfigs()">
+                <i class="fas fa-sync-alt"></i> Sync to Asterisk
+            </button>
             <a href="{% url 'telephony:create_carrier' %}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Add Carrier
             </a>
@@ -122,7 +125,8 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Search carriers..." value="{{ request.GET.search }}">
+                    <input type="text" name="search" class="form-control" placeholder="Search carriers..."
+                        value="{{ request.GET.search }}">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-outline-primary">Filter</button>
@@ -168,7 +172,8 @@
                                 <br><small class="text-muted">{{ carrier.username }}</small>
                             </td>
                             <td>
-                                <span class="badge badge-{% if carrier.protocol == 'sip' %}primary{% elif carrier.protocol == 'iax2' %}success{% elif carrier.protocol == 'pjsip' %}info{% else %}secondary{% endif %}">
+                                <span
+                                    class="badge badge-{% if carrier.protocol == 'sip' %}primary{% elif carrier.protocol == 'iax2' %}success{% elif carrier.protocol == 'pjsip' %}info{% else %}secondary{% endif %}">
                                     {{ carrier.protocol|upper }}
                                 </span>
                             </td>
@@ -184,14 +189,15 @@
                             </td>
                             <td>
                                 {% if carrier.cost_per_minute > 0 %}
-                                    <div class="font-weight-bold">${{ carrier.cost_per_minute }}</div>
-                                    <small class="text-muted">per minute</small>
+                                <div class="font-weight-bold">${{ carrier.cost_per_minute }}</div>
+                                <small class="text-muted">per minute</small>
                                 {% else %}
-                                    <span class="text-muted">Free</span>
+                                <span class="text-muted">Free</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge badge-{% if carrier.priority == 1 %}success{% elif carrier.priority <= 3 %}warning{% else %}secondary{% endif %}">
+                                <span
+                                    class="badge badge-{% if carrier.priority == 1 %}success{% elif carrier.priority <= 3 %}warning{% else %}secondary{% endif %}">
                                     {{ carrier.priority }}
                                 </span>
                             </td>
@@ -202,25 +208,22 @@
                             </td>
                             <td>
                                 {% if carrier.is_active %}
-                                    <span class="badge badge-success">Active</span>
+                                <span class="badge badge-success">Active</span>
                                 {% else %}
-                                    <span class="badge badge-secondary">Inactive</span>
+                                <span class="badge badge-secondary">Inactive</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{% url 'telephony:carrier_detail' carrier.pk %}" 
-                                   class="btn btn-sm btn-outline-primary" 
-                                   data-toggle="tooltip" title="View Details">
+                                <a href="{% url 'telephony:carrier_detail' carrier.pk %}"
+                                    class="btn btn-sm btn-outline-primary" data-toggle="tooltip" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{% url 'telephony:update_carrier' carrier.pk %}" 
-                                   class="btn btn-sm btn-outline-warning" 
-                                   data-toggle="tooltip" title="Edit">
+                                <a href="{% url 'telephony:update_carrier' carrier.pk %}"
+                                    class="btn btn-sm btn-outline-warning" data-toggle="tooltip" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button class="btn btn-sm btn-outline-danger" 
-                                        data-toggle="tooltip" title="Delete"
-                                        onclick="confirmDelete('{{ carrier.name }}', '{% url 'telephony:delete_carrier' carrier.pk %}')">
+                                <button class="btn btn-sm btn-outline-danger" data-toggle="tooltip" title="Delete"
+                                    onclick="confirmDelete('{{ carrier.name }}', '{% url 'telephony:delete_carrier' carrier.pk %}')">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -229,38 +232,38 @@
                     </tbody>
                 </table>
             </div>
-            
+
             <!-- Pagination -->
             {% if is_paginated %}
             <nav aria-label="Carrier pagination">
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1">First</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-                        </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
                     {% endif %}
-                    
+
                     <li class="page-item active">
                         <span class="page-link">
                             Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
                         </span>
                     </li>
-                    
+
                     {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-                        </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
                     {% endif %}
                 </ul>
             </nav>
             {% endif %}
-            
+
             {% else %}
             <!-- Empty State -->
             <div class="text-center py-5">
@@ -279,15 +282,80 @@
 
 {% block extra_js %}
 <script>
-function confirmDelete(itemName, deleteUrl) {
-    if (confirm(`Are you sure you want to delete carrier "${itemName}"? This action cannot be undone.`)) {
-        window.location.href = deleteUrl;
-    }
-}
+    function syncAsteriskConfigs() {
+        const btn = document.getElementById('syncAsteriskBtn');
+        const originalHtml = btn.innerHTML;
 
-// Initialize tooltips
-$(document).ready(function() {
-    $('[data-toggle="tooltip"]').tooltip();
-});
+        // Disable button and show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('/telephony/carriers/sync/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Re-enable button
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+
+                if (data.success) {
+                    // Show success message
+                    showNotification('success', data.message);
+
+                    // Show detailed output in console
+                    console.log('Sync Details:', data.details);
+                } else {
+                    // Show error message
+                    showNotification('error', data.error || 'Sync failed');
+                    console.error('Sync Error:', data);
+                }
+            })
+            .catch(error => {
+                // Re-enable button
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+
+                showNotification('error', 'Network error: ' + error.message);
+                console.error('Fetch Error:', error);
+            });
+    }
+
+    function showNotification(type, message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-' + (type === 'success' ? 'success' : 'danger') + ' alert-dismissible fade show';
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.innerHTML = '<strong>' + (type === 'success' ? 'Success!' : 'Error!') + '</strong> ' + message +
+            '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>';
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(function () {
+            notification.remove();
+        }, 5000);
+    }
+    function confirmDelete(itemName, deleteUrl) {
+        if (confirm(`Are you sure you want to delete carrier "${itemName}"? This action cannot be undone.`)) {
+            window.location.href = deleteUrl;
+        }
+    }
+
+    // Initialize tooltips
+    $(document).ready(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
 </script>
 {% endblock %}

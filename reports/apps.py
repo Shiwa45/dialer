@@ -6,3 +6,6 @@ class ReportsConfig(AppConfig):
     name = 'reports'
     verbose_name = 'Reports & Analytics'
 
+
+    def ready(self):
+        import reports.signals

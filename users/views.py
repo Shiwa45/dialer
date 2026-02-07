@@ -27,6 +27,41 @@ class CustomLoginView(BaseLoginView):
     redirect_authenticated_user = True
     
     def form_valid(self, form):
+        user = form.get_user()
+        
+        # Skip extension check for superusers and staff (admin/supervisor)
+        if not user.is_superuser and not user.is_staff:
+            # Check if user is an agent (not admin/supervisor)
+            if hasattr(user, 'profile') and user.profile.is_agent():
+                # Verify extension is registered with Asterisk
+                extension = user.profile.extension
+                
+                if not extension:
+                    messages.error(self.request, 'Your account does not have an extension assigned. Please contact your supervisor.')
+                    return self.form_invalid(form)
+                
+                # Check if extension is registered with Asterisk
+                from telephony.models import AsteriskServer
+                from telephony.services import AsteriskService
+                
+                try:
+                    server = AsteriskServer.objects.filter(is_active=True).first()
+                    if server:
+                        service = AsteriskService(server)
+                        status = service.get_endpoint_status(extension)
+                        
+                        if not status.get('registered', False):
+                            messages.error(
+                                self.request, 
+                                f'Your extension ({extension}) is not registered. Please connect your softphone before logging in.'
+                            )
+                            return self.form_invalid(form)
+                except Exception as e:
+                    # Log error but allow login (fail open for availability)
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error checking extension registration: {e}")
+        
         # Log the user in
         response = super().form_valid(form)
         
@@ -55,36 +90,41 @@ class CustomLoginView(BaseLoginView):
             ip = self.request.META.get('REMOTE_ADDR')
         return ip
 
-class CustomLogoutView(BaseLogoutView):
+class CustomLogoutView(View):
     """
     Custom logout view with session cleanup
     """
-    next_page = reverse_lazy('users:login')
-    
-    def dispatch(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
+        # 1. Cleanup custom session data
         if request.user.is_authenticated:
-            # Update session record
             try:
+                # Update session record
                 session = UserSession.objects.filter(
                     user=request.user,
                     session_key=request.session.session_key,
                     is_active=True
                 ).first()
-                
                 if session:
                     session.logout_time = timezone.now()
                     session.is_active = False
                     session.save()
-            except:
-                pass
-            
+            except Exception as e:
+                # Log error but don't stop logout
+                print(f"Logout cleanup error: {e}")
+
             # Set agent status to offline
-            if hasattr(request.user, 'agent_status'):
-                request.user.agent_status.set_status('offline')
-            
-            messages.info(request, 'You have been successfully logged out.')
+            try:
+                if hasattr(request.user, 'agent_status'):
+                    request.user.agent_status.set_status('offline')
+            except Exception:
+                pass
+
+        # 2. Perform Django Logout
+        logout(request)
         
-        return super().dispatch(request, *args, **kwargs)
+        # 3. Message and Redirect
+        messages.info(request, 'You have been successfully logged out.')
+        return redirect('users:login')
 
 @method_decorator(login_required, name='dispatch')
 class ProfileView(View):

@@ -36,6 +36,94 @@ class LeadList(TimeStampedModel):
     def __str__(self):
         return f"{self.name}"
 
+    @property
+    def total_leads(self):
+        """Total number of leads in this list"""
+        return self.leads.count()
+    
+    @property
+    def new_leads(self):
+        """Leads that haven't been contacted"""
+        return self.leads.filter(status='new').count()
+    
+    @property
+    def contacted_leads(self):
+        """Leads that have been contacted at least once"""
+        return self.leads.exclude(status='new').exclude(status='dnc').count()
+    
+    @property
+    def used_leads(self):
+        """Leads that have been called at least once"""
+        return self.leads.filter(call_count__gt=0).count()
+    
+    @property
+    def remaining_leads(self):
+        """Leads that are still available for calling"""
+        return self.leads.filter(
+            status__in=['new', 'callback', 'no_answer', 'busy']
+        ).count()
+    
+    @property
+    def dnc_leads(self):
+        """Leads marked as Do Not Call"""
+        return self.leads.filter(status='dnc').count()
+    
+    @property
+    def sale_leads(self):
+        """Leads that resulted in a sale"""
+        return self.leads.filter(status='sale').count()
+    
+    @property
+    def progress_percentage(self):
+        """Percentage of leads that have been used"""
+        total = self.total_leads
+        if total == 0:
+            return 0
+        return round((self.used_leads / total) * 100, 1)
+    
+    @property
+    def completion_percentage(self):
+        """Percentage of leads with final disposition (sale, dnc, not_interested)"""
+        total = self.total_leads
+        if total == 0:
+            return 0
+        completed = self.leads.filter(
+            status__in=['sale', 'dnc', 'not_interested']
+        ).count()
+        return round((completed / total) * 100, 1)
+    
+    def get_status_breakdown(self):
+        """Get count of leads by status"""
+        return self.leads.values('status').annotate(
+            count=models.Count('id')
+        ).order_by('status')
+    
+    def get_progress_stats(self):
+        """Get comprehensive progress statistics"""
+        total = self.total_leads
+        
+        status_counts = {
+            item['status']: item['count'] 
+            for item in self.get_status_breakdown()
+        }
+        
+        return {
+            'total_leads': total,
+            'new_leads': status_counts.get('new', 0),
+            'contacted_leads': self.contacted_leads,
+            'used_leads': self.used_leads,
+            'remaining_leads': self.remaining_leads,
+            'sale_leads': status_counts.get('sale', 0),
+            'callback_leads': status_counts.get('callback', 0),
+            'dnc_leads': status_counts.get('dnc', 0),
+            'no_answer_leads': status_counts.get('no_answer', 0),
+            'busy_leads': status_counts.get('busy', 0),
+            'not_interested_leads': status_counts.get('not_interested', 0),
+            'progress_percentage': self.progress_percentage,
+            'completion_percentage': self.completion_percentage,
+            'status_breakdown': status_counts
+        }
+
 class Lead(TimeStampedModel):
     """
     Individual lead/prospect information
@@ -296,6 +384,197 @@ class LeadFilter(TimeStampedModel):
     
     def __str__(self):
         return f"{self.name}"
+
+class LeadRecycleRule(TimeStampedModel):
+    """
+    Rules for automatically recycling leads based on status
+    PHASE 2.4: Lead recycling configuration
+    """
+    RECYCLE_STATUSES = [
+        ('no_answer', 'No Answer'),
+        ('busy', 'Busy'),
+        ('voicemail', 'Voicemail'),
+        ('callback', 'Callback'),
+        ('not_interested', 'Not Interested'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    
+    # Which campaign does this rule apply to (null = all campaigns)
+    campaign = models.ForeignKey(
+        'campaigns.Campaign',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='recycle_rules',
+        help_text="Leave blank to apply to all campaigns"
+    )
+    
+    # Which lead list does this rule apply to (null = all lists)
+    lead_list = models.ForeignKey(
+        'leads.LeadList',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='recycle_rules',
+        help_text="Leave blank to apply to all lists"
+    )
+    
+    # Source status - leads with this status will be recycled
+    source_status = models.CharField(
+        max_length=20,
+        choices=RECYCLE_STATUSES,
+        help_text="Recycle leads with this status"
+    )
+    
+    # Target status - leads will be changed to this status after recycle
+    target_status = models.CharField(
+        max_length=20,
+        default='new',
+        help_text="Status to set after recycling"
+    )
+    
+    # Timing configuration
+    recycle_after_hours = models.PositiveIntegerField(
+        default=24,
+        help_text="Hours after last contact before recycling"
+    )
+    
+    # Attempt limits
+    max_attempts = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum call attempts before lead is excluded"
+    )
+    
+    min_attempts = models.PositiveIntegerField(
+        default=1,
+        help_text="Minimum call attempts before eligible for recycle"
+    )
+    
+    # Priority adjustment
+    priority_adjustment = models.IntegerField(
+        default=0,
+        help_text="Adjust lead priority on recycle (+/- value)"
+    )
+    
+    # Scheduling
+    active_days = models.CharField(
+        max_length=50,
+        default='1,2,3,4,5',  # Monday to Friday
+        help_text="Days of week when rule is active (1=Mon, 7=Sun)"
+    )
+    
+    active_start_hour = models.PositiveIntegerField(
+        default=9,
+        help_text="Hour of day when rule becomes active (0-23)"
+    )
+    
+    active_end_hour = models.PositiveIntegerField(
+        default=17,
+        help_text="Hour of day when rule stops being active (0-23)"
+    )
+    
+    # Control
+    is_active = models.BooleanField(default=True)
+    
+    # Statistics
+    last_run = models.DateTimeField(null=True, blank=True)
+    total_recycled = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        verbose_name = "Lead Recycle Rule"
+        verbose_name_plural = "Lead Recycle Rules"
+        ordering = ['name']
+    
+    def __str__(self):
+        campaign_name = self.campaign.name if self.campaign else "All Campaigns"
+        return f"{self.name} ({self.source_status} -> {self.target_status}) - {campaign_name}"
+    
+    def is_currently_active(self):
+        """Check if rule is active at current time"""
+        if not self.is_active:
+            return False
+        
+        now = timezone.now()
+        
+        # Check day of week
+        current_day = str(now.isoweekday())  # 1=Monday, 7=Sunday
+        active_days = self.active_days.split(',')
+        if current_day not in active_days:
+            return False
+        
+        # Check hour
+        current_hour = now.hour
+        if current_hour < self.active_start_hour or current_hour >= self.active_end_hour:
+            return False
+        
+        return True
+    
+    def get_eligible_leads(self):
+        """
+        Get leads eligible for recycling under this rule
+        """
+        # Avoid circular import
+        from leads.models import Lead
+        
+        cutoff_time = timezone.now() - timezone.timedelta(hours=self.recycle_after_hours)
+        
+        queryset = Lead.objects.filter(
+            status=self.source_status,
+            call_count__gte=self.min_attempts,
+            call_count__lt=self.max_attempts
+        )
+        
+        # Filter by last contact time
+        queryset = queryset.filter(
+            models.Q(last_contact_date__lte=cutoff_time) |
+            models.Q(last_contact_date__isnull=True)
+        )
+        
+        # Filter by campaign if specified
+        if self.campaign:
+            queryset = queryset.filter(
+                lead_list__assigned_campaign=self.campaign
+            )
+        
+        # Filter by lead list if specified
+        if self.lead_list:
+            queryset = queryset.filter(lead_list=self.lead_list)
+        
+        return queryset
+
+
+class LeadRecycleLog(TimeStampedModel):
+    """
+    Log of lead recycling actions
+    """
+    rule = models.ForeignKey(
+        LeadRecycleRule,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='logs'
+    )
+    
+    lead = models.ForeignKey(
+        'leads.Lead',
+        on_delete=models.CASCADE,
+        related_name='recycle_logs'
+    )
+    
+    old_status = models.CharField(max_length=20)
+    new_status = models.CharField(max_length=20)
+    old_call_count = models.PositiveIntegerField(default=0)
+    
+    recycled_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Lead Recycle Log"
+        verbose_name_plural = "Lead Recycle Logs"
+        ordering = ['-recycled_at']
+    
+    def __str__(self):
+        return f"Lead {self.lead_id}: {self.old_status} -> {self.new_status}"
 
 # apps.py
 from django.apps import AppConfig

@@ -466,3 +466,34 @@ class QuickLeadForm(forms.Form):
         queryset=LeadList.objects.filter(is_active=True),
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+
+class RecycleLeadsForm(forms.Form):
+    """
+    Form for recycling leads based on status
+    """
+    source_statuses = forms.MultipleChoiceField(
+        choices=[
+            ('busy', 'Busy'),
+            ('no_answer', 'No Answer'),
+            ('not_interested', 'Not Interested'),
+            ('failed', 'Failed'),
+            ('other', 'Other'),
+            ('dnc', 'Do Not Call (DNC)'),
+        ],
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Select the statuses you want to reset to 'New'."
+    )
+    
+    reset_call_count = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text="Reset"
+    )
+
+    def clean_source_statuses(self):
+        statuses = self.cleaned_data['source_statuses']
+        if not statuses:
+            raise forms.ValidationError("Please select at least one status to recycle.")
+        return statuses

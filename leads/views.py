@@ -182,7 +182,7 @@ class LeadListListView(LoginRequiredMixin, ListView):
         queryset = LeadList.objects.annotate(
             lead_count=Count('leads'),
             active_leads=Count('leads', filter=Q(leads__status='new')),
-            contacted_leads=Count('leads', filter=Q(leads__status__in=['contacted', 'callback', 'sale']))
+            contacted_leads_count=Count('leads', filter=Q(leads__status__in=['contacted', 'callback', 'sale']))
         ).order_by('-created_at')
 
         search_query = self.request.GET.get('search')
@@ -280,6 +280,65 @@ class LeadListLeadsView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['lead_list'] = self.lead_list
         return context
+
+
+class RecycleLeadsView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """
+    Recycle leads in a list
+    """
+    template_name = 'leads/recycle_leads.html'
+    
+    def test_func(self):
+        return self.request.user.is_superuser or self.request.user.groups.filter(name__in=['Managers', 'Supervisors']).exists()
+    
+    def get(self, request, pk):
+        lead_list = get_object_or_404(LeadList, pk=pk)
+        from .forms import RecycleLeadsForm
+        form = RecycleLeadsForm()
+        
+        # Calculate stats for the form helper
+        stats = {
+            'busy': lead_list.leads.filter(status='busy').count(),
+            'no_answer': lead_list.leads.filter(status='no_answer').count(),
+            'not_interested': lead_list.leads.filter(status='not_interested').count(),
+            'failed': lead_list.leads.filter(status='failed').count(),
+            'other': lead_list.leads.filter(status='other').count(),
+        }
+        
+        return render(request, self.template_name, {
+            'lead_list': lead_list,
+            'form': form,
+            'stats': stats
+        })
+    
+    def post(self, request, pk):
+        lead_list = get_object_or_404(LeadList, pk=pk)
+        from .forms import RecycleLeadsForm
+        form = RecycleLeadsForm(request.POST)
+        
+        if form.is_valid():
+            statuses = form.cleaned_data['source_statuses']
+            reset_count = form.cleaned_data['reset_call_count']
+            
+            leads_to_recycle = lead_list.leads.filter(status__in=statuses)
+            count = leads_to_recycle.count()
+            
+            update_kwargs = {
+                'status': 'new',
+                'last_contact_date': None
+            }
+            if reset_count:
+                update_kwargs['call_count'] = 0
+            
+            leads_to_recycle.update(**update_kwargs)
+            
+            messages.success(request, f'Successfully recycled {count} leads from statuses: {", ".join(statuses)}')
+            return redirect('leads:lead_list_detail', pk=pk)
+            
+        return render(request, self.template_name, {
+            'lead_list': lead_list,
+            'form': form
+        })
 
 
 # Lead Import/Export Views
@@ -839,10 +898,16 @@ def bulk_action_ajax(request):
     action = request.POST.get('action')
     lead_ids = request.POST.getlist('lead_ids[]')
     
-    if not action or not lead_ids:
-        return JsonResponse({'success': False, 'message': 'Action and lead IDs required'})
+    if not action:
+        return JsonResponse({'success': False, 'message': 'Action required'})
     
-    leads = Lead.objects.filter(id__in=lead_ids)
+    # Validation for actions requiring lead_ids
+    if action not in ['recycle_leads'] and not lead_ids:
+        return JsonResponse({'success': False, 'message': 'Lead IDs required'})
+    
+    leads = Lead.objects.none()
+    if lead_ids:
+        leads = Lead.objects.filter(id__in=lead_ids)
     count = leads.count()
     
     if action == 'delete':
@@ -878,6 +943,33 @@ def bulk_action_ajax(request):
             return JsonResponse({'success': False, 'message': 'New status required'})
         leads.update(status=new_status, last_contact_date=timezone.now())
         message = f'{count} leads status updated'
+
+    elif action == 'recycle_leads':
+        list_id = request.POST.get('list_id')
+        source_statuses = request.POST.getlist('source_statuses[]')
+        
+        if not list_id or not source_statuses:
+            return JsonResponse({'success': False, 'message': 'List ID and source statuses required'})
+        
+        try:
+            lead_list = LeadList.objects.get(id=list_id)
+            leads_to_recycle = Lead.objects.filter(
+                lead_list=lead_list,
+                status__in=source_statuses
+            )
+            
+            recycle_count = leads_to_recycle.count()
+            
+            # Reset leads
+            leads_to_recycle.update(
+                status='new',
+                call_count=0,
+                last_contact_date=None
+            )
+            
+            message = f'{recycle_count} leads recycled successfully'
+        except LeadList.DoesNotExist:
+             return JsonResponse({'success': False, 'message': 'Lead list not found'})
     
     else:
         return JsonResponse({'success': False, 'message': 'Invalid action'})

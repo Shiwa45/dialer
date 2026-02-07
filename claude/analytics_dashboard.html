@@ -1,0 +1,674 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --success-color: #06d6a0;
+        --warning-color: #ffd166;
+        --danger-color: #ef476f;
+    }
+
+    .analytics-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-bar {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: transform 0.2s;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .metric-change {
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.5rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 20px;
+    }
+
+    .metric-change.positive {
+        background: rgba(6, 214, 160, 0.1);
+        color: var(--success-color);
+    }
+
+    .metric-change.negative {
+        background: rgba(239, 71, 111, 0.1);
+        color: var(--danger-color);
+    }
+
+    .metric-card.calls .metric-value { color: var(--primary-color); }
+    .metric-card.contacts .metric-value { color: var(--success-color); }
+    .metric-card.sales .metric-value { color: var(--warning-color); }
+    .metric-card.conversion .metric-value { color: #7209b7; }
+
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .chart-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    .leaderboard-table {
+        width: 100%;
+    }
+
+    .leaderboard-table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .leaderboard-table td {
+        padding: 0.75rem 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .rank-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .rank-1 { background: #ffd700; color: #333; }
+    .rank-2 { background: #c0c0c0; color: #333; }
+    .rank-3 { background: #cd7f32; color: white; }
+    .rank-default { background: #e9ecef; color: #666; }
+
+    .agent-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .stat-pill {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .stat-pill.sales { background: rgba(255, 209, 102, 0.2); color: #b5830a; }
+    .stat-pill.conversion { background: rgba(114, 9, 183, 0.1); color: #7209b7; }
+
+    .roi-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+    }
+
+    .roi-value {
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .roi-label {
+        opacity: 0.8;
+        font-size: 0.9rem;
+    }
+
+    .roi-breakdown {
+        margin-top: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .roi-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+    }
+
+    .roi-item-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .roi-item-label {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+
+    .best-time-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(6, 214, 160, 0.1);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: var(--success-color);
+    }
+
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .filter-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .roi-breakdown {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- Header -->
+    <div class="analytics-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-1">
+                    <i class="fas fa-chart-line me-2"></i>Analytics Dashboard
+                </h1>
+                <p class="mb-0 opacity-75">Comprehensive performance insights and trends</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="dropdown">
+                    <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="?type=trends&format=xlsx"><i class="fas fa-file-excel me-2 text-success"></i>Trends (Excel)</a></li>
+                        <li><a class="dropdown-item" href="?type=leaderboard&format=xlsx"><i class="fas fa-file-excel me-2 text-success"></i>Leaderboard (Excel)</a></li>
+                        <li><a class="dropdown-item" href="?type=leaderboard&format=csv"><i class="fas fa-file-csv me-2 text-primary"></i>Leaderboard (CSV)</a></li>
+                        {% if roi %}<li><a class="dropdown-item" href="?type=roi&format=xlsx"><i class="fas fa-file-excel me-2 text-success"></i>ROI Report (Excel)</a></li>{% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label><i class="fas fa-bullhorn me-1"></i>Campaign:</label>
+            <select class="form-select form-select-sm" id="campaignFilter" style="width: 200px;">
+                <option value="">All Campaigns</option>
+                {% for campaign in campaigns %}
+                <option value="{{ campaign.id }}" {% if selected_campaign_id == campaign.id %}selected{% endif %}>
+                    {{ campaign.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-calendar me-1"></i>Period:</label>
+            <select class="form-select form-select-sm" id="daysFilter" style="width: 150px;">
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="14" {% if days == 14 %}selected{% endif %}>Last 14 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="60" {% if days == 60 %}selected{% endif %}>Last 60 days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+            </select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+            <i class="fas fa-filter me-1"></i>Apply
+        </button>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card calls">
+            <div class="metric-value" id="totalCalls">{{ trends.summary.total_calls|intcomma }}</div>
+            <div class="metric-label">Total Calls</div>
+            <div class="metric-change positive" id="callsChange">
+                <i class="fas fa-arrow-up"></i>
+                <span>{{ trends.summary.avg_daily_calls|floatformat:0 }}/day avg</span>
+            </div>
+        </div>
+        <div class="metric-card contacts">
+            <div class="metric-value" id="answeredCalls">{{ trends.summary.answered_calls|intcomma }}</div>
+            <div class="metric-label">Contacts Made</div>
+            {% with contact_rate=trends.summary.answered_calls|divisibleby:trends.summary.total_calls %}
+            <div class="metric-change positive">
+                <i class="fas fa-phone-alt"></i>
+                <span>Contact Rate</span>
+            </div>
+            {% endwith %}
+        </div>
+        <div class="metric-card sales">
+            <div class="metric-value" id="totalSales">{{ trends.summary.sales|intcomma }}</div>
+            <div class="metric-label">Sales</div>
+        </div>
+        <div class="metric-card conversion">
+            <div class="metric-value" id="conversionRate">
+                {% widthratio trends.summary.sales trends.summary.answered_calls 100 %}%
+            </div>
+            <div class="metric-label">Conversion Rate</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Call Trends Chart -->
+        <div class="col-lg-8">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h5 class="chart-title"><i class="fas fa-chart-area me-2"></i>Call Volume Trends</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" onclick="setChartType('line')">Line</button>
+                        <button class="btn btn-outline-secondary" onclick="setChartType('bar')">Bar</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Best Time to Call -->
+        <div class="col-lg-4">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h5 class="chart-title"><i class="fas fa-clock me-2"></i>Best Hours to Call</h5>
+                </div>
+                {% if hourly.best_contact_hour is not None %}
+                <div class="mb-3">
+                    <div class="best-time-badge">
+                        <i class="fas fa-star"></i>
+                        Best Contact: {{ hourly.best_contact_hour }}:00
+                    </div>
+                </div>
+                {% endif %}
+                <div class="chart-container" style="height: 220px;">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Agent Leaderboard -->
+        <div class="col-lg-{% if roi %}7{% else %}12{% endif %}">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h5 class="chart-title"><i class="fas fa-trophy me-2"></i>Agent Leaderboard</h5>
+                    <select class="form-select form-select-sm" style="width: 150px;" id="leaderboardMetric" onchange="updateLeaderboard()">
+                        <option value="sales">By Sales</option>
+                        <option value="calls">By Calls</option>
+                        <option value="conversion">By Conversion</option>
+                        <option value="quality">By Quality</option>
+                    </select>
+                </div>
+                <div class="table-responsive">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Rank</th>
+                                <th>Agent</th>
+                                <th class="text-center">Calls</th>
+                                <th class="text-center">Contacts</th>
+                                <th class="text-center">Sales</th>
+                                <th class="text-center">Conversion</th>
+                                <th class="text-center">Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardBody">
+                            {% for agent in leaderboard %}
+                            <tr>
+                                <td>
+                                    <span class="rank-badge {% if agent.rank == 1 %}rank-1{% elif agent.rank == 2 %}rank-2{% elif agent.rank == 3 %}rank-3{% else %}rank-default{% endif %}">
+                                        {{ agent.rank }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="agent-name">{{ agent.name }}</span>
+                                </td>
+                                <td class="text-center">{{ agent.total_calls }}</td>
+                                <td class="text-center">{{ agent.answered_calls }}</td>
+                                <td class="text-center">
+                                    <span class="stat-pill sales">{{ agent.sales }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="stat-pill conversion">{{ agent.conversion_rate }}%</span>
+                                </td>
+                                <td class="text-center">{{ agent.avg_quality|floatformat:1 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    No agent data available
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if roi %}
+        <!-- ROI Card -->
+        <div class="col-lg-5">
+            <div class="roi-card">
+                <div class="row align-items-center">
+                    <div class="col-6">
+                        <div class="roi-label">Return on Investment</div>
+                        <div class="roi-value">{{ roi.roi.roi_percent }}%</div>
+                        <div class="roi-label mt-2">
+                            {% if roi.roi.profit >= 0 %}
+                            <i class="fas fa-arrow-up me-1"></i>Profit: ${{ roi.roi.profit|intcomma }}
+                            {% else %}
+                            <i class="fas fa-arrow-down me-1"></i>Loss: ${{ roi.roi.profit|intcomma }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div style="font-size: 4rem; opacity: 0.2;">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="roi-breakdown">
+                    <div class="roi-item">
+                        <div class="roi-item-value">${{ roi.revenue.total_revenue|intcomma }}</div>
+                        <div class="roi-item-label">Revenue</div>
+                    </div>
+                    <div class="roi-item">
+                        <div class="roi-item-value">${{ roi.costs.total_cost|intcomma }}</div>
+                        <div class="roi-item-label">Total Cost</div>
+                    </div>
+                    <div class="roi-item">
+                        <div class="roi-item-value">${{ roi.costs.cost_per_sale|floatformat:2 }}</div>
+                        <div class="roi-item-label">Cost/Sale</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Breakdown -->
+            <div class="chart-card mt-3">
+                <h6 class="mb-3"><i class="fas fa-coins me-2"></i>Cost Breakdown</h6>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Telecom Costs</span>
+                    <strong>${{ roi.costs.telecom_cost|floatformat:2 }}</strong>
+                </div>
+                <div class="progress mb-3" style="height: 8px;">
+                    <div class="progress-bar bg-primary" style="width: {% widthratio roi.costs.telecom_cost roi.costs.total_cost 100 %}%"></div>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Agent Costs</span>
+                    <strong>${{ roi.costs.agent_cost|floatformat:2 }}</strong>
+                </div>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-warning" style="width: {% widthratio roi.costs.agent_cost roi.costs.total_cost 100 %}%"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Chart data from Django
+const trendsData = {
+    labels: {{ trends.labels|safe }},
+    totalCalls: {{ trends.datasets.total_calls|safe }},
+    answeredCalls: {{ trends.datasets.answered_calls|safe }},
+    sales: {{ trends.datasets.sales|safe }}
+};
+
+const hourlyData = {{ hourly.hourly_data|safe }};
+
+let trendsChart = null;
+let hourlyChart = null;
+
+// Initialize charts on load
+document.addEventListener('DOMContentLoaded', function() {
+    initTrendsChart();
+    initHourlyChart();
+});
+
+function initTrendsChart() {
+    const ctx = document.getElementById('trendsChart').getContext('2d');
+    
+    trendsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendsData.labels,
+            datasets: [
+                {
+                    label: 'Total Calls',
+                    data: trendsData.totalCalls,
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Contacts',
+                    data: trendsData.answeredCalls,
+                    borderColor: '#06d6a0',
+                    backgroundColor: 'rgba(6, 214, 160, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Sales',
+                    data: trendsData.sales,
+                    borderColor: '#ffd166',
+                    backgroundColor: 'rgba(255, 209, 102, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initHourlyChart() {
+    const ctx = document.getElementById('hourlyChart').getContext('2d');
+    
+    const labels = hourlyData.map(h => h.hour_formatted);
+    const contactRates = hourlyData.map(h => h.contact_rate);
+    
+    hourlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Contact Rate %',
+                data: contactRates,
+                backgroundColor: 'rgba(67, 97, 238, 0.7)',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function setChartType(type) {
+    if (trendsChart) {
+        trendsChart.config.type = type;
+        trendsChart.update();
+    }
+    
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+function applyFilters() {
+    const campaign = document.getElementById('campaignFilter').value;
+    const days = document.getElementById('daysFilter').value;
+    
+    let url = window.location.pathname + '?';
+    if (campaign) url += `campaign=${campaign}&`;
+    url += `days=${days}`;
+    
+    window.location.href = url;
+}
+
+function updateLeaderboard() {
+    const metric = document.getElementById('leaderboardMetric').value;
+    const campaign = document.getElementById('campaignFilter').value;
+    const days = document.getElementById('daysFilter').value;
+    
+    fetch(`/reports/api/leaderboard/?metric=${metric}&campaign=${campaign}&days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderLeaderboard(data.leaderboard);
+            }
+        });
+}
+
+function renderLeaderboard(data) {
+    const tbody = document.getElementById('leaderboardBody');
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No agent data available</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(agent => `
+        <tr>
+            <td>
+                <span class="rank-badge ${agent.rank === 1 ? 'rank-1' : agent.rank === 2 ? 'rank-2' : agent.rank === 3 ? 'rank-3' : 'rank-default'}">
+                    ${agent.rank}
+                </span>
+            </td>
+            <td><span class="agent-name">${agent.name}</span></td>
+            <td class="text-center">${agent.total_calls}</td>
+            <td class="text-center">${agent.answered_calls}</td>
+            <td class="text-center"><span class="stat-pill sales">${agent.sales}</span></td>
+            <td class="text-center"><span class="stat-pill conversion">${agent.conversion_rate}%</span></td>
+            <td class="text-center">${agent.avg_quality.toFixed(1)}</td>
+        </tr>
+    `).join('');
+}
+</script>
+{% endblock %}

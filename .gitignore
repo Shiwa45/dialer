@@ -6,11 +6,42 @@ env/
 __pycache__/
 *.py[cod]
 
+# Database
+*.sqlite3
+db.sqlite3
+
+# Environment variables
+.env
+*.env
+.env.*
+
+# Generated configs (may contain sensitive data)
+generated_configs/
+
+# Media and recordings
+media/
+recordings/
+
 # Logs and local artifacts
 *.log
 logs/
 celerybeat-schedule
 
+# Static files (can be regenerated)
+staticfiles/
+static_collected/
+
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
+*~

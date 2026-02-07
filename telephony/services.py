@@ -143,7 +143,62 @@ class AsteriskService:
                 'registered': False,
                 'error': str(e)
             }
-    
+
+    def get_all_endpoint_statuses(self):
+        """
+        Retrieve statuses for ALL endpoints in a single request.
+        Returns a dict keyed by extension (resource name).
+        Optimized to avoid N+1 API calls.
+        """
+        try:
+            response = requests.get(
+                f"{self.ari_base_url}/endpoints",
+                auth=(self.ari_username, self.ari_password),
+                timeout=10
+            )
+            
+            result = {}
+            if response.status_code == 200:
+                endpoints = response.json()
+                for ep in endpoints:
+                    # We only care about PJSIP usually, but let's key by resource name
+                    # resource name is like '101'
+                    resource = ep.get('resource')
+                    state = (ep.get('state') or '').lower()
+                    tech = ep.get('technology')
+                    
+                    if resource and tech == 'PJSIP':
+                        result[resource] = {
+                            'registered': state in ('online', 'reachable', 'available', 'ready'),
+                            'state': state
+                        }
+            return result
+            
+            
+        except Exception as e:
+            logger.error(f"Error retrieving all endpoints: {str(e)}")
+            return {}
+
+    def get_channel_variable(self, channel_id, variable):
+        """
+        Get value of a channel variable
+        """
+        try:
+            response = requests.get(
+                f"{self.ari_base_url}/channels/{channel_id}/variable",
+                auth=(self.ari_username, self.ari_password),
+                params={'variable': variable},
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result.get('value')
+            return None
+        except Exception as e:
+            logger.error(f"Error getting channel variable {variable}: {e}")
+            return None
+
     def originate_call(self, extension, phone_number, campaign=None, context='agents'):
         """
         Originate a call from agent extension to phone number
@@ -238,6 +293,40 @@ class AsteriskService:
                 return {"success": True}
             return {"success": False, "error": f"Add channel failed: {r.text}"}
         except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def create_bridge_and_add_channels(self, channel1, channel2):
+        """
+        Create an ARI bridge and add both channels to it
+        """
+        try:
+            # Create a mixing bridge
+            bridge_response = requests.post(
+                f"{self.ari_base_url}/bridges",
+                auth=(self.ari_username, self.ari_password),
+                json={"type": "mixing"},
+                timeout=10
+            )
+            
+            if bridge_response.status_code not in [200, 201]:
+                return {"success": False, "error": f"Failed to create bridge: {bridge_response.text}"}
+            
+            bridge_data = bridge_response.json()
+            bridge_id = bridge_data.get('id')
+            
+            # Add both channels to the bridge
+            add1 = self.add_channel_to_bridge(bridge_id, channel1)
+            if not add1.get('success'):
+                return {"success": False, "error": f"Failed to add channel1: {add1.get('error')}"}
+            
+            add2 = self.add_channel_to_bridge(bridge_id, channel2)
+            if not add2.get('success'):
+                return {"success": False, "error": f"Failed to add channel2: {add2.get('error')}"}
+            
+            return {"success": True, "bridge_id": bridge_id}
+            
+        except Exception as e:
+            logger.error(f"Error creating bridge: {e}")
             return {"success": False, "error": str(e)}
 
     def destroy_bridge(self, bridge_id):

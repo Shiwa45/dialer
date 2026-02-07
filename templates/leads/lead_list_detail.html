@@ -4,9 +4,9 @@
 {% block title %}{{ lead_list.name }} - Lead List Details{% endblock %}
 
 {% block breadcrumb_items %}
-    <li class="breadcrumb-item"><a href="{% url 'leads:list' %}">Leads</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'leads:lead_lists' %}">Lead Lists</a></li>
-    <li class="breadcrumb-item active">{{ lead_list.name }}</li>
+<li class="breadcrumb-item"><a href="{% url 'leads:list' %}">Leads</a></li>
+<li class="breadcrumb-item"><a href="{% url 'leads:lead_lists' %}">Lead Lists</a></li>
+<li class="breadcrumb-item active">{{ lead_list.name }}</li>
 {% endblock %}
 
 {% block page_header %}
@@ -15,13 +15,14 @@
         <h1 class="h3 mb-0">
             <i class="fas fa-list-ul me-2"></i>{{ lead_list.name }}
             {% if lead_list.is_active %}
-                <span class="badge bg-success ms-2">Active</span>
+            <span class="badge bg-success ms-2">Active</span>
             {% else %}
-                <span class="badge bg-secondary ms-2">Inactive</span>
+            <span class="badge bg-secondary ms-2">Inactive</span>
             {% endif %}
         </h1>
         <p class="text-muted mb-0">
-            Created {{ lead_list.created_at|date:"M d, Y" }} by {{ lead_list.created_by.get_full_name|default:lead_list.created_by.username }}
+            Created {{ lead_list.created_at|date:"M d, Y" }} by {{
+            lead_list.created_by.get_full_name|default:lead_list.created_by.username }}
         </p>
     </div>
     <div class="btn-group">
@@ -33,11 +34,11 @@
         </button>
         <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="{% url 'leads:create' %}?list={{ lead_list.id }}">
-                <i class="fas fa-user-plus me-2"></i>Add Single Lead
-            </a></li>
+                    <i class="fas fa-user-plus me-2"></i>Add Single Lead
+                </a></li>
             <li><a class="dropdown-item" href="{% url 'leads:import' %}?list={{ lead_list.id }}">
-                <i class="fas fa-upload me-2"></i>Import from File
-            </a></li>
+                    <i class="fas fa-upload me-2"></i>Import from File
+                </a></li>
         </ul>
         <div class="btn-group">
             <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
@@ -45,18 +46,20 @@
             </button>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'leads:lead_list_leads' lead_list.pk %}">
-                    <i class="fas fa-users me-2"></i>View All Leads
-                </a></li>
+                        <i class="fas fa-users me-2"></i>View All Leads
+                    </a></li>
                 <li><a class="dropdown-item" href="{% url 'leads:lead_list_export' lead_list.pk %}">
-                    <i class="fas fa-download me-2"></i>Export Leads
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
+                        <i class="fas fa-download me-2"></i>Export Leads
+                    </a></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
                 <li><a class="dropdown-item" href="#" onclick="duplicateList({{ lead_list.id }})">
-                    <i class="fas fa-copy me-2"></i>Duplicate List
-                </a></li>
+                        <i class="fas fa-copy me-2"></i>Duplicate List
+                    </a></li>
                 <li><a class="dropdown-item text-danger" href="{% url 'leads:delete_lead_list' lead_list.pk %}">
-                    <i class="fas fa-trash me-2"></i>Delete List
-                </a></li>
+                        <i class="fas fa-trash me-2"></i>Delete List
+                    </a></li>
             </ul>
         </div>
     </div>
@@ -133,56 +136,59 @@
             </div>
             <div class="card-body">
                 {% if recent_leads %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Phone</th>
-                                    <th>Status</th>
-                                    <th>Added</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for lead in recent_leads %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'leads:detail' lead.pk %}" class="text-decoration-none">
-                                            {{ lead.get_full_name }}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lead in recent_leads %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'leads:detail' lead.pk %}" class="text-decoration-none">
+                                        {{ lead.get_full_name }}
+                                    </a>
+                                </td>
+                                <td>{{ lead.phone_number }}</td>
+                                <td>
+                                    <span
+                                        class="badge bg-{% if lead.status == 'new' %}primary{% elif lead.status == 'contacted' %}success{% elif lead.status == 'sale' %}success{% elif lead.status == 'dnc' %}danger{% else %}secondary{% endif %}">
+                                        {{ lead.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ lead.created_at|timesince }} ago</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'leads:detail' lead.pk %}" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-eye"></i>
                                         </a>
-                                    </td>
-                                    <td>{{ lead.phone_number }}</td>
-                                    <td>
-                                        <span class="badge bg-{% if lead.status == 'new' %}primary{% elif lead.status == 'contacted' %}success{% elif lead.status == 'sale' %}success{% elif lead.status == 'dnc' %}danger{% else %}secondary{% endif %}">
-                                            {{ lead.get_status_display }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ lead.created_at|timesince }} ago</small>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'leads:detail' lead.pk %}" class="btn btn-outline-info btn-sm">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button class="btn btn-outline-success btn-sm" onclick="initiateCall('{{ lead.phone_number }}')">
-                                                <i class="fas fa-phone"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                                        <button class="btn btn-outline-success btn-sm"
+                                            onclick="initiateCall('{{ lead.phone_number }}')">
+                                            <i class="fas fa-phone"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                        <h5>No leads in this list yet</h5>
-                        <p>Start by <a href="{% url 'leads:create' %}?list={{ lead_list.id }}">adding your first lead</a> or 
-                           <a href="{% url 'leads:import' %}?list={{ lead_list.id }}">importing from a file</a>.</p>
-                    </div>
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <h5>No leads in this list yet</h5>
+                    <p>Start by <a href="{% url 'leads:create' %}?list={{ lead_list.id }}">adding your first lead</a> or
+                        <a href="{% url 'leads:import' %}?list={{ lead_list.id }}">importing from a file</a>.
+                    </p>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -212,7 +218,8 @@
             <div class="card-body">
                 <div class="info-item mb-3">
                     <label class="text-muted small">Created By</label>
-                    <div class="fw-bold">{{ lead_list.created_by.get_full_name|default:lead_list.created_by.username }}</div>
+                    <div class="fw-bold">{{ lead_list.created_by.get_full_name|default:lead_list.created_by.username }}
+                    </div>
                 </div>
                 <div class="info-item mb-3">
                     <label class="text-muted small">Created Date</label>
@@ -226,9 +233,9 @@
                     <label class="text-muted small">Status</label>
                     <div>
                         {% if lead_list.is_active %}
-                            <span class="badge bg-success">Active</span>
+                        <span class="badge bg-success">Active</span>
                         {% else %}
-                            <span class="badge bg-secondary">Inactive</span>
+                        <span class="badge bg-secondary">Inactive</span>
                         {% endif %}
                     </div>
                 </div>
@@ -237,9 +244,9 @@
                     <label class="text-muted small">Tags</label>
                     <div class="mt-1">
                         {% for tag in lead_list.tags|default_if_none:""|cut:"," %}
-                            {% if tag %}
-                            <span class="badge bg-light text-dark me-1">{{ tag }}</span>
-                            {% endif %}
+                        {% if tag %}
+                        <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>
@@ -271,9 +278,14 @@
                     <button type="button" class="btn btn-outline-secondary" onclick="cleanupList()">
                         <i class="fas fa-broom me-2"></i>Clean Up List
                     </button>
+                    <a href="{% url 'leads:recycle_leads' lead_list.pk %}" class="btn btn-outline-danger">
+                        <i class="fas fa-recycle me-2"></i>Recycle Leads
+                    </a>
                 </div>
             </div>
         </div>
+
+
 
         <!-- Lead Activity Timeline -->
         <div class="card mb-4">
@@ -294,20 +306,20 @@
                         </div>
                     </div>
                     {% if recent_leads %}
-                        {% for lead in recent_leads|slice:":3" %}
-                        <div class="activity-item">
-                            <div class="activity-time">
-                                <small class="text-muted">{{ lead.created_at|timesince }} ago</small>
-                            </div>
-                            <div class="activity-content">
-                                <i class="fas fa-user-plus text-success me-2"></i>
-                                <a href="{% url 'leads:detail' lead.pk %}">{{ lead.get_full_name }}</a> added
-                            </div>
+                    {% for lead in recent_leads|slice:":3" %}
+                    <div class="activity-item">
+                        <div class="activity-time">
+                            <small class="text-muted">{{ lead.created_at|timesince }} ago</small>
                         </div>
-                        {% endfor %}
+                        <div class="activity-content">
+                            <i class="fas fa-user-plus text-success me-2"></i>
+                            <a href="{% url 'leads:detail' lead.pk %}">{{ lead.get_full_name }}</a> added
+                        </div>
+                    </div>
+                    {% endfor %}
                     {% endif %}
                 </div>
-                
+
                 {% if not recent_leads %}
                 <div class="text-center text-muted">
                     <i class="fas fa-clock fa-2x mb-2"></i>
@@ -336,9 +348,9 @@
                         <div class="stat-box p-2 bg-light rounded">
                             <div class="stat-value text-success">
                                 {% if total_leads > 0 %}
-                                    {{ contacted_leads|floatformat:0 }}%
+                                {{ contacted_leads|floatformat:0 }}%
                                 {% else %}
-                                    0%
+                                0%
                                 {% endif %}
                             </div>
                             <div class="stat-label">Contact Rate</div>
@@ -365,201 +377,214 @@
 
 {% block extra_css %}
 <style>
-.info-item {
-    margin-bottom: 1rem;
-}
-.info-item label {
-    display: block;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.25rem;
-}
-.activity-timeline {
-    position: relative;
-}
-.activity-item {
-    position: relative;
-    padding-left: 20px;
-    margin-bottom: 15px;
-}
-.activity-item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 5px;
-    width: 6px;
-    height: 6px;
-    background: #007bff;
-    border-radius: 50%;
-}
-.activity-item::after {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 11px;
-    width: 2px;
-    height: calc(100% + 5px);
-    background: #dee2e6;
-}
-.activity-item:last-child::after {
-    display: none;
-}
-.stat-box {
-    text-align: center;
-}
-.stat-value {
-    font-size: 1.25rem;
-    font-weight: bold;
-}
-.stat-label {
-    font-size: 0.75rem;
-    color: #6c757d;
-}
+    .info-item {
+        margin-bottom: 1rem;
+    }
+
+    .info-item label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-timeline {
+        position: relative;
+    }
+
+    .activity-item {
+        position: relative;
+        padding-left: 20px;
+        margin-bottom: 15px;
+    }
+
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 5px;
+        width: 6px;
+        height: 6px;
+        background: #007bff;
+        border-radius: 50%;
+    }
+
+    .activity-item::after {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 11px;
+        width: 2px;
+        height: calc(100% + 5px);
+        background: #dee2e6;
+    }
+
+    .activity-item:last-child::after {
+        display: none;
+    }
+
+    .stat-box {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Create status distribution chart
-    createStatusChart();
-    
-    // Auto-refresh stats every 30 seconds
-    setInterval(function() {
-        refreshStats();
-    }, 30000);
-});
+    $(document).ready(function () {
+        // Create status distribution chart
+        createStatusChart();
 
-function createStatusChart() {
-    var ctx = document.getElementById('statusChart').getContext('2d');
-    
-    var chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['New', 'Contacted', 'DNC', 'Other'],
-            datasets: [{
-                data: [{{ fresh_leads }}, {{ contacted_leads }}, {{ dnc_leads }}, {{ total_leads|add:fresh_leads|add:contacted_leads|add:dnc_leads|default:0 }}],
-                backgroundColor: [
-                    '#28a745',
-                    '#17a2b8', 
-                    '#dc3545',
-                    '#6c757d'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
+        // Auto-refresh stats every 30 seconds
+        setInterval(function () {
+            refreshStats();
+        }, 30000);
+    });
+
+    function createStatusChart() {
+        var ctx = document.getElementById('statusChart').getContext('2d');
+
+        var chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['New', 'Contacted', 'DNC', 'Other'],
+                datasets: [{
+                    data: [{{ fresh_leads }}, {{ contacted_leads }}, {{ dnc_leads }}, { { total_leads | add: fresh_leads | add: contacted_leads | add: dnc_leads |default: 0 } }],
+    backgroundColor: [
+        '#28a745',
+        '#17a2b8',
+        '#dc3545',
+        '#6c757d'
+    ],
+        borderWidth: 2,
+            borderColor: '#fff'
+                }]
+            },
+    options: {
+        responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
+                plugins: {
+            legend: {
+                position: 'bottom'
             }
         }
-    });
-}
+    }
+        });
+    }
 
-function refreshStats() {
-    $.ajax({
-        url: '{% url "leads:stats_api" %}?list_id={{ lead_list.id }}',
-        method: 'GET',
-        success: function(response) {
-            // Update stat cards without page refresh
-            // Implementation depends on your API response structure
-        }
-    });
-}
+    function refreshStats() {
+        $.ajax({
+            url: '{% url "leads:stats_api" %}?list_id={{ lead_list.id }}',
+            method: 'GET',
+            success: function (response) {
+                // Update stat cards without page refresh
+                // Implementation depends on your API response structure
+            }
+        });
+    }
 
-function createCampaign() {
-    if ({{ total_leads }} === 0) {
+    function createCampaign() {
+        if ({{ total_leads }
+    } === 0) {
         toastr.warning('Add some leads to this list before creating a campaign');
         return;
     }
-    
+
     if (confirm('Create a new campaign using this lead list?')) {
         window.location.href = '/campaigns/create/?list={{ lead_list.id }}';
     }
-}
-
-function cleanupList() {
-    if (confirm('Clean up this list? This will remove invalid phone numbers and duplicate entries.')) {
-        $.ajax({
-            url: '{% url "leads:bulk_action" %}',
-            method: 'POST',
-            data: {
-                'action': 'cleanup_list',
-                'list_id': {{ lead_list.id }},
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success('List cleanup completed. ' + response.removed_count + ' invalid entries removed.');
-                    setTimeout(function() {
-                        location.reload();
-                    }, 2000);
-                } else {
-                    toastr.error('Failed to clean up list: ' + response.error);
-                }
-            },
-            error: function() {
-                toastr.error('Error processing cleanup request');
-            }
-        });
     }
-}
 
-function duplicateList(listId) {
-    var newName = prompt('Enter name for the duplicate list:', '{{ lead_list.name }} (Copy)');
-    if (newName) {
-        $.ajax({
-            url: '{% url "leads:bulk_action" %}',
-            method: 'POST',
-            data: {
-                'action': 'duplicate_list',
-                'list_id': listId,
-                'new_name': newName,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success('List duplicated successfully');
-                    window.location.href = '/leads/lists/' + response.new_list_id + '/';
-                } else {
-                    toastr.error('Failed to duplicate list: ' + response.error);
-                }
-            },
-            error: function() {
-                toastr.error('Error duplicating list');
-            }
-        });
+    function cleanupList() {
+        if (confirm('Clean up this list? This will remove invalid phone numbers and duplicate entries.')) {
+            $.ajax({
+                url: '{% url "leads:bulk_action" %}',
+                method: 'POST',
+                data: {
+                    'action': 'cleanup_list',
+                    'list_id': {{ lead_list.id }},
+        'csrfmiddlewaretoken': '{{ csrf_token }}'
+    },
+    success: function(response) {
+        if (response.success) {
+            toastr.success('List cleanup completed. ' + response.removed_count + ' invalid entries removed.');
+            setTimeout(function () {
+                location.reload();
+            }, 2000);
+        } else {
+            toastr.error('Failed to clean up list: ' + response.error);
+        }
+    },
+    error: function() {
+        toastr.error('Error processing cleanup request');
     }
-}
+            });
+        }
+    }
 
-function initiateCall(phoneNumber) {
-    if (confirm('Initiate call to ' + phoneNumber + '?')) {
-        $.ajax({
-            url: '/telephony/initiate-call/',
-            method: 'POST',
-            data: {
-                'phone_number': phoneNumber,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    toastr.success('Call initiated successfully');
-                } else {
-                    toastr.error('Failed to initiate call: ' + response.error);
+    function duplicateList(listId) {
+        var newName = prompt('Enter name for the duplicate list:', '{{ lead_list.name }} (Copy)');
+        if (newName) {
+            $.ajax({
+                url: '{% url "leads:bulk_action" %}',
+                method: 'POST',
+                data: {
+                    'action': 'duplicate_list',
+                    'list_id': listId,
+                    'new_name': newName,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success('List duplicated successfully');
+                        window.location.href = '/leads/lists/' + response.new_list_id + '/';
+                    } else {
+                        toastr.error('Failed to duplicate list: ' + response.error);
+                    }
+                },
+                error: function () {
+                    toastr.error('Error duplicating list');
                 }
-            },
-            error: function() {
-                toastr.error('Error initiating call');
-            }
-        });
+            });
+        }
     }
-}
+
+    function initiateCall(phoneNumber) {
+        if (confirm('Initiate call to ' + phoneNumber + '?')) {
+            $.ajax({
+                url: '/telephony/initiate-call/',
+                method: 'POST',
+                data: {
+                    'phone_number': phoneNumber,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success('Call initiated successfully');
+                    } else {
+                        toastr.error('Failed to initiate call: ' + response.error);
+                    }
+                },
+                error: function () {
+                    toastr.error('Error initiating call');
+                }
+            });
+        }
+    }
+
+
+
 </script>
 {% endblock %}

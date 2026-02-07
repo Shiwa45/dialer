@@ -20,6 +20,7 @@ urlpatterns = [
     path('lists/<int:pk>/edit/', views.LeadListUpdateView.as_view(), name='update_lead_list'),
     path('lists/<int:pk>/delete/', views.LeadListDeleteView.as_view(), name='delete_lead_list'),
     path('lists/<int:pk>/leads/', views.LeadListLeadsView.as_view(), name='lead_list_leads'),
+    path('lists/<int:pk>/recycle/', views.RecycleLeadsView.as_view(), name='recycle_leads'),
     
     # Lead Import/Export
     path('import/', views.LeadImportView.as_view(), name='import'),
@@ -49,4 +50,17 @@ urlpatterns = [
     # API endpoints for real-time updates
     path('api/stats/', views.lead_stats_api, name='stats_api'),
     path('api/import-progress/<int:pk>/', views.import_progress_api, name='import_progress_api'),
+]
+
+# Phase 2.4: Lead Recycle & Progress Tracking
+from . import views_progress
+
+urlpatterns += [
+    path('lists/<int:list_id>/progress/', views_progress.lead_list_detail_with_progress, name='list_progress'),
+    path('api/lists/<int:list_id>/progress/', views_progress.lead_list_progress_api, name='list_progress_api'),
+    path('lists/<int:list_id>/recycle/', views_progress.recycle_list_leads, name='recycle_list_leads'),
+    path('recycle-rules/', views_progress.recycle_rules_list, name='recycle_rules'),
+    path('recycle-rules/create/', views_progress.create_recycle_rule, name='create_recycle_rule'),
+    path('recycle-rules/<int:rule_id>/toggle/', views_progress.toggle_recycle_rule, name='toggle_recycle_rule'),
+    path('recycle-rules/<int:rule_id>/delete/', views_progress.delete_recycle_rule, name='delete_recycle_rule'),
 ]

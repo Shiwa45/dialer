@@ -59,7 +59,7 @@ class ARIEventWorker:
             
             async for message in websocket:
                 try:
-                    logger.info(f"Received ARI event: {message[:200]}...")  # Log first 200 chars
+                    logger.debug(f"Received ARI event: {message[:200]}...")  # Log first 200 chars
                     event = json.loads(message)
                     await self.handle_event(event)
                 except Exception as e:
@@ -83,6 +83,7 @@ class ARIEventWorker:
             'BridgeDestroyed': self.handle_bridge_destroyed,
             'ChannelEnteredBridge': self.handle_channel_entered_bridge,
             'ChannelLeftBridge': self.handle_channel_left_bridge,
+            'EndpointStateChange': self.handle_endpoint_state_change,
         }
         
         handler = handlers.get(event_type)
@@ -381,8 +382,78 @@ class ARIEventWorker:
             'state': 'initiated',
             'started_at': timezone.now()
         }
+
+    
+    async def handle_endpoint_state_change(self, event):
+        """Handle endpoint state changes (registration/break)"""
+        endpoint = event.get('endpoint', {})
+        resource = endpoint.get('resource')  # Extension, e.g. "101"
+        state = (endpoint.get('state') or '').lower()
+        tech = endpoint.get('technology')
+        
+        # We only care about PJSIP extensions
+        if tech != 'PJSIP' or not resource:
+            return
+            
+        logger.info(f"Endpoint state change: {tech}/{resource} -> {state}")
+        
+        # Determine if registered/online
+        is_online = state in ('online', 'reachable', 'available', 'ready')
+        
+        # Verify this extension belongs to an agent
+        # We need to find which user has this extension
+        # Since this is async/realtime, avoiding complex queries is best
+        # querying UserProfile -> User -> AgentStatus
+        
+        await sync_to_async(self._update_agent_status_from_endpoint)(resource, is_online)
+
     
     # Helper methods (sync)
+    
+    def _update_agent_status_from_endpoint(self, extension, is_online):
+        """Update agent status based on endpoint state"""
+        from users.models import UserProfile, AgentStatus
+        
+        try:
+            # Find user with this extension
+            profile = UserProfile.objects.filter(extension=extension).select_related('user').first()
+            if not profile:
+                return
+                
+            agent_status = AgentStatus.objects.filter(user=profile.user).first()
+            if not agent_status:
+                return
+                
+            current_status = agent_status.status
+            
+            if is_online:
+                # Agent became reachable
+                if current_status == 'offline':
+                    # Only auto-set to available if they were offline
+                    logger.info(f"Agent {profile.user.username} (Ext {extension}) came online. Setting to Available.")
+                    agent_status.status = 'available'
+                    agent_status.status_changed_at = timezone.now()
+                    agent_status.save()
+                    
+                    # Notify dashboard
+                    # (In a real app, we'd fire a websocket event here)
+            else:
+                # Agent became unreachable
+                if current_status != 'offline':
+                    logger.info(f"Agent {profile.user.username} (Ext {extension}) lost connection. Setting to Offline.")
+                    agent_status.status = 'offline'
+                    agent_status.status_changed_at = timezone.now()
+                    agent_status.save()
+                    
+                    # Cleanup sessions
+                    AgentDialerSession.objects.filter(
+                        agent=profile.user, 
+                        status__in=['ready', 'connecting', 'incall']
+                    ).delete()
+
+        except Exception as e:
+            logger.error(f"Error updating agent status from endpoint: {e}")
+
     
     def _get_channel_variables(self, channel_id):
         """Get channel variables from Asterisk"""

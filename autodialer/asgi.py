@@ -8,10 +8,15 @@ from channels.security.websocket import AllowedHostsOriginValidator
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'autodialer.settings')
 
-# Import after setting environment
-from agents.routing import websocket_urlpatterns
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
+django_asgi_app = get_asgi_application()
 
-django_asgi_app = ASGIStaticFilesHandler(get_asgi_application()) if settings.DEBUG else get_asgi_application()
+if settings.DEBUG:
+    django_asgi_app = ASGIStaticFilesHandler(django_asgi_app)
+
+# Import after django setup
+from agents.routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,

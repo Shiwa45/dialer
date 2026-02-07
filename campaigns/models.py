@@ -141,6 +141,50 @@ class Campaign(TimeStampedModel):
         ('very_fast', 'Very Fast'),
         ('custom', 'Custom'),
     ]
+    # Predictive dialer settings (Phase 4.1)
+    dial_mode = models.CharField(
+        max_length=20,
+        choices=[
+            ('predictive', 'Predictive'),
+            ('progressive', 'Progressive'),
+            ('power', 'Power'),
+            ('preview', 'Preview'),
+        ],
+        default='predictive'
+    )
+    target_abandon_rate = models.FloatField(default=3.0)
+    max_dial_ratio = models.FloatField(default=3.0)
+    avg_talk_time = models.IntegerField(default=180)
+    wrapup_time = models.IntegerField(default=30)
+    
+    # AMD settings
+    amd_enabled = models.BooleanField(default=False)
+    amd_action = models.CharField(
+        max_length=20,
+        choices=[
+            ('hangup', 'Hangup'),
+            ('voicemail', 'Drop Voicemail'),
+            ('transfer', 'Transfer'),
+        ],
+        default='hangup'
+    )
+    voicemail_file = models.FileField(
+        upload_to='voicemail/',
+        blank=True,
+        null=True
+    )
+
+    # ROI tracking (Phase 4.3)
+    cost_per_minute = models.DecimalField(
+        max_digits=6, decimal_places=4, default=0.03
+    )
+    revenue_per_sale = models.DecimalField(
+        max_digits=10, decimal_places=2, default=100
+    )
+    agent_hourly_cost = models.DecimalField(
+        max_digits=6, decimal_places=2, default=15
+    )
+
     dial_speed = models.CharField(max_length=20, choices=DIAL_SPEED, default='normal')
     custom_dials_per_agent = models.PositiveIntegerField(default=1, help_text="Used when dial_speed=custom")
     
@@ -223,6 +267,29 @@ class CampaignAgent(TimeStampedModel):
         verbose_name = "Campaign Agent"
         verbose_name_plural = "Campaign Agents"
     
+    def save(self, *args, **kwargs):
+        """
+        PHASE 1.4 FIX: When activating an agent assignment,
+        automatically deactivate all other assignments for this user.
+        """
+        if self.is_active:
+            # Deactivate all other campaign assignments for this user
+            CampaignAgent.objects.filter(
+                user=self.user,
+                is_active=True
+            ).exclude(pk=self.pk).update(is_active=False)
+            
+            # Also update the user's current campaign in AgentStatus
+            try:
+                from users.models import AgentStatus
+                AgentStatus.objects.filter(user=self.user).update(
+                    current_campaign=self.campaign
+                )
+            except Exception:
+                pass
+        
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user.username} - {self.campaign.name}"
 

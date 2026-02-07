@@ -1,1515 +1,1011 @@
-class RetroPhoneController {
-    constructor(container, options = {}) {
-        this.container = container;
-        this.options = options;
-        this.toast = typeof options.toast === 'function' ? options.toast : () => { };
-        this.onRegistrationChange =
-            typeof options.onRegistrationChange === 'function' ? options.onRegistrationChange : () => { };
-        this.manualDialHandler =
-            typeof options.manualDialHandler === 'function' ? options.manualDialHandler : null;
-        this.webrtcEnabled = !!options.webrtcEnabled;
-        this.webrtcConfig = options.webrtcConfig || {};
-        this.softphoneRegistered = !!options.softphoneRegistered;
-        this.phoneNumber = '';
-        this.callTimer = null;
-        this.callDuration = 0;
-        this.isMuted = false;
-        this.isOnHold = false;
-        this.ua = null;
-        this.uaRegistered = false;
-        this.currentSession = null;
-        this.remoteAudio =
-            this.container.querySelector('[data-webrtc-audio]') ||
-            document.querySelector('[data-webrtc-audio]') ||
-            null;
+/**
+ * Agent Dashboard JavaScript - IMPROVED with Phase 1 Fixes
+ * 
+ * Phase 1 Fixes Applied:
+ * - 1.1: Handle call_incoming event for immediate UI update
+ * - 1.2: Handle call_cleared event to wipe previous call data
+ * 
+ * This script handles:
+ * - WebSocket connection for real-time events
+ * - Call state management
+ * - UI updates for incoming calls, connected calls, call end
+ * - Disposition handling
+ */
 
-        this.displayEl = this.container.querySelector('#phone-number-display');
-        this.statusEl = this.container.querySelector('#phone-status-display');
-        this.timerEl = this.container.querySelector('#phone-timer');
-        this.callBtn = this.container.querySelector('#phone-call-btn');
-        this.hangupBtn = this.container.querySelector('#phone-hangup-btn');
-        this.muteBtn = this.container.querySelector('#phone-mute-btn');
-        this.holdBtn = this.container.querySelector('#phone-hold-btn');
-        this.clearBtn = this.container.querySelector('#phone-clear-btn');
-        this.keyButtons = Array.from(this.container.querySelectorAll('.phone-key'));
+(function () {
+    'use strict';
 
-        this._bindUI();
+    // ========================================
+    // State Management
+    // ========================================
 
-        if (this.webrtcEnabled && this._hasValidWebRTCConfig()) {
-            this._initWebRTC();
-        } else {
-            this.webrtcEnabled = false;
-            this._updateIdleStatus();
+    const state = {
+        agentId: null,
+        currentCall: null,
+        currentLead: null,
+        callDurationTimer: null,
+        status: 'offline',
+        socket: null,
+        reconnectAttempts: 0,
+        maxReconnectAttempts: 10,
+        urls: {
+            status: '',
+            callStatus: '',
+            leadInfo: '',
+            disposition: '',
+            hangup: '',
+            manualDial: '',
+            transfer: ''
         }
-    }
+    };
 
-    _hasValidWebRTCConfig() {
-        if (!this.webrtcEnabled || !this.webrtcConfig || this.webrtcConfig.success === false) {
-            return false;
-        }
-        const cfg = this.webrtcConfig;
-        return Boolean(cfg.username || cfg.extension) && Boolean(cfg.password) && Boolean(cfg.server);
-    }
+    // ========================================
+    // Initialization
+    // ========================================
 
-    _bindUI() {
-        this._updateIdleStatus();
-        this._updateNumberDisplay();
-        this._toggleCallButtons(false);
-        this._bindKeyboard();
-        if (this.callBtn) {
-            this.callBtn.addEventListener('click', () => this._handleCall());
-        }
-        if (this.hangupBtn) {
-            this.hangupBtn.addEventListener('click', () => this._handleHangup());
-        }
-        if (this.clearBtn) {
-            this.clearBtn.addEventListener('click', () => this._handleClear());
-        }
-        if (this.muteBtn) {
-            this.muteBtn.addEventListener('click', () => this._toggleMute());
-        }
-        if (this.holdBtn) {
-            this.holdBtn.addEventListener('click', () => this._toggleHold());
-        }
-        this.keyButtons.forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const digit = btn.dataset.key || '';
-                this._handleDigit(digit, btn);
-            });
-        });
-        this._updateCallButtonState();
-    }
-
-    _bindKeyboard() {
-        this._keyboardHandler = (evt) => {
-            if (this._shouldIgnoreKeyEvent(evt)) {
-                return;
-            }
-            const key = evt.key;
-            if (/^[0-9]$/.test(key)) {
-                evt.preventDefault();
-                this._handleDigit(key);
-                return;
-            }
-            if (key === '*' || key === '#') {
-                evt.preventDefault();
-                this._handleDigit(key);
-                return;
-            }
-            if (key === '+' || (key === '=' && evt.shiftKey)) {
-                evt.preventDefault();
-                this._handleDigit('+');
-                return;
-            }
-            if (key === 'Backspace') {
-                evt.preventDefault();
-                this._handleClear();
-                return;
-            }
-            if (key === 'Enter') {
-                evt.preventDefault();
-                this._handleCall();
-                return;
-            }
-            if (key === 'Escape') {
-                evt.preventDefault();
-                this._handleHangup();
-            }
-        };
-        window.addEventListener('keydown', this._keyboardHandler);
-    }
-
-    _shouldIgnoreKeyEvent(evt) {
-        if (evt.metaKey || evt.ctrlKey || evt.altKey) return true;
-        const target = evt.target;
-        if (!target) return false;
-        const tag = target.tagName;
-        if (!tag) return false;
-        const interactiveTags = ['INPUT', 'TEXTAREA', 'SELECT'];
-        if (interactiveTags.includes(tag)) return true;
-        if (target.isContentEditable) return true;
-        return false;
-    }
-
-    _handleDigit(digit, buttonEl) {
-        if (!digit) return;
-        if (this.currentSession && this.webrtcEnabled && this.currentSession.isEstablished()) {
-            try {
-                this.currentSession.sendDTMF(digit);
-            } catch (err) {
-                console.warn('Failed to send DTMF', err);
-            }
-            this._flashButton(buttonEl);
-            return;
-        }
-        if (this.phoneNumber.length >= 32) return;
-        this.phoneNumber += digit;
-        this._updateNumberDisplay();
-        this._updateCallButtonState();
-        this._flashButton(buttonEl);
-    }
-
-    _handleClear() {
-        if (!this.phoneNumber) return;
-        this.phoneNumber = this.phoneNumber.slice(0, -1);
-        this._updateNumberDisplay();
-        this._updateCallButtonState();
-    }
-
-    _handleCall() {
-        const digits = this._getNormalizedNumber();
-        if (!digits) {
-            this.toast('Enter a phone number', true);
-            return;
-        }
-        if (this.webrtcEnabled && this.ua && this.uaRegistered) {
-            this._dialViaWebRTC(digits);
-        } else if (this.webrtcEnabled && (!this.ua || !this.uaRegistered)) {
-            this._setStatus('WEBRTC NOT REGISTERED');
-            this.toast('WebRTC phone is not registered yet. Please wait or reload.', true);
-        } else {
-            this._dialViaManual(digits);
-        }
-    }
-
-    _handleHangup() {
-        if (this.currentSession) {
-            try {
-                this.currentSession.terminate();
-            } catch (err) {
-                console.warn('Failed to terminate WebRTC session', err);
-            }
-        }
-        if (typeof this.options.onHangup === 'function') {
-            this.options.onHangup();
-        } else if (!this.currentSession) {
-            this.toast('Hang up from your softphone client', false);
-            this._resetPhone();
-        }
-    }
-
-    _toggleMute() {
-        if (!this.currentSession || !this.webrtcEnabled) {
-            this.toast('Mute control is only available for WebRTC calls', true);
-            return;
-        }
-        this.isMuted = !this.isMuted;
-        if (this.isMuted) {
-            this.currentSession.mute({ audio: true });
-            this._setStatus('MUTED');
-            if (this.muteBtn) {
-                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> UNMUTE';
-            }
-        } else {
-            this.currentSession.unmute({ audio: true });
-            this._setStatus('CONNECTED');
-            if (this.muteBtn) {
-                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
-            }
-        }
-    }
-
-    _toggleHold() {
-        if (!this.currentSession || !this.webrtcEnabled) {
-            this.toast('Hold control is only available for WebRTC calls', true);
-            return;
-        }
-        this.isOnHold = !this.isOnHold;
-        try {
-            if (this.isOnHold) {
-                this.currentSession.hold({ useUpdate: true });
-                this._setStatus('ON HOLD');
-                if (this.holdBtn) {
-                    this.holdBtn.innerHTML = '<i class="fa-solid fa-play"></i> RESUME';
-                }
-            } else {
-                this.currentSession.unhold({ useUpdate: true });
-                this._setStatus('CONNECTED');
-                if (this.holdBtn) {
-                    this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
-                }
-            }
-        } catch (err) {
-            console.warn('Hold toggle failed', err);
-        }
-    }
-
-    _toggleHoldApi() {
-        if (!this.holdUrl || !this.activeCallId) {
-            this._showToast('No active call to hold', true);
+    function init() {
+        const dashboard = document.querySelector('[data-agent-dashboard]');
+        if (!dashboard) {
+            console.error('Agent dashboard element not found');
             return;
         }
 
-        // Determine action based on current button state
-        const isCurrentlyOnHold = (this.callElements.holdBtn?.dataset.state === 'hold-on');
-        const action = isCurrentlyOnHold ? 'unhold' : 'hold';
+        // Get configuration from data attributes
+        state.agentId = dashboard.dataset.agentId;
+        state.status = dashboard.dataset.status || 'offline';
+        state.urls.status = dashboard.dataset.statusUrl;
+        state.urls.callStatus = dashboard.dataset.callStatusUrl;
+        state.urls.leadInfo = dashboard.dataset.leadInfoUrl;
+        state.urls.disposition = dashboard.dataset.dispositionUrl;
+        state.urls.hangup = dashboard.dataset.hangupUrl;
+        state.urls.manualDial = dashboard.dataset.manualDialUrl;
+        state.urls.transfer = dashboard.dataset.transferUrl;
 
-        const payload = new URLSearchParams();
-        payload.append('call_id', this.activeCallId);
-        payload.append('action', action);
+        // Connect WebSocket
+        connectWebSocket();
 
-        fetch(this.holdUrl, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': this.csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: payload.toString(),
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.success) {
-                    const isOnHold = data.is_on_hold;
-                    if (this.callElements.holdBtn) {
-                        this.callElements.holdBtn.dataset.state = isOnHold ? 'hold-on' : 'hold-off';
-                        this.callElements.holdBtn.innerHTML = isOnHold
-                            ? '<i class="fa-solid fa-play"></i> Resume'
-                            : '<i class="fa-solid fa-pause"></i> Hold';
-                    }
-                    // Also update retro phone state if present
-                    if (this.retroPhone) {
-                        this.retroPhone.isOnHold = isOnHold;
-                        if (isOnHold) this.retroPhone._setStatus('ON HOLD');
-                        else this.retroPhone._setStatus('CONNECTED');
-                    }
-                    this._showToast(data.message || (isOnHold ? 'Call on hold' : 'Call resumed'));
-                } else {
-                    this._showToast(data.error || 'Hold action failed', true);
-                }
-            })
-            .catch(() => this._showToast('Network error toggling hold', true));
+        // Setup event listeners
+        setupEventListeners();
+
+        // Initial UI state
+        updateStatusUI(state.status);
+
+        console.log('Agent dashboard initialized', { agentId: state.agentId });
     }
 
-    _dialViaManual(digits) {
-        if (!this.manualDialHandler) {
-            this.toast('Manual dialing is unavailable', true);
-            return;
-        }
-        this._setStatus('REQUESTING CALL…');
-        this._toggleCallButtons(true);
-        this.manualDialHandler(digits)
-            .then((res) => {
-                if (res && res.success) {
-                    this._setStatus('CHECK YOUR PHONE');
-                    setTimeout(() => this._resetPhone(), 4000);
-                } else {
-                    const error = (res && res.error) || 'Dial failed';
-                    this._setStatus('CALL FAILED');
-                    this.toast(error, true);
-                    this._toggleCallButtons(false);
-                }
-            })
-            .catch((err) => {
-                const message = err && err.message ? err.message : 'Dial failed';
-                this._setStatus('CALL FAILED');
-                this.toast(message, true);
-                this._toggleCallButtons(false);
-            });
-    }
-
-    _dialViaWebRTC(digits) {
-        if (typeof JsSIP === 'undefined') {
-            this.toast('WebRTC library missing', true);
-            return;
-        }
-        try {
-            const cfg = this.webrtcConfig;
-            const target = this._buildTargetUri(digits);
-            const options = {
-                mediaConstraints: { audio: true, video: false },
-                rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: false },
-            };
-            if (cfg.ice_servers && cfg.ice_servers.length) {
-                options.pcConfig = { iceServers: cfg.ice_servers };
-            }
-            this.ua.call(target, options);
-            this._toggleCallButtons(true);
-            this._setStatus('CALLING…');
-        } catch (err) {
-            console.error('WebRTC call failed', err);
-            this._setStatus('CALL FAILED');
-            this._toggleCallButtons(false);
-            this.toast('Failed to start WebRTC call', true);
-        }
-    }
-
-    _buildTargetUri(number) {
-        const cfg = this.webrtcConfig || {};
-        const domain = cfg.from_domain || cfg.server;
-        return `sip:${number}@${domain}`;
-    }
-
-    _flashButton(buttonEl) {
-        if (!buttonEl) return;
-        buttonEl.style.transform = 'scale(0.96)';
-        setTimeout(() => {
-            buttonEl.style.transform = '';
-        }, 120);
-    }
-
-    _setStatus(text) {
-        if (this.statusEl) {
-            this.statusEl.textContent = text;
-        }
-    }
-
-    _updateNumberDisplay() {
-        if (this.displayEl) {
-            this.displayEl.textContent = this.phoneNumber;
-        }
-    }
-
-    _toggleCallButtons(inCall) {
-        if (this.callBtn) {
-            this.callBtn.style.display = inCall ? 'none' : 'block';
-        }
-        if (this.hangupBtn) {
-            this.hangupBtn.style.display = inCall ? 'block' : 'none';
-        }
-        if (!inCall) {
-            this._updateCallButtonState();
-        }
-    }
-
-    _updateCallButtonState() {
-        if (!this.callBtn) return;
-        const hasDigits = this.phoneNumber.length > 0;
-        this.callBtn.disabled = !hasDigits;
-    }
-
-    _getNormalizedNumber() {
-        return (this.phoneNumber || '').replace(/[^\d*#\+]/g, '');
-    }
-
-    _resetPhone() {
-        this.phoneNumber = '';
-        this._updateNumberDisplay();
-        this._toggleCallButtons(false);
-        this._stopTimer();
-        this.isMuted = false;
-        this.isOnHold = false;
-        if (this.muteBtn) {
-            this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
-        }
-        if (this.holdBtn) {
-            this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
-        }
-        if (this.timerEl) {
-            this.timerEl.style.display = 'none';
-            this.timerEl.textContent = '00:00';
-        }
-        this._updateIdleStatus();
-    }
-
-    _startTimer() {
-        if (!this.timerEl) return;
-        this._stopTimer();
-        this.callDuration = 0;
-        this.timerEl.style.display = 'block';
-        this.timerEl.textContent = '00:00';
-        this.callTimer = setInterval(() => {
-            this.callDuration += 1;
-            const minutes = Math.floor(this.callDuration / 60)
-                .toString()
-                .padStart(2, '0');
-            const seconds = (this.callDuration % 60).toString().padStart(2, '0');
-            this.timerEl.textContent = `${minutes}:${seconds}`;
-        }, 1000);
-    }
-
-    _stopTimer() {
-        if (this.callTimer) {
-            clearInterval(this.callTimer);
-            this.callTimer = null;
-        }
-    }
-
-    _initWebRTC() {
-        if (typeof JsSIP === 'undefined') {
-            console.warn('JsSIP not available');
-            this.webrtcEnabled = false;
-            this._setStatus('WebRTC script missing');
-            this._updateIdleStatus();
-            return;
-        }
-        const cfg = this.webrtcConfig;
-        const protocol = cfg.protocol || 'wss';
-        const port = cfg.port || 8089;
-        const socketUrl = `${protocol}://${cfg.server}:${port}/ws`;
-        let socket;
-        try {
-            socket = new JsSIP.WebSocketInterface(socketUrl);
-        } catch (err) {
-            console.error('Failed to create WebSocketInterface', err);
-            this.webrtcEnabled = false;
-            this._setStatus('WebRTC socket error');
-            return;
-        }
-        const uriUser = cfg.username || cfg.extension;
-        const domain = cfg.from_domain || cfg.server;
-        const uaConfig = {
-            sockets: [socket],
-            uri: `sip:${uriUser}@${domain}`,
-            password: cfg.password,
-            authorization_user: uriUser,
-            display_name: cfg.display_name || uriUser,
-            registrar_server: domain,
-            session_timers: false,
-            trace_sip: false,
-        };
-        this.ua = new JsSIP.UA(uaConfig);
-        this.ua.on('connected', () => this._setStatus('CONNECTING…'));
-        this.ua.on('disconnected', () => this._handleWebRTCDrop('SOCKET CLOSED'));
-        this.ua.on('registered', () => {
-            this.uaRegistered = true;
-            this._setStatus('WEBRTC READY');
-            this.onRegistrationChange(true);
-        });
-        this.ua.on('unregistered', () => this._handleWebRTCDrop('WEBRTC UNREGISTERED'));
-        this.ua.on('registrationFailed', (evt) => {
-            this.uaRegistered = false;
-            console.error('WebRTC registration failed', evt.cause);
-            this.toast('WebRTC registration failed. Check credentials.', true);
-            this._handleWebRTCDrop('REGISTRATION FAILED');
-        });
-        this.ua.on('newRTCSession', (evt) => this._handleRTCSession(evt));
-        this.ua.start();
-    }
-
-    _handleRTCSession(evt) {
-        const session = evt.session;
-        const originator = evt.originator;
-        if (this.currentSession && originator === 'local') {
-            session.terminate();
-            return;
-        }
-        this.currentSession = session;
-        this._attachSessionEvents(session);
-        this._toggleCallButtons(true);
-        if (originator === 'local') {
-            this._setStatus('CALLING…');
-        } else {
-            this._setStatus('INCOMING CALL');
-        }
-    }
-
-    _attachSessionEvents(session) {
-        session.on('progress', () => this._setStatus('RINGING…'));
-        session.on('accepted', () => {
-            this._setStatus('CONNECTED');
-            this._startTimer();
-        });
-        session.on('confirmed', () => {
-            this._setStatus('CONNECTED');
-            this._startTimer();
-        });
-        session.on('ended', () => this._handleSessionEnd('CALL ENDED'));
-        session.on('failed', (evt) => {
-            const reason = evt && evt.cause ? String(evt.cause) : 'CALL FAILED';
-            this._handleSessionEnd(reason, true);
-        });
-        session.on('hold', () => {
-            this.isOnHold = true;
-            this._setStatus('ON HOLD');
-            if (this.holdBtn) {
-                this.holdBtn.innerHTML = '<i class="fa-solid fa-play"></i> RESUME';
-            }
-        });
-        session.on('unhold', () => {
-            this.isOnHold = false;
-            this._setStatus('CONNECTED');
-            if (this.holdBtn) {
-                this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
-            }
-        });
-        session.on('muted', () => {
-            this.isMuted = true;
-            if (this.muteBtn) {
-                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> UNMUTE';
-            }
-        });
-        session.on('unmuted', () => {
-            this.isMuted = false;
-            if (this.muteBtn) {
-                this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
-            }
-        });
-        if (session.connection) {
-            session.connection.addEventListener('track', (event) => {
-                if (!this.remoteAudio || !event.streams || !event.streams.length) return;
-                this.remoteAudio.srcObject = event.streams[0];
-            });
-        }
-    }
-
-    _handleSessionEnd(statusText, isError = false) {
-        this._stopTimer();
-        this._setStatus(statusText);
-        this._toggleCallButtons(false);
-        this.currentSession = null;
-        this.isMuted = false;
-        this.isOnHold = false;
-        if (this.muteBtn) {
-            this.muteBtn.innerHTML = '<i class="fa-solid fa-microphone"></i> MUTE';
-        }
-        if (this.holdBtn) {
-            this.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> HOLD';
-        }
-        if (isError) {
-            this.toast(statusText || 'Call failed', true);
-        }
-        setTimeout(() => this._resetPhone(), 1200);
-    }
-
-    _handleWebRTCDrop(message) {
-        this.uaRegistered = false;
-        if (message) {
-            this._setStatus(message);
-        }
-        this.onRegistrationChange(false);
-        this._updateIdleStatus();
-    }
-
-    _updateIdleStatus() {
-        const statusText = this.hasActiveWebRTC()
-            ? 'READY'
-            : this.softphoneRegistered
-                ? 'READY (SOFTPHONE)'
-                : 'SOFTPHONE OFFLINE';
-        this._setStatus(statusText);
-    }
-
-    hasActiveWebRTC() {
-        return this.webrtcEnabled && this.uaRegistered;
-    }
-
-    setSoftphoneRegistration(isRegistered) {
-        this.softphoneRegistered = !!isRegistered;
-        if (!this.hasActiveWebRTC()) {
-            this._updateIdleStatus();
-        }
-    }
-}
-
-class AgentDashboardUI {
-    constructor(root) {
-        this.root = root;
-        this.statusUrl = root.dataset.statusUrl;
-        this.currentStatus = root.dataset.status || 'offline';
-        this.statusDisplay = root.querySelector('[data-current-status]');
-        this.statusToast = root.querySelector('[data-status-toast]');
-        this.statusOptions = this._parseJSON('agent-status-options') || [];
-        this.breakCodes = this._parseJSON('agent-break-codes-data') || [];
-        this.callStatusData = this._parseJSON('agent-call-status-data') || {};
-        this.dispositions = this._parseJSON('agent-dispositions-data') || [];
-        this.callStatusUrl = root.dataset.callStatusUrl || '';
-        this.leadInfoUrl = root.dataset.leadInfoUrl || '';
-        this.dispositionUrl = root.dataset.dispositionUrl || '';
-        this.manualDialUrl = root.dataset.manualDialUrl || '';
-        this.webrtcEnabled = root.dataset.webrtcEnabled === 'true';
-        this.csrfToken = this._getCsrfToken();
-        this.phoneStatusEl = root.querySelector('[data-phone-registration]');
-        this.webrtcConfig = this._parseJSON('agent-webrtc-config') || {};
-        this.hangupUrl = root.dataset.hangupUrl || '';
-        this.holdUrl = root.dataset.holdUrl || '';
-        this.agentId = root.dataset.agentId || '';
-        this.isDisposing = false;
-        this.pendingDispositionCallId = null;
-
-
-        this.breakModal = document.getElementById('break-modal');
-        this.breakList = document.getElementById('break-code-list');
-        this.breakNotesInput = document.getElementById('break-notes-input');
-
-        this.callElements = {
-            placeholder: root.querySelector('[data-call-placeholder]'),
-            details: root.querySelector('[data-call-details]'),
-            number: root.querySelector('[data-call-number]'),
-            state: root.querySelector('[data-call-state]'),
-            duration: root.querySelector('[data-call-duration]'),
-            leadCard: root.querySelector('[data-lead-card]'),
-            leadName: root.querySelector('[data-lead-name]'),
-            leadStatus: root.querySelector('[data-lead-status]'),
-            leadPhone: root.querySelector('[data-lead-phone]'),
-            leadEmail: root.querySelector('[data-lead-email]'),
-            leadCompany: root.querySelector('[data-lead-company]'),
-            leadLocation: root.querySelector('[data-lead-location]'),
-            dispositionBtn: root.querySelector('[data-open-disposition]'),
-            hangupBtn: root.querySelector('[data-hangup-call]'),
-            holdBtn: root.querySelector('[data-hold-call]'),
-        };
-        if (this.callElements.dispositionBtn) {
-            this.callElements.dispositionBtn.disabled = !this.dispositions.length;
-        }
-
-        this.dispositionModal = document.getElementById('disposition-modal');
-        this.dispositionForm = document.getElementById('disposition-form');
-        this.dispositionCallInput = document.getElementById('disposition-call-id');
-        this.dispositionSelect = document.getElementById('disposition-select');
-        this.dispositionNotes = document.getElementById('disposition-notes');
-
-        this.manualDialForm = document.getElementById('manual-dial-form');
-        this.manualDialInput = document.querySelector('[data-manual-input]');
-        this.manualDialCampaign = document.getElementById('manual-dial-campaign');
-        this.manualDialButton = document.querySelector('[data-manual-submit]');
-        this.manualDialLoading = false;
-        this.manualDialDisabledByRegistration = false;
-        this.transferUrl = root.dataset.transferUrl || '';
-        this.transferForm = document.getElementById('transfer-call-form');
-        this.transferSelect = document.querySelector('[data-transfer-target]');
-        this.transferButton = document.querySelector('[data-transfer-submit]');
-        this.transferButtonLabel = this.transferButton ? this.transferButton.textContent.trim() : 'Transfer Call';
-        this.transferLoading = false;
-
-        this._bindStatusButtons();
-        this._bindModalEvents();
-        const initialPhoneRegistered = typeof this.callStatusData.phone_registered !== 'undefined'
-            ? this.callStatusData.phone_registered
-            : this.phoneStatusEl?.dataset.registered === 'true';
-        this.lastKnownSoftphoneRegistered = !!initialPhoneRegistered;
-
-        this._bindManualDial();
-        this._bindTransferForm();
-        this._bindDispositionEvents();
-        this._bindCallControlButtons();
-        this._updateStatusUI(this.currentStatus);
-        this._initCallState();
-        this._initRetroPhone(this.lastKnownSoftphoneRegistered);
-        this._updatePhoneRegistration(initialPhoneRegistered);
-        this._initRealtimeChannel();
-        this._initRealtimeChannel();
-    }
-
-    _getCsrfToken() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        if (meta) return meta.getAttribute('content');
-        // fallback to cookie
-        const match = document.cookie.match(/csrftoken=([^;]+)/);
-        return match ? match[1] : '';
-    }
-
-    _parseJSON(id) {
-        const el = document.getElementById(id);
-        if (!el) return null;
-        try {
-            return JSON.parse(el.textContent);
-        } catch {
-            return null;
-        }
-    }
-
-    _bindStatusButtons() {
-        const buttons = this.root.querySelectorAll('[data-status-trigger]');
-        buttons.forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const status = btn.dataset.statusTrigger;
-                if (!status) return;
-                if (['break', 'lunch'].includes(status) && this.breakCodes.length) {
-                    this._openBreakModal(status);
-                } else {
-                    const reason = btn.dataset.statusReason || '';
-                    this._sendStatus(status, reason);
-                }
-            });
-        });
-    }
-
-    _bindModalEvents() {
-        if (!this.breakModal) return;
-        const closeBtn = this.breakModal.querySelector('[data-break-cancel]');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this._closeBreakModal());
-        }
-        this.breakModal.addEventListener('click', (evt) => {
-            if (evt.target === this.breakModal) {
-                this._closeBreakModal();
-            }
-        });
-    }
-
-    _openBreakModal(targetStatus) {
-        if (!this.breakModal || !this.breakList) {
-            const note = prompt('Enter break reason (optional):') || '';
-            this._sendStatus(targetStatus, note);
-            return;
-        }
-
-        this.breakModal.dataset.targetStatus = targetStatus;
-        this.breakList.innerHTML = '';
-        this.breakCodes.forEach((code) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'break-chip';
-            btn.textContent = `${code.name}`;
-            btn.style.setProperty('--chip-color', code.color_code || '#6c757d');
-            btn.addEventListener('click', () => {
-                const notes = this.breakNotesInput ? this.breakNotesInput.value.trim() : '';
-                const reason = code.description || code.name;
-                this._sendStatus(targetStatus, notes || reason);
-                this._closeBreakModal();
-            });
-            this.breakList.appendChild(btn);
-        });
-
-        if (this.breakNotesInput) {
-            this.breakNotesInput.value = '';
-        }
-
-        this.breakModal.removeAttribute('hidden');
-    }
-
-    _closeBreakModal() {
-        if (this.breakModal) {
-            this.breakModal.setAttribute('hidden', 'hidden');
-        }
-    }
-
-    _sendStatus(status, reason) {
-        if (!this.statusUrl) return;
-        const payload = new URLSearchParams();
-        payload.append('status', status);
-        if (reason) {
-            payload.append('break_reason', reason);
-        }
-
-        fetch(this.statusUrl, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': this.csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: payload.toString(),
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.success) {
-                    this.currentStatus = status;
-                    if (status === 'available') {
-                        this.clearedCallId = this.activeCallId;
-                        this._setCallIdle();
-                        this.lastCompletedCallId = null;
-                    }
-                    this._updateStatusUI(status, reason);
-                    this._showToast(data.message || 'Status updated');
-                } else {
-                    this._showToast(data.error || 'Failed to update status', true);
-                }
-            })
-            .catch(() => this._showToast('Network error updating status', true));
-    }
-
-    _updateStatusUI(status, reason = '') {
-        if (this.statusDisplay) {
-            const label = this._lookupStatusLabel(status);
-            this.statusDisplay.textContent = label;
-            this.statusDisplay.dataset.status = status;
-            if (reason) {
-                this.statusDisplay.setAttribute('title', reason);
-            } else {
-                this.statusDisplay.removeAttribute('title');
-            }
-        }
-
-        this.root.dataset.status = status;
-        const buttons = this.root.querySelectorAll('[data-status-trigger]');
-        buttons.forEach((btn) => {
-            btn.classList.toggle('is-active', btn.dataset.statusTrigger === status);
-        });
-    }
-
-    _lookupStatusLabel(value) {
-        const match = this.statusOptions.find((opt) => opt.value === value);
-        return match ? match.label : value;
-    }
-
-    _showToast(message, isError = false) {
-        if (!this.statusToast) return;
-        this.statusToast.textContent = message;
-        this.statusToast.classList.toggle('is-error', isError);
-        this.statusToast.classList.add('is-visible');
-        clearTimeout(this.toastTimer);
-        this.toastTimer = setTimeout(() => {
-            this.statusToast.classList.remove('is-visible');
-        }, 4000);
-    }
-
-    _bindDispositionEvents() {
-        if (this.callElements.dispositionBtn) {
-            this.callElements.dispositionBtn.addEventListener('click', () => {
-                const callId = this.activeCallId || this.lastCompletedCallId;
-                if (callId && this.dispositions.length) {
-                    this._openDispositionModal(callId);
-                } else if (!this.dispositions.length) {
-                    this._showToast('No dispositions configured for this campaign', true);
-                }
-            });
-        }
-
-        if (this.dispositionModal) {
-            const cancelBtn = this.dispositionModal.querySelector('[data-disposition-cancel]');
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', () => {
-                    this.isDisposing = false;
-                    this.pendingDispositionCallId = null;
-                    this._closeDispositionModal();
-                });
-            }
-            this.dispositionModal.addEventListener('click', (evt) => {
-                if (evt.target === this.dispositionModal) {
-                    this._closeDispositionModal();
-                }
-            });
-        }
-
-        if (this.dispositionForm) {
-            this.dispositionForm.addEventListener('submit', (evt) => {
-                evt.preventDefault();
-                this._submitDisposition();
-            });
-        }
-    }
-
-    _bindCallControlButtons() {
-        if (this.callElements.hangupBtn) {
-            this.callElements.hangupBtn.addEventListener('click', () => this._requestHangup());
-        }
-        if (this.callElements.holdBtn) {
-            this.callElements.holdBtn.addEventListener('click', () => this._toggleHoldApi());
-        }
-    }
-
-    _initCallState() {
-        const initialCall = this.callStatusData.current_call;
-        if (initialCall) {
-            this._applyCallState(initialCall);
-        } else {
-            this._setCallIdle();
-        }
-
-        if (this.callStatusUrl) {
-            this._pollCallStatus();
-            this.callPollInterval = setInterval(() => this._pollCallStatus(), 5000);
-        }
-    }
-
-    _pollCallStatus() {
-        fetch(this.callStatusUrl, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        })
-            .then((res) => res.json())
-            .then((data) => this._handleCallStatus(data))
-            .catch(() => { });
-    }
-
-    _handleCallStatus(data) {
-        if (this.isDisposing) return; // Ignore updates while user is disposing
-        if (!data || data.success === false) {
-            // If polling fails but we had a call in progress, assume it ended
-            if (this.activeCallId) {
-                const completedCallId = this.activeCallId;
-                this._setCallIdle();
-                this.lastCompletedCallId = completedCallId;
-                if (this.dispositions.length) {
-                    this._openDispositionModal(completedCallId);
-                }
-            }
-            return;
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'phone_registered')) {
-            this._updatePhoneRegistration(data.phone_registered);
-        }
-        const newCall = data.current_call || null;
-        if (newCall && newCall.id) {
-            if (this.clearedCallId === newCall.id) {
-                return; // Ignore stale call that was manually cleared
-            }
-            if (this.activeCallId !== newCall.id) {
-                this._applyCallState(newCall);
-            } else {
-                this._updateCallDuration(newCall.duration || 0);
-                this._updateCallStateLabel(newCall.status);
-            }
-        } else if (this.activeCallId) {
-            // If backend didn't return a call but we have one locally, keep showing it
-            // to allow hangup/disposition without forcing a refresh.
-            this._updateCallStateLabel('initiated');
-            if (this.callElements.hangupBtn) {
-                this.callElements.hangupBtn.disabled = false;
-            }
-            if (this.callElements.dispositionBtn && !this.dispositions.length) {
-                this.callElements.dispositionBtn.disabled = true;
-            }
-        }
-    }
-
-    _applyCallState(call) {
-        this.activeCallId = call.id;
-        this.lastCompletedCallId = null;
-        this._updateTransferButtonState();
-        this._setCallDisplay(true);
-        if (this.callElements.number) {
-            this.callElements.number.textContent = call.number || 'Unknown';
-        }
-        this._updateCallStateLabel(call.status);
-        this._startDurationTimer(call.duration || 0);
-        if (this.callElements.dispositionBtn) {
-            this.callElements.dispositionBtn.disabled = true; // Lock dispose during call
-        }
-        if (this.retroPhone) {
-            this.retroPhone._toggleCallButtons(true);
-        } else if (this.callElements.hangupBtn) {
-            this.callElements.hangupBtn.style.display = 'block';
-            if (this.callElements.callBtn) this.callElements.callBtn.style.display = 'none';
-        }
-        if (this.callElements.hangupBtn) {
-            this.callElements.hangupBtn.disabled = false;
-        }
-        if (this.callElements.holdBtn) {
-            this.callElements.holdBtn.disabled = false;
-        }
-        if (call.lead_id && this.leadInfoUrl) {
-            this._fetchLeadInfo(call.lead_id);
-        } else {
-            this._clearLeadCard();
-        }
-    }
-
-    _setCallDisplay(hasCall) {
-        if (this.callElements.placeholder) {
-            this.callElements.placeholder.toggleAttribute('hidden', hasCall);
-        }
-        if (this.callElements.details) {
-            this.callElements.details.toggleAttribute('hidden', !hasCall);
-        }
-    }
-
-    _setCallIdle() {
-        this.activeCallId = null;
-        this._updateTransferButtonState();
-        this._stopDurationTimer();
-        if (this.callElements.number) this.callElements.number.textContent = '—';
-        this._updateCallStateLabel('idle');
-        if (this.callElements.duration) this.callElements.duration.textContent = '00:00';
-        if (this.callElements.dispositionBtn) {
-            this.callElements.dispositionBtn.disabled = !this.dispositions.length; // Unlock if dispositions exist
-        }
-        if (this.callElements.hangupBtn) {
-            this.callElements.hangupBtn.disabled = true;
-        }
-        if (this.retroPhone) {
-            this.retroPhone._toggleCallButtons(false);
-        } else if (this.callElements.hangupBtn) {
-            this.callElements.hangupBtn.style.display = 'none';
-            if (this.callElements.callBtn) this.callElements.callBtn.style.display = 'block';
-        }
-        if (this.callElements.holdBtn) {
-            this.callElements.holdBtn.disabled = true;
-            this.callElements.holdBtn.dataset.state = 'hold-off';
-            this.callElements.holdBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Hold';
-        }
-        this._clearLeadCard();
-        this._setCallDisplay(false);
-    }
-
-    _updateCallStateLabel(state) {
-        if (this.callElements.state) {
-            const normalized = state || 'idle';
-            this.callElements.state.dataset.state = normalized;
-            this.callElements.state.textContent = normalized;
-        }
-    }
-
-    _startDurationTimer(initialSeconds) {
-        this._stopDurationTimer();
-        this.durationBase = Date.now() - initialSeconds * 1000;
-        if (this.callElements.duration) {
-            this.callElements.duration.textContent = this._formatDuration(initialSeconds);
-        }
-        this.durationTimer = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - this.durationBase) / 1000);
-            if (this.callElements.duration) {
-                this.callElements.duration.textContent = this._formatDuration(elapsed);
-            }
-        }, 1000);
-    }
-
-    _updateCallDuration(seconds) {
-        if (this.durationBase) return;
-        if (this.callElements.duration) {
-            this.callElements.duration.textContent = this._formatDuration(seconds);
-        }
-    }
-
-    _stopDurationTimer() {
-        if (this.durationTimer) {
-            clearInterval(this.durationTimer);
-            this.durationTimer = null;
-            this.durationBase = null;
-        }
-    }
-
-    _formatDuration(seconds) {
-        const mins = Math.floor(seconds / 60)
-            .toString()
-            .padStart(2, '0');
-        const secs = (seconds % 60).toString().padStart(2, '0');
-        return `${mins}:${secs}`;
-    }
-
-    _fetchLeadInfo(leadId) {
-        const url = new URL(this.leadInfoUrl, window.location.origin);
-        url.searchParams.set('lead_id', leadId);
-        fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        })
-            .then((res) => res.json())
-            .then((res) => {
-                if (res.success && res.lead) {
-                    this._populateLeadCard(res.lead);
-                } else {
-                    this._clearLeadCard();
-                }
-            })
-            .catch(() => {
-                this._clearLeadCard();
-            });
-    }
-
-    _populateLeadCard(lead) {
-        if (!this.callElements.leadCard) return;
-        this.callElements.leadCard.removeAttribute('hidden');
-        this.callElements.leadName.textContent = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Lead';
-        this.callElements.leadStatus.textContent = lead.status || 'Unknown';
-        this.callElements.leadPhone.textContent = lead.phone_number || '—';
-        this.callElements.leadEmail.textContent = lead.email || '—';
-        this.callElements.leadCompany.textContent = lead.company || '—';
-        const location = [lead.city, lead.state].filter(Boolean).join(', ');
-        this.callElements.leadLocation.textContent = location || '—';
-    }
-
-    _clearLeadCard() {
-        if (!this.callElements.leadCard) return;
-        this.callElements.leadCard.setAttribute('hidden', 'hidden');
-        ['leadName', 'leadStatus', 'leadPhone', 'leadEmail', 'leadCompany', 'leadLocation'].forEach((key) => {
-            if (this.callElements[key]) {
-                this.callElements[key].textContent = key === 'leadStatus' ? 'Unknown' : '—';
-            }
-        });
-    }
-
-    _openDispositionModal(callId) {
-        if (!this.dispositionModal || !this.dispositions.length) return;
-        if (callId) {
-            this.pendingDispositionCallId = callId;
-        }
-        this.isDisposing = true;
-        if (this.dispositionCallInput) {
-            this.dispositionCallInput.value = callId || this.pendingDispositionCallId || '';
-        }
-        if (this.dispositionSelect) {
-            this.dispositionSelect.value = '';
-        }
-        if (this.dispositionNotes) {
-            this.dispositionNotes.value = '';
-        }
-        this.dispositionModal.removeAttribute('hidden');
-    }
-
-    _closeDispositionModal() {
-        if (this.dispositionModal) {
-            this.dispositionModal.setAttribute('hidden', 'hidden');
-        }
-        this.isDisposing = false;
-        this.pendingDispositionCallId = null;
-    }
-
-    _submitDisposition() {
-        if (!this.dispositionUrl || !this.dispositionForm) return;
-        const callId =
-            this.pendingDispositionCallId ||
-            this.dispositionCallInput?.value ||
-            this.activeCallId ||
-            this.lastCompletedCallId;
-        const dispositionId = this.dispositionSelect?.value;
-        const notes = this.dispositionNotes?.value || '';
-        if (!callId || !dispositionId) {
-            this._showToast('Select a disposition before saving', true);
-            return;
-        }
-
-        // Helper to save disposition
-        const saveDisposition = () => {
-            const payload = new URLSearchParams();
-            payload.append('call_id', callId);
-            payload.append('disposition_id', dispositionId);
-            payload.append('notes', notes);
-            return fetch(this.dispositionUrl, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': this.csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: payload.toString(),
-            }).then(res => res.json());
-        };
-
-        // Helper to hangup backend
-        const performHangup = () => {
-            if (!this.hangupUrl || !callId) return Promise.resolve({ success: true });
-            const payload = new URLSearchParams();
-            payload.append('call_id', callId);
-            return fetch(this.hangupUrl, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': this.csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: payload.toString(),
-            }).then(res => res.json()).catch(() => ({ success: true }));
-        };
-
-        // Chain: Disposition -> Hangup
-        saveDisposition()
-            .then((data) => {
-                if (!data.success) {
-                    throw new Error(data.error || 'Failed to save disposition');
-                }
-                return performHangup();
-            })
-            .then(() => {
-                this._showToast('Disposition saved');
-                this._closeDispositionModal();
-                this.pendingDispositionCallId = null;
-                this.lastCompletedCallId = null;
-                this.isDisposing = false;
-                this._setCallIdle();
-                this._sendStatus('available');
-            })
-            .catch((err) => {
-                const message = err?.message || 'Network error saving disposition';
-                this._showToast(message, true);
-                this.isDisposing = false;
-            });
-    }
-
-    _bindManualDial() {
-        if (!this.manualDialForm) return;
-        this.manualDialForm.addEventListener('submit', (evt) => {
-            evt.preventDefault();
-            this._manualDial().catch(() => { });
-        });
-    }
-
-    _manualDial(numberOverride = null) {
-        if (!this.manualDialUrl) {
-            this._showToast('Manual dialing disabled', true);
-            return Promise.reject(new Error('Manual dialing disabled'));
-        }
-        const rawInput =
-            numberOverride !== null && numberOverride !== undefined
-                ? String(numberOverride)
-                : (this.manualDialInput?.value || '').trim();
-        const sanitized = rawInput.replace(/[^\d\+\#\*]/g, '');
-        if (!sanitized) {
-            this._showToast('Enter a phone number', true);
-            return Promise.reject(new Error('Invalid number'));
-        }
-        const payload = new URLSearchParams();
-        payload.append('phone_number', sanitized);
-        if (this.manualDialCampaign) {
-            payload.append('campaign_id', this.manualDialCampaign.value || '');
-        }
-        this._setManualDialLoading(true);
-        return fetch(this.manualDialUrl, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': this.csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: payload.toString(),
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.success && (!numberOverride && this.manualDialInput)) {
-                    this.manualDialInput.value = '';
-                }
-                if (data.success) {
-                    if (data.call_id) {
-                        this.activeCallId = data.call_id;
-                    }
-                    if (!numberOverride) {
-                        this._showToast(data.message || 'Dial requested');
-                    }
-                } else {
-                    this._showToast(data.error || 'Dial failed', true);
-                    if (data.call_id) {
-                        this.lastCompletedCallId = data.call_id;
-                        if (this.callElements.dispositionBtn) {
-                            this.callElements.dispositionBtn.disabled = false;
-                        }
-                        this._openDispositionModal(data.call_id);
-                    }
-                }
-                return data;
-            })
-            .catch(() => {
-                this._showToast('Network error requesting dial', true);
-                throw new Error('Network error');
-            })
-            .finally(() => this._setManualDialLoading(false));
-    }
-
-    _setManualDialLoading(isLoading) {
-        if (this.manualDialButton) {
-            this.manualDialLoading = isLoading;
-            this.manualDialButton.disabled = isLoading || (this.manualDialDisabledByRegistration ?? false);
-            this.manualDialButton.textContent = isLoading ? 'Dialing…' : 'Dial Now';
-        }
-    }
-
-    _bindTransferForm() {
-        if (!this.transferForm || !this.transferButton) return;
-        this.transferForm.addEventListener('submit', (evt) => {
-            evt.preventDefault();
-            this._submitTransfer();
-        });
-        if (this.transferSelect) {
-            this.transferSelect.addEventListener('change', () => this._updateTransferButtonState());
-        }
-        this._updateTransferButtonState();
-    }
-
-    _updateTransferButtonState() {
-        if (!this.transferButton) return;
-        const hasTarget = !!(this.transferSelect && this.transferSelect.value);
-        const hasCall = !!this.activeCallId;
-        const disabled = !hasTarget || !hasCall || this.transferLoading;
-        this.transferButton.disabled = disabled;
-    }
-
-    _setTransferLoading(isLoading) {
-        if (!this.transferButton) return;
-        this.transferLoading = isLoading;
-        if (isLoading) {
-            this.transferButton.textContent = 'Transferring…';
-        } else if (this.transferButtonLabel) {
-            this.transferButton.textContent = this.transferButtonLabel;
-        }
-        this._updateTransferButtonState();
-    }
-
-    _submitTransfer() {
-        if (!this.transferUrl) {
-            this._showToast('Transfer unavailable', true);
-            return;
-        }
-        if (!this.activeCallId) {
-            this._showToast('No active call to transfer', true);
-            return;
-        }
-        const transferTo = this.transferSelect?.value;
-        if (!transferTo) {
-            this._showToast('Select an agent to transfer to', true);
-            return;
-        }
-        this._setTransferLoading(true);
-        const payload = new URLSearchParams();
-        payload.append('call_id', this.activeCallId);
-        payload.append('transfer_to', transferTo);
-        payload.append('transfer_type', 'warm');
-        fetch(this.transferUrl, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': this.csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: payload.toString(),
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.success) {
-                    this._showToast(data.message || 'Transfer initiated');
-                } else {
-                    this._showToast(data.error || 'Transfer failed', true);
-                }
-            })
-            .catch(() => this._showToast('Network error transferring call', true))
-            .finally(() => this._setTransferLoading(false));
-    }
-
-    _updatePhoneRegistration(isRegistered) {
-        this.lastKnownSoftphoneRegistered = !!isRegistered;
-        if (this.retroPhone && typeof this.retroPhone.setSoftphoneRegistration === 'function') {
-            this.retroPhone.setSoftphoneRegistration(this.lastKnownSoftphoneRegistered);
-        }
-        this._applyRegistrationState();
-    }
-
-    _applyRegistrationState() {
-        const registered = !!this.lastKnownSoftphoneRegistered;
-        const webRtcReady = typeof this.retroPhone?.hasActiveWebRTC === 'function'
-            ? this.retroPhone.hasActiveWebRTC()
-            : false;
-        const effectiveRegistered = registered || webRtcReady;
-        if (this.phoneStatusEl) {
-            this.phoneStatusEl.dataset.registered = effectiveRegistered ? 'true' : 'false';
-            if (effectiveRegistered) {
-                this.phoneStatusEl.textContent = webRtcReady
-                    ? 'WebRTC registered'
-                    : 'Softphone registered';
-            } else {
-                this.phoneStatusEl.textContent = 'Not registered — open your softphone client';
-            }
-        }
-        if (this.manualDialButton) {
-            this.manualDialDisabledByRegistration = !effectiveRegistered;
-            if (!this.manualDialLoading) {
-                this.manualDialButton.disabled = !effectiveRegistered;
-            }
-        }
-        this._updateTransferButtonState();
-    }
-
-    _requestHangup() {
-        if (!this.hangupUrl || !this.activeCallId) {
-            this._setCallIdle();
-            return;
-        }
-        const callId = this.activeCallId;
-
-        // Terminate WebRTC if active (UI update handled by RetroPhone events)
-        if (this.retroPhone && this.retroPhone.currentSession) {
-            try {
-                this.retroPhone.currentSession.terminate();
-            } catch (e) { console.warn(e); }
-        }
-
-        // Always notify backend to clear the call, then open disposition locally
-        const payload = new URLSearchParams();
-        payload.append('call_id', callId);
-        fetch(this.hangupUrl, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': this.csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: payload.toString(),
-        })
-            .catch(() => ({}))
-            .finally(() => {
-                this._setCallIdle();
-                if (this.dispositions.length) {
-                    this.isDisposing = true;
-                    this.pendingDispositionCallId = callId;
-                    this.lastCompletedCallId = callId;
-                    this._openDispositionModal(callId);
-                } else {
-                    this.lastCompletedCallId = null;
-                }
-            });
-    }
-
-    _initRealtimeChannel() {
-        if (!this.agentId) return;
+    // ========================================
+    // WebSocket Connection
+    // ========================================
+
+    function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/agent/${this.agentId}/`;
+        const wsUrl = `${protocol}//${window.location.host}/ws/agent/${state.agentId}/`;
+
+        console.log('Connecting to WebSocket:', wsUrl);
+
         try {
-            this.realtimeSocket = new WebSocket(wsUrl);
-        } catch (err) {
-            console.warn('Failed to open realtime socket', err);
-            return;
-        }
-        this.realtimeSocket.onmessage = (evt) => {
-            try {
-                const payload = JSON.parse(evt.data);
-                this._handleRealtimeEvent(payload);
-            } catch (e) {
-                console.warn('Invalid realtime payload', e);
-            }
-        };
-        this.realtimeSocket.onclose = () => {
-            setTimeout(() => this._initRealtimeChannel(), 5000);
-        };
-    }
+            state.socket = new WebSocket(wsUrl);
 
-    _handleRealtimeEvent(payload) {
-        const type = payload.type || '';
-
-        if (type === 'call_started' && payload.call) {
-            this._applyCallState(payload.call);
-            return;
-        }
-
-        if (type === 'call_connected') {
-            if (payload.call) {
-                this._applyCallState(payload.call);
-            }
-            if (payload.lead) {
-                this._populateLeadCard(payload.lead);
-            }
-            return;
-        }
-
-        if (type === 'call_ended') {
-            const completedCallId = payload.call_id || this.activeCallId;
-            this._setCallIdle();
-            if (completedCallId && this.dispositions.length) {
-                this.lastCompletedCallId = completedCallId;
-                if (payload.disposition_needed !== false) {
-                    this._openDispositionModal(completedCallId);
+            state.socket.onopen = function (e) {
+                console.log('WebSocket connected to agent channel');
+                state.reconnectAttempts = 0;
+                // Don't show toast on every reconnect, only on initial connection
+                if (state.reconnectAttempts === 0) {
+                    console.log('WebSocket connection established for real-time updates');
                 }
-            }
-            return;
-        }
+            };
 
-        if (type === 'call_update' && payload.call) {
-            this._applyCallState(payload.call);
-            return;
-        }
+            state.socket.onmessage = function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
 
-        if (type === 'status_update') {
-            if (payload.status) {
-                this._updateStatusUI(payload.status, payload.message);
-                this.currentStatus = payload.status;
-            }
-            return;
-        }
+            state.socket.onclose = function (e) {
+                console.warn('WebSocket closed:', e.code, e.reason);
+                scheduleReconnect();
+            };
 
-        if (type === 'registration' && typeof payload.registered !== 'undefined') {
-            this._updatePhoneRegistration(payload.registered);
+            state.socket.onerror = function (e) {
+                console.error('WebSocket error:', e);
+            };
+
+        } catch (error) {
+            console.error('Error creating WebSocket:', error);
+            scheduleReconnect();
         }
     }
 
-    _initRetroPhone(initialRegistered) {
-        const retroPhone = document.querySelector('[data-retro-phone]');
-        if (!retroPhone) return;
-        this.retroPhone = new RetroPhoneController(retroPhone, {
-            manualDialHandler: (number) => this._manualDial(number),
-            toast: (message, isError) => this._showToast(message, isError),
-            webrtcEnabled: this.webrtcEnabled,
-            webrtcConfig: this.webrtcConfig,
-            softphoneRegistered: initialRegistered,
-            onRegistrationChange: () => this._applyRegistrationState(),
-            onHangup: () => this._requestHangup(),
+    function scheduleReconnect() {
+        if (state.reconnectAttempts >= state.maxReconnectAttempts) {
+            console.error('Max reconnection attempts reached');
+            showToast('Connection lost. Please refresh the page.', 'error');
+            return;
+        }
+
+        state.reconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts), 30000);
+
+        console.log(`Reconnecting in ${delay}ms (attempt ${state.reconnectAttempts})`);
+        setTimeout(connectWebSocket, delay);
+    }
+
+    // ========================================
+    // WebSocket Message Handling
+    // ========================================
+
+    function handleWebSocketMessage(data) {
+        console.log('WebSocket message received on current page:', data);
+
+        // Ensure we're handling this on the correct page
+        const dashboard = document.querySelector('[data-agent-dashboard]');
+        if (!dashboard) {
+            console.warn('Dashboard element not found, ignoring message');
+            return;
+        }
+
+        const eventType = data.type;
+
+        switch (eventType) {
+            // PHASE 1.1: NEW - Handle immediate call notification
+            case 'call_incoming':
+                handleCallIncoming(data);
+                break;
+
+            case 'call_connecting':
+                handleCallConnecting(data);
+                break;
+
+            case 'call_connected':
+                handleCallConnected(data);
+                break;
+
+            case 'call_ended':
+                handleCallEnded(data);
+                break;
+
+            // PHASE 1.2: NEW - Handle call cleared after disposition
+            case 'call_cleared':
+                handleCallCleared(data);
+                break;
+
+            case 'status_update':
+                handleStatusUpdate(data);
+                break;
+
+            case 'connection_established':
+                console.log('Connection confirmed for agent:', data.username);
+                break;
+
+            case 'pong':
+                // Heartbeat response
+                break;
+
+            default:
+                console.log('Unknown event type:', eventType);
+        }
+    }
+
+    // ========================================
+    // PHASE 1.1: Immediate Call Display
+    // ========================================
+
+    /**
+     * Handle call_incoming event - PHASE 1.1 FIX
+     * This fires IMMEDIATELY when a call is placed, before it's answered
+     * Allows UI to show "Incoming Call" with minimal delay
+     */
+    function handleCallIncoming(data) {
+        console.log('Call incoming - updating UI immediately on current page:', data);
+
+        const call = data.call || {};
+        const lead = data.lead || {};
+
+        // Store call data - handle both id (primary key) and call_id (UUID)
+        state.currentCall = {
+            id: call.id || call.call_id,  // Primary key ID
+            call_id: call.call_id || call.id,  // UUID call_id field
+            number: call.number,
+            status: 'ringing',
+            leadId: call.lead_id,
+            startTime: new Date()
+        };
+        state.currentLead = lead;
+        
+        console.log('Stored call data:', state.currentCall);
+
+        // IMMEDIATELY update UI on THIS page - don't wait for call_connected
+        showCallPanel();
+        updateCallDisplay({
+            number: call.number,
+            status: 'Incoming Call...',
+            statusClass: 'ringing'
         });
 
-        // Sync state if we have an active call
-        if (this.activeCallId) {
-            this.retroPhone._toggleCallButtons(true);
+        // Update phone display if available
+        const phoneDisplay = document.getElementById('phone-status-display');
+        const phoneNumberDisplay = document.getElementById('phone-number-display');
+        if (phoneDisplay) phoneDisplay.textContent = 'RINGING';
+        if (phoneNumberDisplay && call.number) phoneNumberDisplay.textContent = call.number;
+
+        // Show lead info if available
+        if (lead && lead.id) {
+            updateLeadDisplay(lead);
+        } else if (call.lead_id) {
+            // Fetch lead info asynchronously
+            fetchLeadInfo(call.lead_id);
+        }
+
+        // Play ring sound/notification
+        playNotificationSound();
+        showToast('Incoming call: ' + call.number, 'info');
+
+        // Update status to show we're receiving a call
+        updateStatusUI('ringing');
+    }
+
+    /**
+     * Handle call_connecting event
+     * Customer leg is being connected to agent
+     */
+    function handleCallConnecting(data) {
+        console.log('Call connecting:', data);
+
+        const call = data.call || {};
+
+        if (state.currentCall) {
+            state.currentCall.status = 'connecting';
+        }
+
+        updateCallDisplay({
+            number: call.number,
+            status: 'Connecting...',
+            statusClass: 'connecting'
+        });
+    }
+
+    /**
+     * Handle call_connected event
+     * Call is now fully connected (answered)
+     */
+    function handleCallConnected(data) {
+        console.log('Call connected:', data);
+
+        const call = data.call || {};
+        const lead = data.lead || {};
+
+        // Update call state - preserve existing call data and update with new info
+        state.currentCall = {
+            id: call.id || state.currentCall?.id || call.call_id,
+            call_id: call.call_id || state.currentCall?.call_id || call.id,
+            number: call.number || state.currentCall?.number,
+            status: 'connected',
+            leadId: call.lead_id || state.currentCall?.leadId,
+            startTime: state.currentCall?.startTime || new Date(),
+            answerTime: new Date()
+        };
+        
+        console.log('Updated call data on connect:', state.currentCall);
+
+        // Update lead if provided
+        if (lead && lead.id) {
+            state.currentLead = lead;
+            updateLeadDisplay(lead);
+        }
+
+        // Update UI
+        showCallPanel();
+        updateCallDisplay({
+            number: call.number,
+            status: 'Connected',
+            statusClass: 'connected'
+        });
+
+        // Start duration timer
+        startDurationTimer();
+
+        // Enable disposition button
+        enableDispositionButton(true);
+
+        // Update agent status
+        updateStatusUI('busy');
+
+        showToast('Call connected', 'success');
+    }
+
+    // ========================================
+    // PHASE 1.2: Call Cleared After Disposition
+    // ========================================
+
+    /**
+     * Handle call_cleared event - PHASE 1.2 FIX
+     * This fires AFTER disposition is saved
+     * Ensures UI is completely wiped of previous call data
+     */
+    function handleCallCleared(data) {
+        console.log('Call cleared:', data);
+
+        // Stop duration timer
+        stopDurationTimer();
+
+        // Clear ALL call state
+        state.currentCall = null;
+        state.currentLead = null;
+
+        // COMPLETELY clear the UI
+        clearCallUI();
+
+        // Close disposition modal if open
+        closeDispositionModal();
+
+        // Show success message
+        if (data.disposition) {
+            showToast(`Call dispositioned: ${data.disposition}`, 'success');
+        }
+
+        // Update status to available
+        updateStatusUI('available');
+    }
+
+    /**
+     * Clear all call-related UI elements - PHASE 1.2 FIX
+     * This ensures no stale data remains on screen
+     */
+    function clearCallUI() {
+        // Hide call details panel
+        const callDetails = document.querySelector('[data-call-details]');
+        const callPlaceholder = document.querySelector('[data-call-placeholder]');
+
+        if (callDetails) callDetails.hidden = true;
+        if (callPlaceholder) callPlaceholder.hidden = false;
+
+        // Reset call info fields
+        const callNumber = document.querySelector('[data-call-number]');
+        const callState = document.querySelector('[data-call-state]');
+        const callDuration = document.querySelector('[data-call-duration]');
+
+        if (callNumber) callNumber.textContent = '—';
+        if (callState) {
+            callState.textContent = 'Idle';
+            callState.className = 'call-status-badge';
+        }
+        if (callDuration) callDuration.textContent = '00:00';
+
+        // Reset lead card
+        const leadCard = document.querySelector('[data-lead-card]');
+        if (leadCard) leadCard.hidden = true;
+
+        const leadName = document.querySelector('[data-lead-name]');
+        const leadPhone = document.querySelector('[data-lead-phone]');
+        const leadEmail = document.querySelector('[data-lead-email]');
+        const leadCompany = document.querySelector('[data-lead-company]');
+        const leadLocation = document.querySelector('[data-lead-location]');
+        const leadStatus = document.querySelector('[data-lead-status]');
+
+        if (leadName) leadName.textContent = 'Lead name';
+        if (leadPhone) leadPhone.textContent = '—';
+        if (leadEmail) leadEmail.textContent = '—';
+        if (leadCompany) leadCompany.textContent = '—';
+        if (leadLocation) leadLocation.textContent = '—';
+        if (leadStatus) leadStatus.textContent = 'Unknown';
+
+        // Disable disposition button
+        enableDispositionButton(false);
+
+        console.log('Call UI cleared');
+    }
+
+    // ========================================
+    // Call End Handling
+    // ========================================
+
+    function handleCallEnded(data) {
+        console.log('Call ended:', data);
+
+        // Stop duration timer
+        stopDurationTimer();
+
+        // Update call state - preserve call ID from data if provided
+        if (state.currentCall) {
+            state.currentCall.status = 'ended';
+            state.currentCall.endTime = new Date();
+            // Update call ID if provided in the event
+            if (data.call && data.call.id) {
+                state.currentCall.id = data.call.id;
+            }
+            if (data.call && data.call.call_id) {
+                state.currentCall.call_id = data.call.call_id;
+            }
+        } else if (data.call) {
+            // Create call state if it doesn't exist
+            state.currentCall = {
+                id: data.call.id || data.call.call_id,
+                call_id: data.call.call_id || data.call.id,
+                number: data.call.number,
+                status: 'ended',
+                endTime: new Date()
+            };
+        }
+
+        console.log('Call state after ended:', state.currentCall);
+
+        // Update UI to show call ended
+        updateCallDisplay({
+            status: 'Call Ended',
+            statusClass: 'ended'
+        });
+
+        // If disposition is needed, show modal
+        if (data.disposition_needed) {
+            showDispositionModal();
+            updateStatusUI('wrapup');
+        }
+
+        showToast(data.message || 'Call ended', 'info');
+    }
+
+    // ========================================
+    // Status Updates
+    // ========================================
+
+    function handleStatusUpdate(data) {
+        console.log('Status update received via WebSocket:', data);
+
+        // Only update if status actually changed
+        if (state.status !== data.status) {
+            state.status = data.status;
+            updateStatusUI(data.status);
+            
+            if (data.message) {
+                showToast(data.message, 'info');
+            } else {
+                showToast(`Status updated to ${getStatusDisplayText(data.status)}`, 'info');
+            }
         }
     }
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-    const root = document.querySelector('[data-agent-dashboard]');
-    if (root) {
-        window.AgentDashboardUI = new AgentDashboardUI(root);
+    function updateStatusUI(status) {
+        // Update status badge/pill - try both selectors for compatibility
+        const statusBadge = document.querySelector('[data-current-status]') || document.querySelector('[data-agent-status]');
+        if (statusBadge) {
+            const statusDisplay = getStatusDisplayText(status);
+            statusBadge.textContent = statusDisplay;
+            // Keep existing classes but update status-related ones
+            statusBadge.className = statusBadge.className.replace(/status-\w+/g, '');
+            statusBadge.classList.add(`status-${status}`);
+        }
+
+        // Update status buttons
+        const statusButtons = document.querySelectorAll('[data-status-trigger]');
+        statusButtons.forEach(btn => {
+            const btnStatus = btn.dataset.statusTrigger;
+            btn.classList.toggle('is-active', btnStatus === status);
+        });
+
+        // Update body data attribute for CSS
+        document.body.dataset.agentStatus = status;
+        
+        // Also update the dashboard data attribute
+        const dashboard = document.querySelector('[data-agent-dashboard]');
+        if (dashboard) {
+            dashboard.dataset.status = status;
+        }
     }
-});
+    
+    function getStatusDisplayText(status) {
+        const statusMap = {
+            'available': 'Available',
+            'break': 'Break',
+            'lunch': 'Lunch',
+            'training': 'Training',
+            'meeting': 'Meeting',
+            'offline': 'Offline',
+            'busy': 'Busy',
+            'wrapup': 'Wrap Up',
+            'ringing': 'Ringing',
+            'paused': 'Paused'
+        };
+        return statusMap[status] || capitalizeFirst(status);
+    }
+
+    // ========================================
+    // UI Updates
+    // ========================================
+
+    function showCallPanel() {
+        const callDetails = document.querySelector('[data-call-details]');
+        const callPlaceholder = document.querySelector('[data-call-placeholder]');
+
+        if (callDetails) callDetails.hidden = false;
+        if (callPlaceholder) callPlaceholder.hidden = true;
+    }
+
+    function updateCallDisplay(options) {
+        const { number, status, statusClass } = options;
+
+        if (number) {
+            const callNumber = document.querySelector('[data-call-number]');
+            if (callNumber) callNumber.textContent = number;
+        }
+
+        if (status) {
+            const callState = document.querySelector('[data-call-state]');
+            if (callState) {
+                callState.textContent = status;
+                if (statusClass) {
+                    callState.className = `call-status-badge status-${statusClass}`;
+                }
+            }
+        }
+    }
+
+    function updateLeadDisplay(lead) {
+        const leadCard = document.querySelector('[data-lead-card]');
+        if (leadCard) leadCard.hidden = false;
+
+        const fields = {
+            '[data-lead-name]': `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown',
+            '[data-lead-phone]': lead.phone || lead.phone_number || '—',
+            '[data-lead-email]': lead.email || '—',
+            '[data-lead-company]': lead.company || '—',
+            '[data-lead-location]': [lead.city, lead.state].filter(Boolean).join(', ') || '—',
+            '[data-lead-status]': lead.status || 'Unknown'
+        };
+
+        Object.entries(fields).forEach(([selector, value]) => {
+            const el = document.querySelector(selector);
+            if (el) el.textContent = value;
+        });
+    }
+
+    // ========================================
+    // Duration Timer
+    // ========================================
+
+    function startDurationTimer() {
+        stopDurationTimer(); // Clear any existing timer
+
+        const durationEl = document.querySelector('[data-call-duration]');
+        if (!durationEl) return;
+
+        const startTime = state.currentCall?.answerTime || new Date();
+
+        state.callDurationTimer = setInterval(() => {
+            const elapsed = Math.floor((new Date() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            durationEl.textContent = `${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    function stopDurationTimer() {
+        if (state.callDurationTimer) {
+            clearInterval(state.callDurationTimer);
+            state.callDurationTimer = null;
+        }
+    }
+
+    // ========================================
+    // Disposition Handling
+    // ========================================
+
+    function showDispositionModal() {
+        const modal = document.getElementById('disposition-modal');
+        if (modal) {
+            modal.hidden = false;
+
+            // Set call ID in form - prefer primary key id, fallback to call_id UUID
+            const callIdInput = document.getElementById('disposition-call-id');
+            if (callIdInput && state.currentCall) {
+                // Use primary key id if available, otherwise use call_id UUID
+                const callIdToUse = state.currentCall.id || state.currentCall.call_id;
+                callIdInput.value = callIdToUse;
+                console.log('Disposition modal opened with call ID:', callIdToUse, 'Full call data:', state.currentCall);
+            } else {
+                console.error('Cannot show disposition modal: call ID missing', {
+                    hasInput: !!callIdInput,
+                    hasCall: !!state.currentCall,
+                    callId: state.currentCall?.id,
+                    call_id: state.currentCall?.call_id
+                });
+                showToast('Error: Call information is missing. Please refresh the page.', 'error');
+                return;
+            }
+
+            // Reset form state
+            const submitBtn = modal.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save';
+            }
+
+            // Focus on disposition select
+            const dispositionSelect = document.getElementById('disposition-select');
+            if (dispositionSelect) {
+                setTimeout(() => dispositionSelect.focus(), 100);
+            }
+        } else {
+            console.error('Disposition modal not found');
+        }
+    }
+
+    function closeDispositionModal() {
+        const modal = document.getElementById('disposition-modal');
+        if (modal) {
+            modal.hidden = true;
+
+            // Reset form
+            const form = document.getElementById('disposition-form');
+            if (form) form.reset();
+        }
+    }
+
+    function enableDispositionButton(enabled) {
+        const btn = document.querySelector('[data-open-disposition]');
+        if (btn) {
+            btn.disabled = !enabled;
+        }
+    }
+
+    function submitDisposition(callId, dispositionId, notes) {
+        console.log('submitDisposition called with:', { callId, dispositionId, notes, url: state.urls.disposition });
+        
+        if (!state.urls.disposition) {
+            console.error('Disposition URL is not configured');
+            showToast('Error: Disposition URL not configured', 'error');
+            return;
+        }
+
+        // Disable submit button to prevent double submission
+        const submitBtn = document.querySelector('#disposition-form button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+        }
+
+        const formData = new FormData();
+        formData.append('call_id', callId);
+        formData.append('disposition_id', dispositionId);
+        formData.append('notes', notes || '');
+
+        console.log('Sending disposition request to:', state.urls.disposition);
+
+        fetch(state.urls.disposition, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Disposition response:', data);
+                if (data.success) {
+                    // The call_cleared event will handle UI cleanup
+                    console.log('Disposition submitted successfully');
+                    showToast('Disposition saved successfully', 'success');
+                    closeDispositionModal();
+                } else {
+                    console.error('Disposition submission failed:', data.error);
+                    showToast(data.error || 'Failed to save disposition', 'error');
+                    // Re-enable submit button
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Save';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Disposition error:', error);
+                showToast('Failed to save disposition: ' + error.message, 'error');
+                // Re-enable submit button
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save';
+                }
+            });
+    }
+
+    // ========================================
+    // API Calls
+    // ========================================
+
+    function fetchLeadInfo(leadId) {
+        if (!leadId || !state.urls.leadInfo) return;
+
+        fetch(`${state.urls.leadInfo}?lead_id=${leadId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.lead) {
+                    state.currentLead = data.lead;
+                    updateLeadDisplay(data.lead);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching lead info:', error);
+            });
+    }
+
+    function updateAgentStatus(newStatus) {
+        // Immediately update UI on current page (optimistic update)
+        const previousStatus = state.status;
+        state.status = newStatus;
+        updateStatusUI(newStatus);
+        
+        const formData = new FormData();
+        formData.append('status', newStatus);
+
+        fetch(state.urls.status, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Status already updated optimistically, just confirm
+                    state.status = data.status;
+                    updateStatusUI(data.status);
+                    showToast(`Status updated to ${getStatusDisplayText(data.status)}`, 'success');
+                } else {
+                    // Revert on error
+                    state.status = previousStatus;
+                    updateStatusUI(previousStatus);
+                    showToast(data.error || 'Failed to update status', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Status update error:', error);
+                // Revert on error
+                state.status = previousStatus;
+                updateStatusUI(previousStatus);
+                showToast('Failed to update status', 'error');
+            });
+    }
+
+    function hangupCall() {
+        if (!state.currentCall) return;
+
+        const formData = new FormData();
+        formData.append('call_id', state.currentCall.id);
+
+        fetch(state.urls.hangup, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    showToast(data.error || 'Failed to hangup call', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Hangup error:', error);
+                showToast('Failed to hangup call', 'error');
+            });
+    }
+
+    function performManualDial(number) {
+        if (!state.urls.manualDial) {
+            console.error('Manual dial URL not configured');
+            return;
+        }
+
+        showToast(`Dialing ${number}...`, 'info');
+
+        const formData = new FormData();
+        formData.append('phone_number', number);
+
+        fetch(state.urls.manualDial, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Manual dial initiated');
+                } else {
+                    showToast(data.error || 'Failed to dial', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Manual dial error:', error);
+                showToast('Error initiating call', 'error');
+            });
+    }
+
+    // ========================================
+    // Event Listeners
+    // ========================================
+
+    function setupEventListeners() {
+        // Status buttons
+        document.querySelectorAll('[data-status-trigger]').forEach(btn => {
+            btn.addEventListener('click', (event) => {
+                event.preventDefault();
+                const status = btn.dataset.statusTrigger;
+                updateAgentStatus(status);
+            });
+        });
+
+        // Disposition button
+        const dispositionBtn = document.querySelector('[data-open-disposition]');
+        if (dispositionBtn) {
+            dispositionBtn.addEventListener('click', showDispositionModal);
+        }
+
+        // Disposition form - use event delegation to ensure it works even if modal is hidden
+        document.addEventListener('submit', (e) => {
+            if (e.target && e.target.id === 'disposition-form') {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Disposition form submitted');
+                
+                const callId = document.getElementById('disposition-call-id')?.value;
+                const dispositionId = document.getElementById('disposition-select')?.value;
+                const notes = document.getElementById('disposition-notes')?.value;
+
+                console.log('Form values:', { callId, dispositionId, notes });
+
+                if (!callId) {
+                    console.error('Call ID is missing');
+                    showToast('Error: Call ID is missing. Please refresh the page.', 'error');
+                    return;
+                }
+
+                if (!dispositionId) {
+                    console.error('Disposition is not selected');
+                    showToast('Please select a disposition', 'error');
+                    return;
+                }
+
+                console.log('Submitting disposition...');
+                submitDisposition(callId, dispositionId, notes);
+            }
+        });
+
+        // Cancel disposition
+        const cancelDisposition = document.querySelector('[data-cancel-disposition]');
+        if (cancelDisposition) {
+            cancelDisposition.addEventListener('click', closeDispositionModal);
+        }
+
+        // Hangup button
+        const hangupBtn = document.querySelector('[data-hangup-btn]');
+        if (hangupBtn) {
+            hangupBtn.addEventListener('click', hangupCall);
+        }
+
+        // Manual Dial Handling
+        const manualDialBtn = document.getElementById('manual-dial-btn');
+        const manualDialInput = document.getElementById('manual-dial-input');
+        if (manualDialBtn && manualDialInput) {
+            manualDialBtn.addEventListener('click', () => {
+                const number = manualDialInput.value.trim();
+                if (number) {
+                    performManualDial(number);
+                }
+            });
+
+            // Allow Enter key to dial
+            manualDialInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const number = manualDialInput.value.trim();
+                    if (number) {
+                        performManualDial(number);
+                    }
+                }
+            });
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                switchTab(tabId);
+            });
+        });
+    }
+
+    function switchTab(tabId) {
+        // Update buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === `tab-${tabId}`);
+        });
+    }
+
+    // ========================================
+    // Utilities
+    // ========================================
+
+    function getCSRFToken() {
+        // Try to get from cookie first
+        const cookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='));
+        if (cookie) {
+            return cookie.split('=')[1];
+        }
+        
+        // Fallback to meta tag
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+            return metaTag.getAttribute('content');
+        }
+        
+        console.error('CSRF token not found in cookie or meta tag');
+        return '';
+    }
+
+    function capitalizeFirst(str) {
+        return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.querySelector('[data-status-toast]');
+        if (toast) {
+            toast.textContent = message;
+            toast.className = `status-toast show toast-${type}`;
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    }
+
+    function playNotificationSound() {
+        // Create audio element for notification
+        try {
+            const audio = new Audio('/static/sounds/notification.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(() => {
+                // Autoplay might be blocked
+                console.log('Audio autoplay blocked');
+            });
+        } catch (e) {
+            console.log('Could not play notification sound');
+        }
+    }
+
+    // ========================================
+    // Initialize on DOM Ready
+    // ========================================
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    // Expose for debugging
+    window.AgentDashboard = {
+        state,
+        clearCallUI,
+        updateStatusUI,
+        showDispositionModal
+    };
+
+})();

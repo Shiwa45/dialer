@@ -172,6 +172,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_ALWAYS_EAGER = True  # Run tasks synchronously to avoid broker connection issues
 CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # DISABLED: Old outbound queue processing - replaced by hopper-based predictive dialer
 # CELERY_BEAT_SCHEDULE = {
@@ -181,7 +182,37 @@ CELERY_TASK_EAGER_PROPAGATES = True
 #         'args': ()
 #     },
 # }
-CELERY_BEAT_SCHEDULE = {}
+CELERY_BEAT_SCHEDULE = {
+    # Phase 4.1: Predictive Dialer
+    'predictive-dial': {
+        'task': 'campaigns.tasks.predictive_dial',
+        'schedule': 1.0,  # Every second (using simple float for seconds)
+    },
+    'cleanup-orphaned-sessions': {
+        'task': 'campaigns.tasks.cleanup_orphaned_sessions',
+        'schedule': 30.0,  # Every 30 seconds
+    },
+    'recycle-failed-calls': {
+        'task': 'campaigns.tasks.recycle_failed_calls',
+        'schedule': 300.0,  # Every 5 minutes
+    },
+    'retry-dropped-calls': {
+        'task': 'campaigns.tasks.retry_dropped_calls',
+        'schedule': 120.0,  # Every 2 minutes
+    },
+    'process-recycle-rules': {
+        'task': 'campaigns.tasks.process_recycle_rules',
+        'schedule': 900.0,  # Every 15 minutes
+    },
+    'sync-call-recordings': {
+        'task': 'campaigns.tasks.sync_call_recordings',
+        'schedule': 600.0,  # Every 10 minutes
+    },
+    'check-agent-registrations': {
+        'task': 'campaigns.tasks.check_agent_registrations',
+        'schedule': 60.0,  # Every 60 seconds (safety net, real-time events handle most updates)
+    },
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -255,8 +286,10 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'INFO',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'autodialer.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB per file
+            'backupCount': 5,              # Keep 5 backups
             'formatter': 'verbose',
         },
         'console': {
@@ -302,6 +335,17 @@ AUTODIALER_SETTINGS = {
     'RECORDING_PATH': config('RECORDING_PATH', default=str(BASE_DIR / 'media' / 'recordings')),
     'LEAD_IMPORT_CHUNK_SIZE': config('LEAD_IMPORT_CHUNK_SIZE', default=1000, cast=int),
     'AGENT_TIMEOUT': config('AGENT_TIMEOUT', default=300, cast=int),  # 5 minutes
+}
+
+# Phase 2.5: Call Recording Path (Asterisk monitor spool)
+CALL_RECORDING_PATH = config('CALL_RECORDING_PATH', default='/var/spool/asterisk/monitor')
+
+# Phase 3.1: WebRTC Configuration
+WEBRTC_CONFIG = {
+    'ws_server': config('WEBRTC_WS_SERVER', default='wss://172.26.7.107:8089/ws'), # Update IP to match your Asterisk server
+    'domain': config('WEBRTC_DOMAIN', default='172.26.7.107'), # Update IP/Domain
+    'stun_servers': ['stun:stun.l.google.com:19302'],
+    'debug': config('WEBRTC_DEBUG', default=False, cast=bool),
 }
 
 # Email Configuration

@@ -8,7 +8,9 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -20,20 +22,27 @@
     <style>
         :root {
             /* LIGHT & TEAL CRM PALETTE */
-            --primary: #0d9488;         /* Professional Teal */
+            --primary: #0d9488;
+            /* Professional Teal */
             --primary-hover: #0f766e;
-            --primary-soft: #f0fdfa;    /* Very light teal background */
-            
+            --primary-soft: #f0fdfa;
+            /* Very light teal background */
+
             /* Light Sidebar & Backgrounds */
-            --sidebar-bg: #ffffff;      /* Pure White Sidebar */
+            --sidebar-bg: #ffffff;
+            /* Pure White Sidebar */
             --sidebar-border: #e2e8f0;
-            --bg-body: #f8fafc;         /* Very light grey body */
-            
+            --bg-body: #f8fafc;
+            /* Very light grey body */
+
             /* Text Colors used on light backgrounds */
-            --text-main: #334155;       /* Slate 700 */
-            --text-muted: #64748b;      /* Slate 500 */
-            --text-light: #94a3b8;      /* Slate 400 */
-            
+            --text-main: #334155;
+            /* Slate 700 */
+            --text-muted: #64748b;
+            /* Slate 500 */
+            --text-light: #94a3b8;
+            /* Slate 400 */
+
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -54,8 +63,8 @@
 
         /* ============= NAVBAR (Light & Clean) ============= */
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
+            background: #ffffff !important;
+            /* backdrop-filter: blur(12px); */
             height: var(--navbar-height);
             border-bottom: 1px solid var(--sidebar-border);
             position: fixed;
@@ -86,7 +95,8 @@
             justify-content: center;
             color: white;
             font-size: 1.1rem;
-            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2); /* Teal shadow */
+            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+            /* Teal shadow */
         }
 
         .navbar-search input {
@@ -141,7 +151,8 @@
             left: 0;
             width: var(--sidebar-width);
             height: calc(100vh - var(--navbar-height));
-            background: var(--sidebar-bg); /* White background */
+            background: var(--sidebar-bg);
+            /* White background */
             z-index: 1020;
             overflow-y: auto;
             transition: transform 0.3s ease;
@@ -157,7 +168,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            background: var(--bg-body); /* Light grey background for user area */
+            background: var(--bg-body);
+            /* Light grey background for user area */
             padding: 12px;
             border-radius: var(--radius);
             margin-bottom: 1rem;
@@ -178,7 +190,8 @@
         }
 
         .sidebar-user-info h6 {
-            color: var(--text-main); /* Dark text */
+            color: var(--text-main);
+            /* Dark text */
             margin: 0;
             font-size: 0.9rem;
             font-weight: 600;
@@ -205,7 +218,8 @@
         }
 
         .stat-item .stat-value {
-            color: var(--text-main); /* Dark text */
+            color: var(--text-main);
+            /* Dark text */
             font-weight: 700;
             display: block;
         }
@@ -233,7 +247,8 @@
             gap: 12px;
             padding: 0.75rem 1.25rem;
             margin: 4px 12px;
-            color: var(--text-muted); /* Dark grey links */
+            color: var(--text-muted);
+            /* Dark grey links */
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 500;
@@ -242,13 +257,17 @@
         }
 
         .sidebar-nav-link:hover {
-            color: var(--primary); /* Teal on hover */
-            background: var(--primary-soft); /* Light teal bg on hover */
+            color: var(--primary);
+            /* Teal on hover */
+            background: var(--primary-soft);
+            /* Light teal bg on hover */
         }
 
         .sidebar-nav-link.active {
-            color: var(--primary); /* Teal text */
-            background: var(--primary-soft); /* Light teal bg */
+            color: var(--primary);
+            /* Teal text */
+            background: var(--primary-soft);
+            /* Light teal bg */
             font-weight: 600;
         }
 
@@ -259,14 +278,17 @@
         }
 
         .submenu {
-            background: var(--bg-body); /* Light grey for submenu area */
+            background: var(--bg-body);
+            /* Light grey for submenu area */
             display: none;
             padding: 0.5rem 0;
             margin: 0 12px;
             border-radius: var(--radius);
         }
 
-        .submenu.expanded { display: block; }
+        .submenu.expanded {
+            display: block;
+        }
 
         .submenu-link {
             display: flex;
@@ -281,9 +303,10 @@
             margin: 2px 8px;
         }
 
-        .submenu-link:hover, .submenu-link.active {
+        .submenu-link:hover,
+        .submenu-link.active {
             color: var(--primary);
-            background: rgba(255,255,255,0.5);
+            background: rgba(255, 255, 255, 0.5);
         }
 
         /* ============= MAIN CONTENT ============= */
@@ -303,8 +326,16 @@
             box-shadow: var(--shadow-sm);
         }
 
-        .breadcrumb-item a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
-        .breadcrumb-item.active { color: var(--text-main); font-weight: 600; }
+        .breadcrumb-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--text-main);
+            font-weight: 600;
+        }
 
         /* Buttons & Alerts */
         .btn-primary {
@@ -312,7 +343,7 @@
             border-color: var(--primary);
             font-weight: 600;
         }
-        
+
         .btn-primary:hover {
             background-color: var(--primary-hover);
             border-color: var(--primary-hover);
@@ -329,17 +360,33 @@
 
         /* Loading Overlay (Lighter) */
         #loadingOverlay {
-            background: rgba(255, 255, 255, 0.8); /* Light overlay */
+            background: rgba(255, 255, 255, 0.8);
+            /* Light overlay */
             backdrop-filter: blur(4px);
         }
-        #loadingOverlay .text-white { color: var(--text-main) !important; }
+
+        #loadingOverlay .text-white {
+            color: var(--text-main) !important;
+        }
 
         /* Mobile Adjustments */
         @media (max-width: 991.98px) {
-            .sidebar { transform: translateX(-100%); box-shadow: var(--shadow-md); }
-            .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; }
-            .navbar-search { display: none; }
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: var(--shadow-md);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .navbar-search {
+                display: none;
+            }
         }
     </style>
 
@@ -362,14 +409,25 @@
             <div class="d-flex align-items-center gap-3">
                 <button class="btn d-lg-none p-0 text-dark" id="sidebarToggle"><i class="fas fa-bars fs-4"></i></button>
                 <a class="navbar-brand" href="{% url 'dashboard:index' %}">
-                    <div class="brand-icon"><i class="fas fa-phone-alt"></i></div>
-                    <span>AutoDialer <span style="color:var(--primary)">Pro</span></span>
+                    <!-- EASYIAN SVG LOGO -->
+                    <svg width="190" height="48" viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg">
+                        <text x="0" y="78" font-size="78" font-weight="800" font-family="Arial, Helvetica, sans-serif"
+                            fill="#111111">
+                            <tspan fill="#E53935">E</tspan>asyian
+                        </text>
+
+                        <text x="95" y="108" font-size="22" font-family="Arial, Helvetica, sans-serif" fill="#111111"
+                            letter-spacing="1">
+                            Unlock the Digital Frontier
+                        </text>
+                    </svg>
                 </a>
             </div>
 
             {% if user.is_authenticated %}
             <div class="navbar-search d-none d-lg-block position-relative">
-                <i class="fas fa-search position-absolute" style="left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-light);"></i>
+                <i class="fas fa-search position-absolute"
+                    style="left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-light);"></i>
                 <input type="text" placeholder="Search campaigns, leads, reports...">
             </div>
 
@@ -381,78 +439,140 @@
                 <div class="dropdown">
                     <button class="navbar-icon-btn" data-bs-toggle="dropdown">
                         <i class="far fa-bell"></i>
-                        <span class="badge rounded-pill">3</span>
+                        <span class="badge rounded-pill bg-danger" id="notificationBadge"
+                            style="display: none;">0</span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 p-2" style="width: 320px; border-radius: 12px;">
-                        <li class="p-2 border-bottom"><h6 class="mb-0 fw-bold">Notifications</h6></li>
-                        <li><a class="dropdown-item p-3" href="#"><div class="fw-bold" style="font-size:0.85rem">New call received</div><small class="text-muted">2 mins ago</small></a></li>
-                        <li><a class="dropdown-item p-3" href="#"><div class="fw-bold" style="font-size:0.85rem">Agent went offline</div><small class="text-muted">15 mins ago</small></a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All Notifications</small></a></li>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 p-2"
+                        style="width: 320px; border-radius: 12px;">
+                        <li class="p-2 border-bottom">
+                            <h6 class="mb-0 fw-bold">Notifications</h6>
+                        </li>
+                        <div id="notificationList">
+                            <li class="p-4 text-center text-muted" id="noNotifications">
+                                <small>No new notifications</small>
+                            </li>
+                        </div>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All
+                                    Notifications</small></a></li>
                     </ul>
                 </div>
 
-                <div class="dropdown">
-                    <div class="d-flex align-items-center gap-2 cursor-pointer" data-bs-toggle="dropdown" style="cursor:pointer">
-                        <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-weight: 700;">
-                            {{ user.username.0|upper }}
-                        </div>
-                        <div class="d-none d-md-block" style="line-height: 1.2;">
-                            <div class="fw-bold" style="font-size: 0.85rem;">{{ user.get_full_name|default:user.username }}</div>
-                            <div class="text-muted" style="font-size: 0.7rem;">{{ user.profile.get_role_display|default:"User" }}</div>
-                        </div>
-                        <i class="fas fa-chevron-down text-muted ms-1" style="font-size: 0.7rem;"></i>
-                    </div>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 p-2" style="min-width: 220px; border-radius: 12px;">
-                        <li><h6 class="dropdown-header text-uppercase small fw-bold">My Account</h6></li>
-                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'users:profile' %}"><i class="far fa-user me-2"></i> Profile</a></li>
-                        <li><a class="dropdown-item rounded-2 py-2" href="{% url 'users:change_password' %}"><i class="fas fa-key me-2"></i> Change Password</a></li>
-                        <li><a class="dropdown-item rounded-2 py-2" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item rounded-2 py-2 text-danger" href="{% url 'users:logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                    </ul>
-                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        // WebSocket for Notifications
+                        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                        const notificationSocket = new WebSocket(
+                            protocol + '//' + window.location.host + '/ws/notifications/'
+                        );
+
+                        notificationSocket.onmessage = function (e) {
+                            const data = JSON.parse(e.data);
+
+                            // Update Badge
+                            const badge = document.getElementById('notificationBadge');
+                            let count = parseInt(badge.innerText) || 0;
+                            count++;
+                            badge.innerText = count;
+                            badge.style.display = 'block'; // Show badge
+
+                            // Add to List
+                            const list = document.getElementById('notificationList');
+                            const noNotif = document.getElementById('noNotifications');
+                            if (noNotif) noNotif.remove();
+
+                            const newItem = document.createElement('li');
+                            newItem.innerHTML = `
+                    <a class="dropdown-item p-3" href="${data.url || '#'}">
+                        <div class="fw-bold" style="font-size:0.85rem">${data.title}</div>
+                        <div class="text-muted" style="font-size:0.75rem">${data.message}</div>
+                        <small class="text-muted" style="font-size:0.7rem">${data.timestamp || 'Just now'}</small>
+                    </a>
+                `;
+                            list.prepend(newItem);
+                        };
+
+                        notificationSocket.onclose = function (e) {
+                            console.error('Notification socket closed unexpectedly');
+                        };
+                    });
+                </script>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All
+                            Notifications</small></a></li>
+                </ul>
             </div>
-            {% else %}
-            <a href="{% url 'users:login' %}" class="btn btn-primary px-4">Login</a>
-            {% endif %}
+
+            <div class="dropdown">
+                <div class="d-flex align-items-center gap-2 cursor-pointer" data-bs-toggle="dropdown"
+                    style="cursor:pointer">
+                    <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                        style="width: 38px; height: 38px; font-weight: 700;">
+                        {{ user.username.0|upper }}
+                    </div>
+                    <div class="d-none d-md-block" style="line-height: 1.2;">
+                        <div class="fw-bold" style="font-size: 0.85rem;">{% firstof user.get_full_name user.username %}
+                        </div>
+                        <div class="text-muted" style="font-size: 0.7rem;">
+                            {{user.profile.get_role_display|default:"User" }}</div>
+                    </div>
+                    <i class="fas fa-chevron-down text-muted ms-1" style="font-size: 0.7rem;"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 p-2"
+                    style="min-width: 220px; border-radius: 12px;">
+                    <li>
+                        <h6 class="dropdown-header text-uppercase small fw-bold">My Account</h6>
+                    </li>
+                    <li><a class="dropdown-item rounded-2 py-2" href="{% url 'users:profile' %}"><i
+                                class="far fa-user me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item rounded-2 py-2" href="{% url 'users:change_password' %}"><i
+                                class="fas fa-key me-2"></i> Change Password</a></li>
+                    <li><a class="dropdown-item rounded-2 py-2" href="#"><i class="fas fa-cog me-2"></i>
+                            Settings</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <form action="{% url 'users:logout' %}" method="post" class="m-0 p-0">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item rounded-2 py-2 text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <a href="{% url 'users:login' %}" class="btn btn-primary px-4">Login</a>
+        {% endif %}
         </div>
     </nav>
 
-    <div id="sidebarOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.2); z-index:1015; backdrop-filter:blur(2px);"></div>
+    <div id="sidebarOverlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.2); z-index:1015; backdrop-filter:blur(2px);">
+    </div>
 
     {% if user.is_authenticated %}
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-user">
-                <div class="user-avatar">{{ user.username.0|upper }}</div>
-                <div class="sidebar-user-info">
-                    <h6>{{ user.username }}</h6>
-                    <p>{{ user.profile.get_role_display|default:"Staff" }}</p>
-                </div>
-            </div>
-            <div class="sidebar-stats">
-                <div class="stat-item">
-                    <span class="stat-value">{{ user.profile.total_calls_made|default:0 }}</span>
-                    <span class="stat-label">Calls</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">{{ user.profile.total_calls_answered|default:0 }}</span>
-                    <span class="stat-label">Ans.</span>
-                </div>
-            </div>
-        </div>
 
         <nav class="mt-3 px-2">
             <div class="nav-section-title">Main</div>
-            <a href="{% url 'dashboard:index' %}" class="sidebar-nav-link {% if request.resolver_match.namespace == 'dashboard' %}active{% endif %}">
+            <a href="{% url 'dashboard:index' %}"
+                class="sidebar-nav-link {% if request.resolver_match.namespace == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-columns"></i><span>Dashboard</span>
             </a>
 
             {% if user.profile.is_agent %}
             <div class="nav-section-title">Agent Tools</div>
-            <a href="{% url 'agents:dashboard' %}" class="sidebar-nav-link"><i class="fas fa-headset"></i><span>Agent Panel</span></a>
-            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'agentSub')"><i class="fas fa-phone"></i><span>Dialer</span><i class="fas fa-chevron-down ms-auto small"></i></a>
+            <a href="{% url 'agents:dashboard' %}" class="sidebar-nav-link"><i class="fas fa-headset"></i><span>Agent
+                    Panel</span></a>
+            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'agentSub')"><i
+                    class="fas fa-phone"></i><span>Dialer</span><i class="fas fa-chevron-down ms-auto small"></i></a>
             <div class="submenu" id="agentSub">
                 <a href="#" class="submenu-link">Manual Dial</a>
                 <a href="#" class="submenu-link">Auto Dial</a>
@@ -464,41 +584,54 @@
 
             {% if user.is_staff or user.profile.is_manager %}
             <div class="nav-section-title">Management</div>
-            <a href="{% url 'campaigns:list' %}" class="sidebar-nav-link {% if request.resolver_match.namespace == 'campaigns' %}active{% endif %}">
+            <a href="{% url 'campaigns:list' %}"
+                class="sidebar-nav-link {% if request.resolver_match.namespace == 'campaigns' %}active{% endif %}">
                 <i class="fas fa-bullhorn"></i><span>Campaigns</span>
             </a>
-            <a href="{% url 'leads:list' %}" class="sidebar-nav-link {% if request.resolver_match.namespace == 'leads' %}active{% endif %}">
+            <a href="{% url 'leads:list' %}"
+                class="sidebar-nav-link {% if request.resolver_match.namespace == 'leads' %}active{% endif %}">
                 <i class="fas fa-users-viewfinder"></i><span>Leads</span>
             </a>
-            <a href="{% url 'leads:lead_lists' %}" class="sidebar-nav-link {% if request.resolver_match.url_name == 'lead_lists' %}active{% endif %}">
+            <a href="{% url 'leads:lead_lists' %}"
+                class="sidebar-nav-link {% if request.resolver_match.url_name == 'lead_lists' %}active{% endif %}">
                 <i class="fas fa-list-ul"></i><span>Lead Lists</span>
             </a>
-            <a href="{% url 'users:list' %}" class="sidebar-nav-link {% if request.resolver_match.namespace == 'users' %}active{% endif %}">
+            <a href="{% url 'users:list' %}"
+                class="sidebar-nav-link {% if request.resolver_match.namespace == 'users' %}active{% endif %}">
                 <i class="fas fa-user-gear"></i><span>Users</span>
             </a>
 
             <div class="nav-section-title">Analytics</div>
-            <a href="{% url 'reports:index' %}" class="sidebar-nav-link"><i class="fas fa-chart-line"></i><span>Overview</span></a>
-            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'repSub')"><i class="fas fa-file-contract"></i><span>Reports</span><i class="fas fa-chevron-down ms-auto small"></i></a>
+            <a href="{% url 'reports:index' %}" class="sidebar-nav-link"><i
+                    class="fas fa-chart-line"></i><span>Overview</span></a>
+            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'repSub')"><i
+                    class="fas fa-file-contract"></i><span>Reports</span><i
+                    class="fas fa-chevron-down ms-auto small"></i></a>
             <div class="submenu" id="repSub">
                 <a href="{% url 'reports:summary' %}" class="submenu-link">Summary</a>
                 <a href="{% url 'reports:campaign_performance' %}" class="submenu-link">Campaign Performance</a>
                 <a href="{% url 'reports:agent_performance' %}" class="submenu-link">Agent Performance</a>
                 <a href="{% url 'reports:call_analytics' %}" class="submenu-link">Call Analytics</a>
             </div>
-            <a href="{% url 'reports:realtime' %}" class="sidebar-nav-link"><i class="fas fa-bolt text-warning"></i><span>Real-time</span><span class="badge bg-danger ms-auto">Live</span></a>
+            <a href="{% url 'reports:realtime_dashboard' %}" class="sidebar-nav-link"><i
+                    class="fas fa-broadcast-tower text-warning"></i><span>Real-time Monitor</span><span
+                    class="badge bg-danger ms-auto">Live</span></a>
             {% endif %}
 
             {% if user.is_superuser %}
             <div class="nav-section-title">System Admin</div>
-            <a href="{% url 'telephony:dashboard' %}" class="sidebar-nav-link"><i class="fas fa-server"></i><span>Telephony</span></a>
-            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'sysSub')"><i class="fas fa-sliders"></i><span>Settings</span><i class="fas fa-chevron-down ms-auto small"></i></a>
+            <a href="{% url 'telephony:dashboard' %}" class="sidebar-nav-link"><i
+                    class="fas fa-server"></i><span>Telephony</span></a>
+            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'sysSub')"><i
+                    class="fas fa-sliders"></i><span>Settings</span><i
+                    class="fas fa-chevron-down ms-auto small"></i></a>
             <div class="submenu" id="sysSub">
                 <a href="#" class="submenu-link">General Settings</a>
                 <a href="#" class="submenu-link">Security</a>
                 <a href="#" class="submenu-link">Backup</a>
             </div>
-            <a href="/admin/" target="_blank" class="sidebar-nav-link"><i class="fas fa-shield-halved"></i><span>Admin Panel</span></a>
+            <a href="/admin/" target="_blank" class="sidebar-nav-link"><i class="fas fa-shield-halved"></i><span>Admin
+                    Panel</span></a>
             {% endif %}
         </nav>
     </aside>
@@ -506,14 +639,6 @@
 
     <main class="{% if user.is_authenticated %}main-content{% else %}container mt-5 pt-5{% endif %}">
         {% if user.is_authenticated %}
-        <div class="breadcrumb-modern">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}"><i class="fas fa-home me-1"></i> Home</a></li>
-                    {% block breadcrumb_items %}{% endblock %}
-                </ol>
-            </nav>
-        </div>
         {% endif %}
 
         {% block page_header %}{% endblock %}
@@ -535,7 +660,9 @@
         {% block content %}{% endblock %}
     </main>
 
-    <div id="loadingOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 9999;">
+    <div id="loadingOverlay"
+        class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+        style="z-index: 9999;">
         <div class="text-center">
             <div class="spinner-border text-primary mb-2" style="width: 3rem; height: 3rem;"></div>
             <h5 class="text-white" style="color: var(--text-main) !important;">Processing...</h5>
@@ -548,7 +675,7 @@
 
     <script>
         // Sidebar Controls
-        $('#sidebarToggle, #sidebarOverlay').on('click', function() {
+        $('#sidebarToggle, #sidebarOverlay').on('click', function () {
             $('#sidebar').toggleClass('show');
             $('#sidebarOverlay').fadeToggle(200);
         });
@@ -564,7 +691,7 @@
         // Global Loading
         window.showLoading = () => $('#loadingOverlay').removeClass('d-none');
         window.hideLoading = () => $('#loadingOverlay').addClass('d-none');
-        $('form').on('submit', function() { showLoading(); });
+        $('form').on('submit', function () { showLoading(); });
 
         // Auto-close alerts
         setTimeout(() => { $('.alert').fadeOut(); }, 5000);
@@ -588,4 +715,5 @@
     </script>
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

@@ -466,3 +466,105 @@ def monitor_api(request):
         'queues': payload['queues'],
         'stats': payload['stats'],
     })
+
+# Phase 4.2: Supervisor Monitoring
+from calls.quality_scoring import SupervisorMonitor
+from telephony.services import AsteriskService
+import json
+
+@login_required
+def monitoring_dashboard(request):
+    """
+    Phase 4.2: Interactive supervisor monitoring dashboard
+    """
+    context = {
+        'campaigns': Campaign.objects.filter(status='active'),
+    }
+    return render(request, 'agents/supervisor_monitoring.html', context)
+
+@login_required
+def start_monitoring(request):
+    """
+    Start listening/whispering/barging
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        agent_id = data.get('agent_id')
+        mode = data.get('mode', 'listen')
+        
+        target_agent = get_object_or_404(User, id=agent_id)
+        
+        service = AsteriskService()
+        monitor = SupervisorMonitor(service)
+        
+        result = monitor.start_monitoring(
+            supervisor_user=request.user,
+            target_agent=target_agent,
+            mode=mode
+        )
+        return JsonResponse(result)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Phase 4.3: Advanced Analytics
+from reports.analytics import AnalyticsEngine, ReportExporter
+
+@login_required
+def analytics_dashboard(request):
+    engine = AnalyticsEngine()
+    
+    campaign_id = request.GET.get('campaign')
+    days = int(request.GET.get('days', 30))
+    
+    context = {
+        'trends': engine.get_call_trends(campaign_id, days),
+        'hourly': engine.get_hourly_performance(campaign_id, days),
+        'leaderboard': engine.get_agent_leaderboard(campaign_id, days)[:10],
+        'campaigns': Campaign.objects.filter(status='active'),
+        'days': days,
+        'selected_campaign_id': int(campaign_id) if campaign_id else None,
+    }
+    
+    if campaign_id:
+        context['roi'] = engine.get_campaign_roi(int(campaign_id), days)
+    
+    return render(request, 'reports/analytics_dashboard.html', context)
+
+@login_required
+def export_report_v2(request):
+    """
+    Enhanced export functionality using AnalyticsEngine (Phase 4.3)
+    Replaces or complements standard export.
+    """
+    engine = AnalyticsEngine()
+    exporter = ReportExporter()
+    
+    report_type = request.GET.get('type', 'trends')
+    format = request.GET.get('format', 'xlsx')
+    campaign_id = request.GET.get('campaign')
+    days = int(request.GET.get('days', 30))
+    
+    # Get data
+    if report_type == 'trends':
+        data = engine.get_call_trends(campaign_id, days)
+    elif report_type == 'leaderboard':
+        data = engine.get_agent_leaderboard(campaign_id, days)
+    elif report_type == 'roi' and campaign_id:
+        data = engine.get_campaign_roi(int(campaign_id), days)
+    else:
+        return HttpResponse('Invalid report type', status=400)
+    
+    # Export
+    filename = f"{report_type}_{timezone.now().strftime('%Y%m%d')}"
+    
+    if format == 'xlsx':
+        buffer = exporter.export_to_excel(data, report_type)
+        return exporter.get_http_response(
+            buffer, f"{filename}.xlsx",
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+    return HttpResponse('Invalid format', status=400)

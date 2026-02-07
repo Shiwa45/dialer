@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Call History - Agent Dashboard{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+<!-- ================= HEADER ================= -->
+<div class="history-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1><i class="fas fa-history me-2"></i>Call History</h1>
+            <p class="opacity-75 mb-0">View and manage your call records</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'agents:dashboard' %}" class="btn btn-outline-light">
+                ← Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ================= FILTERS ================= -->
+<div class="filter-card mt-3">
+<form method="get">
+<div class="row g-3">
+
+<div class="col-md-2">
+<label>Date From</label>
+<input type="date" name="date_from" class="form-control"
+       value="{{ request.GET.date_from }}">
+</div>
+
+<div class="col-md-2">
+<label>Date To</label>
+<input type="date" name="date_to" class="form-control"
+       value="{{ request.GET.date_to }}">
+</div>
+
+<div class="col-md-2">
+<label>Disposition</label>
+<select name="disposition" class="form-select">
+<option value="">All</option>
+
+{% for disp in dispositions %}
+{% with disp_id=disp.id|stringformat:"s" %}
+<option value="{{ disp.id }}"
+    {% if request.GET.disposition == disp_id %}selected{% endif %}>
+    {{ disp.name }}
+</option>
+{% endwith %}
+{% endfor %}
+
+</select>
+</div>
+
+<div class="col-md-2">
+<label>Campaign</label>
+<select name="campaign" class="form-select">
+<option value="">All</option>
+
+{% for camp in campaigns %}
+{% with camp_id=camp.id|stringformat:"s" %}
+<option value="{{ camp.id }}"
+    {% if request.GET.campaign == camp_id %}selected{% endif %}>
+    {{ camp.name }}
+</option>
+{% endwith %}
+{% endfor %}
+
+</select>
+</div>
+
+<div class="col-md-2">
+<label>Call Type</label>
+<select name="call_type" class="form-select">
+<option value="">All</option>
+<option value="outbound" {% if request.GET.call_type == "outbound" %}selected{% endif %}>Outbound</option>
+<option value="inbound" {% if request.GET.call_type == "inbound" %}selected{% endif %}>Inbound</option>
+<option value="manual" {% if request.GET.call_type == "manual" %}selected{% endif %}>Manual</option>
+</select>
+</div>
+
+<div class="col-md-2 d-grid">
+<button class="btn btn-primary mt-4">Apply</button>
+</div>
+
+</div>
+</form>
+</div>
+
+<!-- ================= TABLE ================= -->
+<div class="call-table mt-4">
+<table class="table table-hover" id="callHistoryTable">
+
+<thead>
+<tr>
+<th>Date</th>
+<th>Number</th>
+<th>Lead</th>
+<th>Campaign</th>
+<th>Duration</th>
+<th>Disposition</th>
+<th>Recording</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+{% for call in calls %}
+<tr>
+
+<td>
+{{ call.start_time|date:"d M Y" }}<br>
+<small class="text-muted">{{ call.start_time|time:"H:i:s" }}</small>
+</td>
+
+<td>
+{% if call.called_number %}
+{{ call.called_number }}
+{% else %}
+{{ call.caller_id }}
+{% endif %}
+</td>
+
+<td>
+{% if call.lead %}
+<a href="{% url 'leads:detail' call.lead.id %}">
+{{ call.lead.first_name }} {{ call.lead.last_name }}
+</a>
+{% else %}
+—
+{% endif %}
+</td>
+
+<td>
+{% if call.campaign %}
+<span class="badge bg-secondary">{{ call.campaign.name }}</span>
+{% else %}
+—
+{% endif %}
+</td>
+
+<td>
+{% if call.talk_duration %}
+{{ call.talk_duration|floatformat:0 }}s
+{% else %}
+—
+{% endif %}
+</td>
+
+<td>
+{% if call.disposition %}
+{{ call.disposition.name }}
+{% else %}
+No Disposition
+{% endif %}
+</td>
+
+<td>
+{% if call.recording_file %}
+<button class="btn btn-sm btn-outline-primary"
+onclick="playRecording('{{ call.id }}','{{ call.recording_file }}')">
+▶
+</button>
+{% else %}
+—
+{% endif %}
+</td>
+
+<td>
+<button class="btn btn-sm btn-outline-info"
+onclick="viewCallDetails('{{ call.id }}')">
+ℹ
+</button>
+</td>
+
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(function () {
+    $('#callHistoryTable').DataTable({
+        paging: false,
+        ordering: true,
+        searching: true,
+        info: false,
+        order: [[0, 'desc']]
+    });
+});
+</script>
+{% endblock %}
+z

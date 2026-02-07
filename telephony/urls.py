@@ -52,6 +52,9 @@ urlpatterns = [
     path('phones/cleanup-orphans/', views.cleanup_asterisk_orphans, name='cleanup_orphans'),
     path('phones/regenerate-provisioning/', views.regenerate_all_provisioning, name='regenerate_provisioning'),
     
+    # Carrier & Dialplan Sync
+    path('carriers/sync/', views.sync_asterisk_configs, name='sync_asterisk_configs'),
+    
     # IVR Management
     path('ivrs/', views.IVRListView.as_view(), name='ivrs'),
     path('ivrs/create/', views.IVRCreateView.as_view(), name='create_ivr'),
@@ -132,4 +135,14 @@ urlpatterns = [
     path('diagnostics/', views.TelephonyDiagnosticsView.as_view(), name='diagnostics'),
     path('diagnostics/connectivity/', views.connectivity_test, name='connectivity_test'),
     path('diagnostics/performance/', views.performance_test, name='performance_test'),
+]
+
+# Phase 2.5: Enhanced Call Recording
+from . import views_recording
+
+urlpatterns += [
+    path('recordings/stream/<int:call_id>/', views_recording.stream_recording, name='stream_recording_by_id'),
+    path('recordings/download/<int:call_id>/', views_recording.download_recording, name='download_recording_by_id'),
+    path('api/recordings/list/', views_recording.recording_list, name='recording_list_api'),
+    path('api/recordings/stats/', views_recording.recording_stats, name='recording_stats_api'),
 ]

@@ -13,27 +13,33 @@
         padding: 2rem;
         margin-bottom: 2rem;
     }
+
     .detail-card {
         border: none;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         border-radius: 10px;
         margin-bottom: 1.5rem;
     }
+
     .detail-row {
         padding: 0.75rem 0;
         border-bottom: 1px solid #f8f9fa;
     }
+
     .detail-row:last-child {
         border-bottom: none;
     }
+
     .detail-label {
         font-weight: 600;
         color: #495057;
         margin-bottom: 0.25rem;
     }
+
     .detail-value {
         color: #6c757d;
     }
+
     .status-badge {
         padding: 0.5rem 1rem;
         border-radius: 6px;
@@ -41,17 +47,20 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+
     .file-info {
         background: #f8f9fa;
         border-radius: 8px;
         padding: 1.5rem;
     }
+
     .audio-player-card {
         background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
         color: white;
         border-radius: 10px;
         padding: 2rem;
     }
+
     .waveform-container {
         height: 100px;
         background: rgba(255, 255, 255, 0.1);
@@ -61,6 +70,7 @@
         overflow: hidden;
         cursor: pointer;
     }
+
     .waveform-progress {
         height: 100%;
         background: linear-gradient(90deg, #28a745, #20c997);
@@ -68,6 +78,7 @@
         transition: width 0.1s ease;
         border-radius: 8px;
     }
+
     .play-controls {
         display: flex;
         align-items: center;
@@ -75,6 +86,7 @@
         justify-content: center;
         margin-top: 1rem;
     }
+
     .play-button {
         width: 60px;
         height: 60px;
@@ -89,15 +101,18 @@
         transition: all 0.3s ease;
         cursor: pointer;
     }
+
     .play-button:hover {
         background: #218838;
         transform: scale(1.1);
     }
+
     .time-display {
         font-family: 'Courier New', monospace;
         font-size: 1.1rem;
         font-weight: bold;
     }
+
     .download-section {
         background: #e8f5e8;
         border: 1px solid #c3e6cb;
@@ -105,30 +120,35 @@
         padding: 1.5rem;
         text-align: center;
     }
+
     .action-buttons {
         display: flex;
         gap: 1rem;
         justify-content: center;
         margin-top: 1rem;
     }
+
     .call-info-card {
         background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
         color: white;
         border-radius: 10px;
         padding: 1.5rem;
     }
+
     .server-info-card {
         background: linear-gradient(135deg, #6f42c1 0%, #563d7c 100%);
         color: white;
         border-radius: 10px;
         padding: 1.5rem;
     }
+
     .metadata-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 1rem;
         margin-top: 1rem;
     }
+
     .metadata-item {
         background: white;
         border: 1px solid #dee2e6;
@@ -136,21 +156,25 @@
         padding: 1rem;
         text-align: center;
     }
+
     .metadata-icon {
         font-size: 2rem;
         margin-bottom: 0.5rem;
     }
+
     .metadata-value {
         font-size: 1.5rem;
         font-weight: bold;
         color: #495057;
     }
+
     .metadata-label {
         color: #6c757d;
         font-size: 0.875rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+
     .unavailable-overlay {
         background: rgba(220, 53, 69, 0.1);
         border: 2px dashed #dc3545;
@@ -183,9 +207,9 @@
                 <p class="mb-1">Call ID: <strong>{{ recording.call_id }}</strong></p>
                 <p class="mb-0">
                     {% if recording.is_available %}
-                        <span class="status-badge bg-success">Available</span>
+                    <span class="status-badge bg-success">Available</span>
                     {% else %}
-                        <span class="status-badge bg-danger">Unavailable</span>
+                    <span class="status-badge bg-danger">Unavailable</span>
                     {% endif %}
                 </p>
             </div>
@@ -195,29 +219,32 @@
                         <i class="fas fa-arrow-left me-1"></i>Back to Recordings
                     </a>
                     {% if recording.is_available %}
-                        <div class="dropdown d-inline-block">
-                            <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-cog me-1"></i>Actions
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'telephony:download_recording' recording.pk %}">
-                                        <i class="fas fa-download me-2"></i>Download
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'telephony:play_recording' recording.pk %}" target="_blank">
-                                        <i class="fas fa-external-link-alt me-2"></i>Open in Player
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="#" onclick="deleteRecording()">
-                                        <i class="fas fa-trash me-2"></i>Delete Recording
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'telephony:download_recording' recording.pk %}">
+                                    <i class="fas fa-download me-2"></i>Download
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'telephony:play_recording' recording.pk %}"
+                                    target="_blank">
+                                    <i class="fas fa-external-link-alt me-2"></i>Open in Player
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" onclick="deleteRecording()">
+                                    <i class="fas fa-trash me-2"></i>Delete Recording
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -228,49 +255,50 @@
         <!-- Audio Player -->
         <div class="col-lg-8">
             {% if recording.is_available %}
-                <div class="audio-player-card detail-card">
-                    <h5 class="mb-3">
-                        <i class="fas fa-play-circle me-2"></i>Audio Player
-                    </h5>
-                    
-                    <div class="waveform-container" onclick="seekToPosition(event)">
-                        <div class="waveform-progress" id="waveformProgress"></div>
-                        <div class="d-flex align-items-center justify-content-center h-100">
-                            <i class="fas fa-music fa-2x opacity-50"></i>
-                        </div>
+            <div class="audio-player-card detail-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-play-circle me-2"></i>Audio Player
+                </h5>
+
+                <div class="waveform-container" onclick="seekToPosition(event)">
+                    <div class="waveform-progress" id="waveformProgress"></div>
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <i class="fas fa-music fa-2x opacity-50"></i>
                     </div>
-                    
-                    <div class="play-controls">
-                        <button id="playPauseBtn" class="play-button">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="time-display" id="currentTime">00:00</span>
-                            <input type="range" id="seekBar" class="form-range" 
-                                   style="width: 300px;" min="0" max="100" value="0">
-                            <span class="time-display" id="totalTime">{{ recording.duration|default:0|time:"i:s" }}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fas fa-volume-down"></i>
-                            <input type="range" id="volumeBar" class="form-range" 
-                                   style="width: 100px;" min="0" max="100" value="50">
-                            <i class="fas fa-volume-up"></i>
-                        </div>
-                    </div>
-                    
-                    <audio id="audioPlayer" preload="metadata">
-                        <source src="{% url 'telephony:stream_recording' recording.pk %}" type="audio/{{ recording.format }}">
-                        Your browser does not support the audio element.
-                    </audio>
                 </div>
+
+                <div class="play-controls">
+                    <button id="playPauseBtn" class="play-button">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="time-display" id="currentTime">00:00</span>
+                        <input type="range" id="seekBar" class="form-range" style="width: 300px;" min="0" max="100"
+                            value="0">
+                        <span class="time-display" id="totalTime">{{ recording.duration|default:0|time:"i:s" }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-volume-down"></i>
+                        <input type="range" id="volumeBar" class="form-range" style="width: 100px;" min="0" max="100"
+                            value="50">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                </div>
+
+                <audio id="audioPlayer" preload="metadata">
+                    <source src="{% url 'telephony:stream_recording' recording.pk %}"
+                        type="audio/{{ recording.format }}">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
             {% else %}
-                <div class="detail-card">
-                    <div class="unavailable-overlay">
-                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                        <h5>Recording Unavailable</h5>
-                        <p class="mb-0">This recording file is not available. It may have been moved or deleted.</p>
-                    </div>
+            <div class="detail-card">
+                <div class="unavailable-overlay">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h5>Recording Unavailable</h5>
+                    <p class="mb-0">This recording file is not available. It may have been moved or deleted.</p>
                 </div>
+            </div>
             {% endif %}
 
             <!-- File Information -->
@@ -310,10 +338,10 @@
                                     <div class="detail-label">Duration</div>
                                     <div class="detail-value">
                                         {% if recording.duration %}
-                                            {{ recording.duration }} seconds
-                                            ({{ recording.duration|floatformat:0|time:"i:s" }})
+                                        {{ recording.duration }} seconds
+                                        ({{ recording.duration|floatformat:0|time:"i:s" }})
                                         {% else %}
-                                            Unknown
+                                        Unknown
                                         {% endif %}
                                     </div>
                                 </div>
@@ -321,9 +349,9 @@
                                     <div class="detail-label">Available</div>
                                     <div class="detail-value">
                                         {% if recording.is_available %}
-                                            <i class="fas fa-check text-success me-1"></i>Yes
+                                        <i class="fas fa-check text-success me-1"></i>Yes
                                         {% else %}
-                                            <i class="fas fa-times text-danger me-1"></i>No
+                                        <i class="fas fa-times text-danger me-1"></i>No
                                         {% endif %}
                                     </div>
                                 </div>
@@ -364,12 +392,12 @@
                     <div class="detail-label text-white-50">Campaign</div>
                     <div class="detail-value text-white">
                         {% if recording.call_log.campaign %}
-                            <a href="{% url 'campaigns:campaign_detail' recording.call_log.campaign.pk %}" 
-                               class="text-white text-decoration-underline">
-                                {{ recording.call_log.campaign.name }}
-                            </a>
+                        <a href="{% url 'campaigns:campaign_detail' recording.call_log.campaign.pk %}"
+                            class="text-white text-decoration-underline">
+                            {{ recording.call_log.campaign.name }}
+                        </a>
                         {% else %}
-                            N/A
+                        N/A
                         {% endif %}
                     </div>
                 </div>
@@ -377,12 +405,12 @@
                     <div class="detail-label text-white-50">Lead</div>
                     <div class="detail-value text-white">
                         {% if recording.call_log.lead %}
-                            <a href="{% url 'leads:lead_detail' recording.call_log.lead.pk %}" 
-                               class="text-white text-decoration-underline">
-                                {{ recording.call_log.lead.phone_number }}
-                            </a>
+                        <a href="{% url 'leads:lead_detail' recording.call_log.lead.pk %}"
+                            class="text-white text-decoration-underline">
+                            {{ recording.call_log.lead.phone_number }}
+                        </a>
                         {% else %}
-                            Unknown
+                        Unknown
                         {% endif %}
                     </div>
                 </div>
@@ -390,9 +418,9 @@
                     <div class="detail-label text-white-50">Agent</div>
                     <div class="detail-value text-white">
                         {% if recording.call_log.agent %}
-                            {{ recording.call_log.agent.get_full_name|default:recording.call_log.agent.username }}
+                        {{ recording.call_log.agent.get_full_name|default:recording.call_log.agent.username }}
                         {% else %}
-                            Unknown
+                        Unknown
                         {% endif %}
                     </div>
                 </div>
@@ -400,9 +428,9 @@
                     <div class="detail-label text-white-50">Call Status</div>
                     <div class="detail-value text-white">
                         {% if recording.call_log.call_status %}
-                            <span class="badge bg-light text-dark">{{ recording.call_log.get_call_status_display }}</span>
+                        <span class="badge bg-light text-dark">{{ recording.call_log.get_call_status_display }}</span>
                         {% else %}
-                            Unknown
+                        Unknown
                         {% endif %}
                     </div>
                 </div>
@@ -417,8 +445,8 @@
                 <div class="detail-row">
                     <div class="detail-label text-white-50">Asterisk Server</div>
                     <div class="detail-value text-white">
-                        <a href="{% url 'telephony:asterisk_server_detail' recording.asterisk_server.pk %}" 
-                           class="text-white text-decoration-underline">
+                        <a href="{% url 'telephony:asterisk_server_detail' recording.asterisk_server.pk %}"
+                            class="text-white text-decoration-underline">
                             {{ recording.asterisk_server.name }}
                         </a>
                     </div>
@@ -431,9 +459,9 @@
                     <div class="detail-label text-white-50">Channel</div>
                     <div class="detail-value text-white">
                         {% if recording.channel %}
-                            <code class="text-white">{{ recording.channel }}</code>
+                        <code class="text-white">{{ recording.channel }}</code>
                         {% else %}
-                            Unknown
+                        Unknown
                         {% endif %}
                     </div>
                 </div>
@@ -481,8 +509,7 @@
                 </h6>
                 <p class="text-muted mb-3">Download this recording in its original format</p>
                 <div class="action-buttons">
-                    <a href="{% url 'telephony:download_recording' recording.pk %}" 
-                       class="btn btn-success">
+                    <a href="{% url 'telephony:download_recording' recording.pk %}" class="btn btn-success">
                         <i class="fas fa-download me-2"></i>Download {{ recording.format|upper }}
                     </a>
                 </div>
@@ -505,7 +532,8 @@
             <div class="modal-body">
                 <p>Are you sure you want to delete this recording?</p>
                 <div class="alert alert-warning">
-                    <strong>Warning:</strong> This action cannot be undone. The recording file will be permanently deleted.
+                    <strong>Warning:</strong> This action cannot be undone. The recording file will be permanently
+                    deleted.
                 </div>
                 <p><strong>Filename:</strong> {{ recording.filename }}</p>
                 <p><strong>Call ID:</strong> {{ recording.call_id }}</p>
@@ -523,107 +551,109 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    const audioPlayer = $('#audioPlayer')[0];
-    
-    if (audioPlayer && {{ recording.is_available|yesno:"true,false" }}) {
+    $(document).ready(function () {
+        const audioPlayer = $('#audioPlayer')[0];
+
+        if (audioPlayer && {{ recording.is_available | yesno: "true,false" }
+    }) {
         // Audio player event listeners
-        audioPlayer.addEventListener('loadedmetadata', function() {
+        audioPlayer.addEventListener('loadedmetadata', function () {
             $('#totalTime').text(formatTime(audioPlayer.duration));
             $('#seekBar').attr('max', audioPlayer.duration);
         });
-        
-        audioPlayer.addEventListener('timeupdate', function() {
+
+        audioPlayer.addEventListener('timeupdate', function () {
             const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
             $('#waveformProgress').css('width', progress + '%');
             $('#seekBar').val(audioPlayer.currentTime);
             $('#currentTime').text(formatTime(audioPlayer.currentTime));
         });
-        
-        audioPlayer.addEventListener('ended', function() {
+
+        audioPlayer.addEventListener('ended', function () {
             $('#playPauseBtn').html('<i class="fas fa-play"></i>');
         });
-        
+
         // Set initial volume
         audioPlayer.volume = 0.5;
     }
 });
 
-// Audio player controls
-$('#playPauseBtn').click(function() {
-    const audioPlayer = $('#audioPlayer')[0];
-    
-    if (audioPlayer.paused) {
-        audioPlayer.play();
-        $(this).html('<i class="fas fa-pause"></i>');
-    } else {
-        audioPlayer.pause();
-        $(this).html('<i class="fas fa-play"></i>');
-    }
-});
+    // Audio player controls
+    $('#playPauseBtn').click(function () {
+        const audioPlayer = $('#audioPlayer')[0];
 
-$('#seekBar').on('input', function() {
-    const audioPlayer = $('#audioPlayer')[0];
-    audioPlayer.currentTime = $(this).val();
-});
-
-$('#volumeBar').on('input', function() {
-    const audioPlayer = $('#audioPlayer')[0];
-    audioPlayer.volume = $(this).val() / 100;
-});
-
-function seekToPosition(event) {
-    const container = event.currentTarget;
-    const rect = container.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const percentage = x / rect.width;
-    
-    const audioPlayer = $('#audioPlayer')[0];
-    if (audioPlayer.duration) {
-        audioPlayer.currentTime = percentage * audioPlayer.duration;
-    }
-}
-
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-function deleteRecording() {
-    $('#deleteModal').modal('show');
-}
-
-function confirmDelete() {
-    $.ajax({
-        url: '{% url "telephony:delete_recording" %}',
-        method: 'POST',
-        data: {
-            'recording_id': {{ recording.id }},
-            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        },
-        success: function(response) {
-            if (response.success) {
-                $('#deleteModal').modal('hide');
-                showAlert('success', 'Recording deleted successfully');
-                setTimeout(function() {
-                    window.location.href = '{% url "telephony:recordings" %}';
-                }, 1500);
-            } else {
-                showAlert('error', response.message || 'Failed to delete recording');
-            }
-        },
-        error: function() {
-            showAlert('error', 'An error occurred while deleting the recording');
+        if (audioPlayer.paused) {
+            audioPlayer.play();
+            $(this).html('<i class="fas fa-pause"></i>');
+        } else {
+            audioPlayer.pause();
+            $(this).html('<i class="fas fa-play"></i>');
         }
     });
-}
 
-function showAlert(type, message) {
-    const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
-    const iconClass = type === 'error' ? 'exclamation-triangle' : 'check-circle';
-    
-    const alertHtml = `
+    $('#seekBar').on('input', function () {
+        const audioPlayer = $('#audioPlayer')[0];
+        audioPlayer.currentTime = $(this).val();
+    });
+
+    $('#volumeBar').on('input', function () {
+        const audioPlayer = $('#audioPlayer')[0];
+        audioPlayer.volume = $(this).val() / 100;
+    });
+
+    function seekToPosition(event) {
+        const container = event.currentTarget;
+        const rect = container.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const percentage = x / rect.width;
+
+        const audioPlayer = $('#audioPlayer')[0];
+        if (audioPlayer.duration) {
+            audioPlayer.currentTime = percentage * audioPlayer.duration;
+        }
+    }
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function deleteRecording() {
+        $('#deleteModal').modal('show');
+    }
+
+    function confirmDelete() {
+        $.ajax({
+            url: '{% url "telephony:delete_recording" recording.pk %}',
+            method: 'POST',
+            data: {
+                'recording_id': {{ recording.id }},
+    'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+    success: function(response) {
+        if (response.success) {
+            $('#deleteModal').modal('hide');
+            showAlert('success', 'Recording deleted successfully');
+            setTimeout(function () {
+                window.location.href = '{% url "telephony:recordings" %}';
+            }, 1500);
+        } else {
+            showAlert('error', response.message || 'Failed to delete recording');
+        }
+    },
+    error: function() {
+        showAlert('error', 'An error occurred while deleting the recording');
+    }
+        });
+    }
+
+
+    function showAlert(type, message) {
+        const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+        const iconClass = type === 'error' ? 'exclamation-triangle' : 'check-circle';
+
+        const alertHtml = `
         <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
              style="top: 20px; right: 20px; z-index: 1060; min-width: 300px;" role="alert">
             <i class="fas fa-${iconClass} me-2"></i>
@@ -631,22 +661,23 @@ function showAlert(type, message) {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    
-    $('body').append(alertHtml);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(function() {
-        $('.alert').fadeOut();
-    }, 5000);
-}
 
-// Keyboard shortcuts
-$(document).keydown(function(e) {
-    const audioPlayer = $('#audioPlayer')[0];
-    
-    if (!audioPlayer || !{{ recording.is_available|yesno:"true,false" }}) return;
-    
-    switch(e.which) {
+        $('body').append(alertHtml);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(function () {
+            $('.alert').fadeOut();
+        }, 5000);
+    }
+
+    // Keyboard shortcuts
+    $(document).keydown(function (e) {
+        const audioPlayer = $('#audioPlayer')[0];
+
+        if (!audioPlayer || !{{ recording.is_available | yesno: "true,false" }
+    }) return;
+
+    switch (e.which) {
         case 32: // Spacebar - play/pause
             e.preventDefault();
             $('#playPauseBtn').click();
@@ -674,18 +705,18 @@ $(document).keydown(function(e) {
     }
 });
 
-// Add CSRF token to all AJAX requests
-$.ajaxSetup({
-    beforeSend: function(xhr, settings) {
-        if (!this.crossDomain) {
-            xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+    // Add CSRF token to all AJAX requests
+    $.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+            if (!this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+            }
         }
-    }
-});
+    });
 
-// Create CSRF token input if it doesn't exist
-if ($('[name=csrfmiddlewaretoken]').length === 0) {
-    $('body').append('<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">');
-}
+    // Create CSRF token input if it doesn't exist
+    if ($('[name=csrfmiddlewaretoken]').length === 0) {
+        $('body').append('<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">');
+    }
 </script>
 {% endblock %}

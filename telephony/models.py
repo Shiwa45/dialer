@@ -185,27 +185,23 @@ class Carrier(TimeStampedModel):
                         )
                     except Exception:
                         pass
-                # Dialplan for prefix in from-campaign
-                if self.dial_prefix:
-                    try:
-                        ctx, _ = DialplanContext.objects.get_or_create(
-                            name='from-campaign',
-                            defaults={'description': 'Auto-generated outbound routing', 'is_active': True, 'asterisk_server': self.asterisk_server}
-                        )
-                        pattern = f"_{self.dial_prefix}X."
-                        pr = 1
-                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'NoOp', 'arguments': f'Outbound via {self.name}: ${{EXTEN}}', 'is_active': True}); pr += 1
-                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'Set', 'arguments': f'STRIPPED=${{EXTEN:{len(self.dial_prefix)}}}', 'is_active': True}); pr += 1
-                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'Dial', 'arguments': f'PJSIP/{self.name}/${{STRIPPED}},{self.dial_timeout}', 'is_active': True}); pr += 1
-                        DialplanExtension.objects.update_or_create(context=ctx, extension=pattern, priority=pr, defaults={'application': 'Hangup', 'arguments': '', 'is_active': True})
-                    except Exception:
-                        pass
-        except Exception:
+                # Dialplan generation is now handled by DialplanService
+                # to support multi-carrier randomization/failover
+                from .dialplan_service import DialplanService
+                DialplanService.regenerate_dialplan()
+                
+        except Exception as e:
             # Don't block save on sync issues
+            print(f"Error syncing carrier {self.name}: {e}")
             pass
 
     def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
         try:
+            from .dialplan_service import DialplanService
+            DialplanService.regenerate_dialplan()
+        except Exception:
+            pass
             if self.protocol.lower() == 'pjsip':
                 from .models import PsEndpoint, PsAuth, PsAor
                 PsEndpoint.objects.filter(id=self.name).delete()

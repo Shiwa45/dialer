@@ -3,6 +3,7 @@ psycopg2-binary==2.9.7
 redis==4.6.0
 celery==5.3.1
 channels==4.0.0
+daphne>=4.0.0
 channels-redis==4.1.0
 django-extensions==3.2.3
 python-decouple==3.8
@@ -15,3 +16,4 @@ reportlab==4.0.4
 matplotlib==3.7.2
 gunicorn==21.2.0
 whitenoise==6.5.0
+pytz

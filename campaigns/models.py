@@ -110,6 +110,21 @@ class Campaign(TimeStampedModel):
         help_text="Seconds an agent can remain in wrap-up before auto-available"
     )
     
+    # Phase 1.1: Auto-wrapup configuration
+    auto_wrapup_enabled = models.BooleanField(
+        default=False,
+        help_text="Automatically dispose calls after timeout period"
+    )
+    auto_wrapup_timeout = models.PositiveIntegerField(
+        default=120,
+        help_text="Seconds before call is auto-dispositioned"
+    )
+    auto_wrapup_disposition = models.CharField(
+        max_length=50,
+        default='not_dispositioned',
+        help_text="Disposition code to apply on auto-wrapup"
+    )
+    
     # Recording and Monitoring
     enable_recording = models.BooleanField(default=True)
     recording_delay = models.PositiveIntegerField(default=0, help_text="Recording delay in seconds")

@@ -135,6 +135,9 @@ class Lead(TimeStampedModel):
         ('sale', 'Sale'),
         ('no_answer', 'No Answer'),
         ('busy', 'Busy'),
+        ('failed', 'Failed'),
+        ('dropped', 'Dropped'),
+        ('congestion', 'Congestion'),
         ('not_interested', 'Not Interested'),
         ('dnc', 'Do Not Call'),
         ('invalid', 'Invalid'),
@@ -172,6 +175,34 @@ class Lead(TimeStampedModel):
     # Call Management
     call_count = models.PositiveIntegerField(default=0)
     last_contact_date = models.DateTimeField(null=True, blank=True)
+    
+    # Phase 2: Enhanced tracking fields
+    last_dial_attempt = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Timestamp of last dial attempt (successful or not)'
+    )
+    dial_result = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Result of last dial attempt (answered, no_answer, busy, failed, etc.)'
+    )
+    dial_attempts = models.PositiveIntegerField(
+        default=0,
+        help_text='Total number of dial attempts (includes failed attempts)'
+    )
+    answered_count = models.PositiveIntegerField(
+        default=0,
+        help_text='Number of times call was answered'
+    )
+    last_status_change = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When status was last changed'
+    )
     
     # Assignment (updated field name to match templates)
     assigned_user = models.ForeignKey(

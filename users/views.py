@@ -40,27 +40,28 @@ class CustomLoginView(BaseLoginView):
                     messages.error(self.request, 'Your account does not have an extension assigned. Please contact your supervisor.')
                     return self.form_invalid(form)
                 
-                # Check if extension is registered with Asterisk
-                from telephony.models import AsteriskServer
-                from telephony.services import AsteriskService
-                
-                try:
-                    server = AsteriskServer.objects.filter(is_active=True).first()
-                    if server:
-                        service = AsteriskService(server)
-                        status = service.get_endpoint_status(extension)
-                        
-                        if not status.get('registered', False):
-                            messages.error(
-                                self.request, 
-                                f'Your extension ({extension}) is not registered. Please connect your softphone before logging in.'
-                            )
-                            return self.form_invalid(form)
-                except Exception as e:
-                    # Log error but allow login (fail open for availability)
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"Error checking extension registration: {e}")
+                # DISABLED: WebRTC registers from browser, no pre-login check needed
+                # Traditional softphone check - commented out for WebRTC compatibility
+                # from telephony.models import AsteriskServer
+                # from telephony.services import AsteriskService
+                # 
+                # try:
+                #     server = AsteriskServer.objects.filter(is_active=True).first()
+                #     if server:
+                #         service = AsteriskService(server)
+                #         status = service.get_endpoint_status(extension)
+                #         
+                #         if not status.get('registered', False):
+                #             messages.error(
+                #                 self.request, 
+                #                 f'Your extension ({extension}) is not registered. Please connect your softphone before logging in.'
+                #             )
+                #             return self.form_invalid(form)
+                # except Exception as e:
+                #     # Log error but allow login (fail open for availability)
+                #     import logging
+                #     logger = logging.getLogger(__name__)
+                #     logger.error(f"Error checking extension registration: {e}")
         
         # Log the user in
         response = super().form_valid(form)

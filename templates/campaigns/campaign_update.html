@@ -24,9 +24,9 @@
     <form method="post" id="campaignForm" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {{ form.non_field_errors }}
-            </div>
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
         {% endif %}
 
         <div class="row g-4">
@@ -221,70 +221,185 @@
                                     {{ form.amd_enabled }}
                                     <label class="form-check-label" for="{{ form.amd_enabled.id_for_label }}">
                                         Enable Answering Machine Detection
-                                    </label>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Phase 1.1: Auto Wrapup Configuration Section -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-clock"></i> Auto Wrapup Configuration
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">
+                                    Configure automatic call disposition after wrapup timeout. When enabled,
+                                    calls will be automatically dispositioned if agents don't manually dispose
+                                    within the specified time.
+                                </p>
+
+                                <div class="row">
+                                    <!-- Enable Auto Wrapup -->
+                                    <div class="col-md-12 mb-3">
+                                        <div class="form-check form-switch">
+                                            {{ form.auto_wrapup_enabled }}
+                                            <label class="form-check-label"
+                                                for="{{ form.auto_wrapup_enabled.id_for_label }}">
+                                                <strong>Enable Auto-Wrapup</strong>
+                                            </label>
+                                            {% if form.auto_wrapup_enabled.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.auto_wrapup_enabled.errors.0 }}
+                                            </div>
+                                            {% endif %}
+                                            <div class="form-text">
+                                                {{ form.auto_wrapup_enabled.help_text }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Auto Wrapup Settings (shown when enabled) -->
+                                <div id="auto-wrapup-settings" style="display: none;">
+                                    <div class="row">
+                                        <!-- Timeout Duration -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.auto_wrapup_timeout.id_for_label }}" class="form-label">
+                                                <i class="fas fa-hourglass-half"></i> Wrapup Timeout
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.auto_wrapup_timeout }}
+                                            {% if form.auto_wrapup_timeout.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.auto_wrapup_timeout.errors.0 }}
+                                            </div>
+                                            {% endif %}
+                                            <div class="form-text">
+                                                {{ form.auto_wrapup_timeout.help_text }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Auto Disposition Status -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.auto_wrapup_disposition.id_for_label }}"
+                                                class="form-label">
+                                                <i class="fas fa-tag"></i> Auto-Disposition Status
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.auto_wrapup_disposition }}
+                                            {% if form.auto_wrapup_disposition.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.auto_wrapup_disposition.errors.0 }}
+                                            </div>
+                                            {% endif %}
+                                            <div class="form-text">
+                                                {{ form.auto_wrapup_disposition.help_text }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Info Alert -->
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>How it works:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>When a call ends, agent enters wrapup status</li>
+                                            <li>Timer starts counting down from the configured timeout</li>
+                                            <li>Agent sees countdown timer in their interface</li>
+                                            <li>If agent manually disposes before timeout, timer is cancelled</li>
+                                            <li>If timeout is reached, call is automatically dispositioned with the
+                                                selected status</li>
+                                            <li>Agent is then set back to "Available" status</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.lead_lists %}
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>Lead Lists
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    {% for choice in form.lead_lists %}
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            {{ choice.tag }}
+                                            <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                {{ choice.choice_label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {{ form.lead_lists.errors }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>Details
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="small text-muted mb-2">Campaign ID</p>
+                                <div class="fw-semibold mb-3">{{ campaign.campaign_id }}</div>
+
+                                <p class="small text-muted mb-2">Created By</p>
+                                <div class="fw-semibold mb-3">
+                                    {{ campaign.created_by.get_full_name|default:campaign.created_by.username }}
+                                </div>
+
+                                <p class="small text-muted mb-2">Created At</p>
+                                <div class="fw-semibold mb-3">{{ campaign.created_at|date:"M d, Y H:i" }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {% if form.lead_lists %}
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2"></i>Lead Lists
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            {% for choice in form.lead_lists %}
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    {{ choice.tag }}
-                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
-                                        {{ choice.choice_label }}
-                                    </label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {{ form.lead_lists.errors }}
-                    </div>
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
                 </div>
-                {% endif %}
-            </div>
-
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <i class="fas fa-info-circle me-2"></i>Details
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="small text-muted mb-2">Campaign ID</p>
-                        <div class="fw-semibold mb-3">{{ campaign.campaign_id }}</div>
-
-                        <p class="small text-muted mb-2">Created By</p>
-                        <div class="fw-semibold mb-3">
-                            {{ campaign.created_by.get_full_name|default:campaign.created_by.username }}
-                        </div>
-
-                        <p class="small text-muted mb-2">Created At</p>
-                        <div class="fw-semibold mb-3">{{ campaign.created_at|date:"M d, Y H:i" }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Cancel
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save me-2"></i>Save Changes
-            </button>
-        </div>
     </form>
 </div>
+
+<!-- JavaScript for Show/Hide Auto Wrapup Settings -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const autoWrapupCheckbox = document.getElementById('id_auto_wrapup_enabled');
+        const autoWrapupSettings = document.getElementById('auto-wrapup-settings');
+
+        function toggleAutoWrapupSettings() {
+            if (autoWrapupCheckbox && autoWrapupSettings) {
+                if (autoWrapupCheckbox.checked) {
+                    autoWrapupSettings.style.display = 'block';
+                } else {
+                    autoWrapupSettings.style.display = 'none';
+                }
+            }
+        }
+
+        // Initial state
+        toggleAutoWrapupSettings();
+
+        // Toggle on change
+        if (autoWrapupCheckbox) {
+            autoWrapupCheckbox.addEventListener('change', toggleAutoWrapupSettings);
+        }
+    });
+</script>
 {% endblock %}

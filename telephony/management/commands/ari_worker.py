@@ -157,6 +157,14 @@ class Command(BaseCommand):
                 campaign_id, lead_id, customer_number, queue_id
             )
         
+        elif etype == 'ChannelLeftBridge':
+            # CRITICAL: This event fires when customer hangs up while in bridge
+            logger.info(f"ChannelLeftBridge: channel={chan_id}")
+            self._handle_channel_destroyed(
+                server, chan_id, call_type, agent_id, target_agent_id,
+                campaign_id, lead_id, queue_id
+            )
+        
         elif etype == 'ChannelDestroyed':
             self._handle_channel_destroyed(
                 server, chan_id, call_type, agent_id, target_agent_id,
@@ -266,6 +274,58 @@ class Command(BaseCommand):
                     
                     if bridge_result.get('success'):
                         logger.info(f"Successfully bridged agent to customer")
+                        
+                        # CRITICAL FIX: Subscribe to customer channel events to detect hangup
+                        try:
+                            import requests
+                            ari_base_url = f"http://{server.ari_host}:{server.ari_port}/ari"
+                            
+                            # Subscribe to customer channel events
+                            subscribe_response = requests.post(
+                                f"{ari_base_url}/applications/autodialer/subscription",
+                                auth=(server.ari_username, server.ari_password),
+                                json={"eventSource": f"channel:{customer_channel}"},
+                                timeout=5
+                            )
+                            logger.info(f"Subscribed to customer channel {customer_channel} events: {subscribe_response.status_code}")
+                            
+                            # Subscribe to agent channel events
+                            subscribe_response2 = requests.post(
+                                f"{ari_base_url}/applications/autodialer/subscription",
+                                auth=(server.ari_username, server.ari_password),
+                                json={"eventSource": f"channel:{chan_id}"},
+                                timeout=5
+                            )
+                            logger.info(f"Subscribed to agent channel {chan_id} events: {subscribe_response2.status_code}")
+                            
+                            # Subscribe to bridge events
+                            bridge_id = bridge_result.get('bridge_id')
+                            if bridge_id:
+                                subscribe_response3 = requests.post(
+                                    f"{ari_base_url}/applications/autodialer/subscription",
+                                    auth=(server.ari_username, server.ari_password),
+                                    json={"eventSource": f"bridge:{bridge_id}"},
+                                    timeout=5
+                                )
+                                logger.info(f"Subscribed to bridge {bridge_id} events: {subscribe_response3.status_code}")
+                        except Exception as e:
+                            logger.error(f"Error subscribing to channel events: {e}")
+                        
+                        # CRITICAL: Store agent channel ID in session for later disconnect
+                        try:
+                            from agents.models import AgentDialerSession
+                            session = AgentDialerSession.objects.filter(agent_id=bridge_info['agent_id']).first()
+                            if session:
+                                session.agent_channel_id = chan_id  # Store agent channel
+                                session.customer_channel_id = customer_channel
+                                session.bridge_id = bridge_result.get('bridge_id')
+                                session.status = 'busy'
+                                session.save()
+                                logger.info(f"Stored agent_channel_id={chan_id} in AgentDialerSession")
+                            else:
+                                logger.warning(f"AgentDialerSession not found for agent {bridge_info['agent_id']}")
+                        except Exception as e:
+                            logger.error(f"Error storing agent channel in session: {e}")
 
                         # Get the CallLog entry for the customer channel
                         call_log = CallLog.objects.filter(channel=customer_channel).first()
@@ -572,6 +632,12 @@ class Command(BaseCommand):
 
         # Get call log
         cl = CallLog.objects.filter(channel=chan_id).first()
+        
+        # DEBUG: Log what we found
+        if cl:
+            logger.info(f"Found CallLog ID {cl.id} for channel {chan_id}: call_type={cl.call_type}, agent_id={cl.agent_id}, end_time={cl.end_time}")
+        else:
+            logger.info(f"No CallLog found for channel {chan_id}")
 
         # Unregister from dialing set
         if cl and cl.call_type == 'outbound' and cl.campaign_id and cl.lead_id:
@@ -588,21 +654,71 @@ class Command(BaseCommand):
 
             # Send disposition prompt to agent
             if cl.agent_id:
-                # FIX: Check call log type OR passed call_type
-                # If call_type is None (common in ChannelDestroyed), rely on CallLog
+                # IMPROVED: Detect customer calls even when call_type parameter is None
+                # Rely primarily on CallLog data which is more reliable
                 is_customer_call = (
-                    call_type in ['customer_leg', 'autodial'] or 
+                    # Check CallLog type first (most reliable)
                     (cl.call_type == 'outbound' and cl.campaign_id) or
-                    (cl.call_type == 'inbound')
+                    (cl.call_type == 'inbound') or
+                    # Fallback to parameter if CallLog type not set
+                    call_type in ['customer_leg', 'autodial']
                 )
+                
+                logger.info(f"Channel destroyed: call_type_param={call_type}, cl.call_type={cl.call_type}, is_customer_call={is_customer_call}")
 
                 if is_customer_call:
+                    # CRITICAL FIX: Update agent status to wrapup immediately
+                    from users.models import AgentStatus
+                    AgentStatus.objects.filter(user_id=cl.agent_id).update(
+                        status='wrapup',
+                        status_changed_at=timezone.now()
+                    )
+                    logger.info(f"Updated agent {cl.agent_id} status to wrapup after customer call ended")
+                    
+                    # Broadcast status update to UI
+                    self.broadcast_message(cl.agent_id, {
+                        'type': 'status_update',
+                        'status': 'wrapup',
+                        'message': 'Call ended - Please select disposition'
+                    })
+                    
+                    # Update AgentDialerSession status
+                    try:
+                        from agents.models import AgentDialerSession
+                        session = AgentDialerSession.objects.filter(agent_id=cl.agent_id).first()
+                        if session:
+                            session.status = 'wrapup'
+                            session.customer_channel_id = None
+                            session.bridge_id = None
+                            session.save()
+                            logger.info(f"Updated AgentDialerSession to wrapup status")
+                    except Exception as e:
+                        logger.error(f"Error updating AgentDialerSession: {e}")
+                    
+                    # Send call_ended message with force_disconnect flag
                     self.broadcast_message(cl.agent_id, {
                         'type': 'call_ended',
                         'call_id': cl.id,
                         'disposition_needed': True,
+                        'force_disconnect': True,
                         'message': 'Call ended - Please select disposition'
                     })
+                    
+                    # Phase 1.1: Start auto-wrapup timer if campaign has it enabled
+                    try:
+                        from campaigns.auto_wrapup_service import get_auto_wrapup_service
+                        
+                        if cl.campaign_id:
+                            service = get_auto_wrapup_service()
+                            service.start_wrapup_timer(
+                                agent_id=cl.agent_id,
+                                call_log_id=cl.id,
+                                campaign_id=cl.campaign_id
+                            )
+                            logger.info(f"Started auto-wrapup timer for agent {cl.agent_id}, call {cl.id}")
+                    except Exception as e:
+                        logger.error(f"Error starting auto-wrapup timer: {e}")
+                    
                     
                     # CLIENT-SIDE DISCONNECT FIX:
                     # If customer hung up, we must auto-disconnect the agent channel
@@ -689,24 +805,8 @@ class Command(BaseCommand):
         if call_type == 'agent_leg' and agent_id:
             self._cleanup_agent_session(agent_id)
 
-        # Also cleanup for target agent on customer leg end
-        if call_type == 'customer_leg' and target_agent_id:
-            # Set to wrapup, not offline (agent should disposition)
-            AgentStatus.objects.filter(user_id=target_agent_id).update(
-                status='wrapup',
-                status_changed_at=timezone.now()
-            )
-            self.broadcast_message(target_agent_id, {
-                'type': 'status_update',
-                'status': 'wrapup',
-                'message': 'Wrap-up: log disposition'
-            })
-            
-            # Phase 3.3: Track call end
-            try:
-                self.tracker.end_call(target_agent_id)
-            except Exception as e:
-                logger.error(f"Tracker error in channel_destroyed: {e}")
+        # Note: Agent status update to wrapup is now handled earlier in the function
+        # (lines 600-632) for all customer calls, ensuring immediate status change
 
     def _cleanup_agent_session(self, agent_id):
         """

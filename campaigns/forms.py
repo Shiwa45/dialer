@@ -38,6 +38,10 @@ class CampaignCreateForm(forms.ModelForm):
             'dial_speed', 'custom_dials_per_agent',
             'outbound_carrier', 'dial_prefix',
             'hopper_size',
+            # Phase 1.1: Auto-wrapup fields
+            'auto_wrapup_enabled',
+            'auto_wrapup_timeout',
+            'auto_wrapup_disposition',
         ]
         
         widgets = {
@@ -131,6 +135,30 @@ class CampaignCreateForm(forms.ModelForm):
                 'max': 5000,
                 'step': 1,
             }),
+            # Phase 1.1: Auto-wrapup widgets
+            'auto_wrapup_enabled': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'id_auto_wrapup_enabled'
+            }),
+            'auto_wrapup_timeout': forms.Select(
+                choices=[
+                    (30, '30 seconds'),
+                    (60, '1 minute'),
+                    (90, '1.5 minutes'),
+                    (120, '2 minutes'),
+                    (180, '3 minutes'),
+                    (240, '4 minutes'),
+                    (300, '5 minutes'),
+                ],
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_auto_wrapup_timeout'
+                }
+            ),
+            'auto_wrapup_disposition': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_auto_wrapup_disposition'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -148,6 +176,24 @@ class CampaignCreateForm(forms.ModelForm):
 
         # Set default lead_order to 'down'
         self.fields['lead_order'].initial = 'down'
+        
+        # Phase 1.1: Set up auto-wrapup disposition choices
+        disposition_choices = [('not_dispositioned', 'Not Dispositioned (Default)')]
+        dispositions = Disposition.objects.filter(is_active=True).order_by('name')
+        disposition_choices.extend([(d.code, d.name) for d in dispositions])
+        
+        self.fields['auto_wrapup_disposition'].widget.choices = disposition_choices
+        
+        # Set help texts for auto-wrapup fields
+        self.fields['auto_wrapup_enabled'].help_text = (
+            'Automatically dispose calls after the timeout period expires'
+        )
+        self.fields['auto_wrapup_timeout'].help_text = (
+            'Time before call is automatically dispositioned (default: 2 minutes)'
+        )
+        self.fields['auto_wrapup_disposition'].help_text = (
+            'Disposition status to apply when auto-wrapup timeout is reached'
+        )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -165,6 +211,26 @@ class CampaignCreateForm(forms.ModelForm):
         if daily_start_time and daily_end_time:
             if daily_start_time >= daily_end_time:
                 raise ValidationError('Daily end time must be after start time.')
+        
+        # Phase 1.1: Auto-wrapup validation
+        auto_wrapup_enabled = cleaned_data.get('auto_wrapup_enabled')
+        auto_wrapup_timeout = cleaned_data.get('auto_wrapup_timeout')
+        auto_wrapup_disposition = cleaned_data.get('auto_wrapup_disposition')
+        
+        if auto_wrapup_enabled:
+            if not auto_wrapup_timeout:
+                raise ValidationError({
+                    'auto_wrapup_timeout': 'Timeout is required when auto-wrapup is enabled'
+                })
+            
+            if auto_wrapup_timeout < 30:
+                raise ValidationError({
+                    'auto_wrapup_timeout': 'Timeout must be at least 30 seconds'
+                })
+            
+            if not auto_wrapup_disposition:
+                # Set default if not provided
+                cleaned_data['auto_wrapup_disposition'] = 'not_dispositioned'
         
         return cleaned_data
 

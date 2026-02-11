@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+from celery.schedules import crontab
 # from decouple import config
 
 def config(key, default=None, cast=None):
@@ -183,6 +184,11 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 #     },
 # }
 CELERY_BEAT_SCHEDULE = {
+    # Phase 1.1: Auto Wrapup
+    'check-auto-wrapup-timeouts': {
+        'task': 'campaigns.tasks.check_auto_wrapup_timeouts',
+        'schedule': 5.0,  # Every 5 seconds
+    },
     # Phase 4.1: Predictive Dialer
     'predictive-dial': {
         'task': 'campaigns.tasks.predictive_dial',
@@ -211,6 +217,15 @@ CELERY_BEAT_SCHEDULE = {
     'check-agent-registrations': {
         'task': 'campaigns.tasks.check_agent_registrations',
         'schedule': 60.0,  # Every 60 seconds (safety net, real-time events handle most updates)
+    },
+    # Phase 2.4: Lead status reconciliation
+    'reconcile-lead-status': {
+        'task': 'campaigns.tasks.reconcile_lead_status',
+        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+    },
+    'sync-call-log-to-lead-status': {
+        'task': 'campaigns.tasks.sync_call_log_to_lead_status',
+        'schedule': 600.0,  # Every 10 minutes
     },
 }
 

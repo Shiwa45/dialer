@@ -1119,6 +1119,277 @@ class IVROptionDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+@login_required
+@user_passes_test(is_manager_or_admin)
+def test_ivr_call(request):
+    """
+    Initiate a test call to an IVR
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        ivr_id = request.POST.get('ivr_id')
+        phone_number = request.POST.get('phone_number')
+        extension = request.POST.get('extension')
+        
+        if not all([ivr_id, phone_number, extension]):
+            return JsonResponse({
+                'success': False,
+                'message': 'Missing required parameters'
+            }, status=400)
+        
+        ivr = get_object_or_404(IVR, pk=ivr_id)
+        
+        # Get the first active Asterisk server
+        server = AsteriskServer.objects.filter(is_active=True).first()
+        if not server:
+            return JsonResponse({
+                'success': False,
+                'message': 'No active Asterisk server found'
+            }, status=500)
+        
+        # Use AsteriskService to originate the call
+        service = AsteriskService(server)
+        
+        # Originate call: dial the phone number and connect to the IVR
+        # Format: Channel, Context, Extension, Priority
+        channel = f'PJSIP/{phone_number}'
+        context = ivr.context or 'ivr-test'
+        exten = ivr.extension
+        
+        result = service.originate_call(
+            channel=channel,
+            context=context,
+            exten=str(exten),
+            priority='1',
+            caller_id=f'"IVR Test" <{extension}>'
+        )
+        
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': f'Test call initiated to {phone_number}'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': result.get('message', 'Failed to initiate call')
+            }, status=500)
+            
+    except Exception as e:
+        logger.error(f"Error initiating IVR test call: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def export_ivr_config(request, pk):
+    """
+    Export IVR configuration in Asterisk format
+    """
+    ivr = get_object_or_404(IVR, pk=pk)
+    options = ivr.options.all().order_by('digit')
+    
+    # Generate Asterisk dialplan configuration
+    config_lines = [
+        f'; IVR Configuration: {ivr.name}',
+        f'; Description: {ivr.description}',
+        f'; Extension: {ivr.extension}',
+        '',
+        f'[{ivr.context or "ivr-menu"}]',
+        f'exten => {ivr.extension},1,Answer()',
+        f'exten => {ivr.extension},n,Wait(1)',
+    ]
+    
+    # Add greeting
+    if ivr.greeting_audio:
+        config_lines.append(f'exten => {ivr.extension},n,Playback({ivr.greeting_audio})')
+    
+    # Add timeout and invalid settings
+    if ivr.timeout:
+        config_lines.append(f'exten => {ivr.extension},n,Set(TIMEOUT(digit)={ivr.timeout})')
+    
+    # Add menu options
+    config_lines.append(f'exten => {ivr.extension},n,Background(silence/1)')
+    config_lines.append(f'exten => {ivr.extension},n,WaitExten({ivr.timeout or 10})')
+    
+    # Add digit options
+    for option in options:
+        action_str = ''
+        if option.action == 'extension':
+            action_str = f'Goto({option.destination})'
+        elif option.action == 'queue':
+            action_str = f'Queue({option.destination})'
+        elif option.action == 'voicemail':
+            action_str = f'VoiceMail({option.destination})'
+        elif option.action == 'hangup':
+            action_str = 'Hangup()'
+        
+        if action_str:
+            config_lines.append(f'exten => {option.digit},1,{action_str}')
+    
+    # Add invalid and timeout handlers
+    if ivr.invalid_audio:
+        config_lines.append(f'exten => i,1,Playback({ivr.invalid_audio})')
+        config_lines.append(f'exten => i,n,Goto({ivr.extension},1)')
+    
+    if ivr.timeout_audio:
+        config_lines.append(f'exten => t,1,Playback({ivr.timeout_audio})')
+        config_lines.append(f'exten => t,n,Goto({ivr.extension},1)')
+    
+    config_lines.append('')
+    
+    # Return as downloadable file
+    config_content = '\n'.join(config_lines)
+    response = HttpResponse(config_content, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="ivr_{ivr.extension}_{ivr.name.replace(" ", "_")}.conf"'
+    
+    return response
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def clone_ivr(request, pk):
+    """
+    Clone an existing IVR with all its options
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        original_ivr = get_object_or_404(IVR, pk=pk)
+        
+        # Get form data
+        new_name = request.POST.get('name', f'{original_ivr.name} (Copy)')
+        new_description = request.POST.get('description', original_ivr.description)
+        include_options = request.POST.get('include_options', 'true').lower() == 'true'
+        
+        # Clone the IVR
+        new_ivr = IVR.objects.create(
+            name=new_name,
+            description=new_description,
+            welcome_message=original_ivr.welcome_message,
+            invalid_message=original_ivr.invalid_message,
+            timeout_message=original_ivr.timeout_message,
+            digit_timeout=original_ivr.digit_timeout,
+            response_timeout=original_ivr.response_timeout,
+            max_retries=original_ivr.max_retries,
+            allow_direct_dial=original_ivr.allow_direct_dial,
+            play_exit_sound=original_ivr.play_exit_sound,
+            is_active=False,  # Start as inactive
+            asterisk_server=original_ivr.asterisk_server,
+            created_by=request.user
+        )
+        
+        # Clone options if requested
+        if include_options:
+            for option in original_ivr.options.all():
+                IVROption.objects.create(
+                    ivr=new_ivr,
+                    digit=option.digit,
+                    description=option.description,
+                    action_type=option.action_type,
+                    action_value=option.action_value,
+                    option_message=option.option_message,
+                    sort_order=option.sort_order,
+                    is_active=option.is_active
+                )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'IVR cloned successfully',
+            'ivr_id': new_ivr.pk
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def toggle_ivr_status(request, pk):
+    """
+    Toggle IVR active status
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        ivr = get_object_or_404(IVR, pk=pk)
+        activate = request.POST.get('activate', 'false').lower() == 'true'
+        
+        ivr.is_active = activate
+        ivr.save()
+        
+        status = 'activated' if activate else 'deactivated'
+        return JsonResponse({
+            'success': True,
+            'message': f'IVR {status} successfully',
+            'is_active': ivr.is_active
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def ivr_stats(request, pk):
+    """
+    Get IVR usage statistics
+    """
+    try:
+        ivr = get_object_or_404(IVR, pk=pk)
+        
+        # TODO: Implement actual call statistics from call logs
+        # For now, return placeholder data
+        stats = {
+            'total_calls': 0,
+            'completed_calls': 0,
+            'avg_duration': 0,
+            'today_calls': 0
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@user_passes_test(is_manager_or_admin)
+def ivr_confirm_delete(request, pk):
+    """
+    Confirm and delete IVR
+    """
+    ivr = get_object_or_404(IVR, pk=pk)
+    
+    if request.method == 'POST':
+        ivr_name = ivr.name
+        ivr.delete()
+        messages.success(request, f'IVR "{ivr_name}" deleted successfully!')
+        return redirect('telephony:ivrs')
+    
+    return render(request, 'telephony/ivr_confirm_delete.html', {'object': ivr})
+
+
+
 # ============================================================================
 # CALL QUEUE MANAGEMENT
 # ============================================================================
@@ -1913,6 +2184,26 @@ def available_phones_api(request):
         'id', 'extension', 'name', 'phone_type'
     )
     return JsonResponse(list(phones), safe=False)
+
+
+@login_required
+def available_extensions_api(request):
+    """
+    Get available extensions for IVR testing
+    """
+    phones = Phone.objects.filter(is_active=True).values(
+        'id', 'extension', 'name'
+    ).order_by('extension')
+    
+    extensions = [
+        {
+            'extension': phone['extension'],
+            'name': phone['name'] or f"Extension {phone['extension']}"
+        }
+        for phone in phones
+    ]
+    
+    return JsonResponse({'extensions': extensions})
 
 
 @login_required

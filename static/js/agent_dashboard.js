@@ -28,6 +28,11 @@
         socket: null,
         reconnectAttempts: 0,
         maxReconnectAttempts: 10,
+        // Phase 1.1: Auto-wrapup state
+        wrapupTimer: null,
+        wrapupTimeoutSeconds: null,
+        wrapupStartTime: null,
+        wrapupCountdown: null,
         urls: {
             status: '',
             callStatus: '',
@@ -184,6 +189,15 @@
                 // Heartbeat response
                 break;
 
+            // Phase 1.1: Auto-wrapup events
+            case 'wrapup_started':
+                handleWrapupStarted(data);
+                break;
+
+            case 'call_auto_disposed':
+                handleCallAutoDisposed(data);
+                break;
+
             default:
                 console.log('Unknown event type:', eventType);
         }
@@ -214,7 +228,7 @@
             startTime: new Date()
         };
         state.currentLead = lead;
-        
+
         console.log('Stored call data:', state.currentCall);
 
         // IMMEDIATELY update UI on THIS page - don't wait for call_connected
@@ -287,7 +301,7 @@
             startTime: state.currentCall?.startTime || new Date(),
             answerTime: new Date()
         };
-        
+
         console.log('Updated call data on connect:', state.currentCall);
 
         // Update lead if provided
@@ -405,6 +419,16 @@
     function handleCallEnded(data) {
         console.log('Call ended:', data);
 
+        // CRITICAL FIX: Handle force_disconnect flag for immediate UI update
+        if (data.force_disconnect) {
+            console.log('[FORCE DISCONNECT] Client hung up - updating UI immediately');
+            updateCallDisplay({
+                status: 'Disconnected',
+                statusClass: 'ended'
+            });
+            updateStatusUI('wrapup');
+        }
+
         // Stop duration timer
         stopDurationTimer();
 
@@ -448,6 +472,159 @@
     }
 
     // ========================================
+    // Phase 1.1: Auto-Wrapup Handlers
+    // ========================================
+
+    /**
+     * Handle wrapup started event
+     */
+    function handleWrapupStarted(data) {
+        console.log('Wrapup started:', data);
+
+        state.wrapupTimeoutSeconds = data.timeout_seconds;
+        state.wrapupStartTime = Date.now();
+
+        // Show wrapup countdown
+        showWrapupCountdown(data.timeout_seconds);
+
+        // Start countdown timer
+        startWrapupCountdown();
+    }
+
+    /**
+     * Show wrapup countdown UI
+     */
+    function showWrapupCountdown(timeoutSeconds) {
+        const dispositionPanel = document.getElementById('disposition-modal');
+        if (!dispositionPanel) return;
+
+        // Create countdown display if it doesn't exist
+        let countdownDiv = document.getElementById('wrapup-countdown');
+        if (!countdownDiv) {
+            countdownDiv = document.createElement('div');
+            countdownDiv.id = 'wrapup-countdown';
+            countdownDiv.className = 'alert alert-warning mt-3';
+            dispositionPanel.insertBefore(countdownDiv, dispositionPanel.firstChild);
+        }
+
+        countdownDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-clock me-2"></i>
+                <div class="flex-grow-1">
+                    <strong>Auto-completing in:</strong>
+                    <span id="countdown-timer" class="ms-2 fs-5 fw-bold"></span>
+                </div>
+            </div>
+            <div class="progress mt-2" style="height: 8px;">
+                <div id="countdown-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                     role="progressbar" style="width: 100%"></div>
+            </div>
+            <small class="text-muted mt-2 d-block">
+                Dispose the call manually to cancel auto-completion
+            </small>
+        `;
+
+        // Update initial countdown display
+        updateCountdownDisplay(timeoutSeconds);
+    }
+
+    /**
+     * Start countdown timer
+     */
+    function startWrapupCountdown() {
+        // Clear any existing timer
+        if (state.wrapupCountdown) {
+            clearInterval(state.wrapupCountdown);
+        }
+
+        // Update every second
+        state.wrapupCountdown = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - state.wrapupStartTime) / 1000);
+            const remaining = Math.max(0, state.wrapupTimeoutSeconds - elapsed);
+
+            updateCountdownDisplay(remaining);
+
+            // Stop when reaches zero
+            if (remaining <= 0) {
+                clearInterval(state.wrapupCountdown);
+                state.wrapupCountdown = null;
+            }
+        }, 1000);
+    }
+
+    /**
+     * Update countdown display
+     */
+    function updateCountdownDisplay(remainingSeconds) {
+        const timerElement = document.getElementById('countdown-timer');
+        const progressElement = document.getElementById('countdown-progress');
+
+        if (!timerElement || !progressElement) return;
+
+        // Format time as MM:SS
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        timerElement.textContent = timeString;
+
+        // Update progress bar
+        const percentage = (remainingSeconds / state.wrapupTimeoutSeconds) * 100;
+        progressElement.style.width = `${percentage}%`;
+
+        // Change color based on remaining time
+        if (remainingSeconds <= 10) {
+            progressElement.classList.remove('bg-warning');
+            progressElement.classList.add('bg-danger');
+        } else if (remainingSeconds <= 30) {
+            progressElement.classList.remove('bg-warning', 'bg-danger');
+            progressElement.classList.add('bg-warning');
+        }
+    }
+
+    /**
+     * Hide wrapup countdown
+     */
+    function hideWrapupCountdown() {
+        const countdownDiv = document.getElementById('wrapup-countdown');
+        if (countdownDiv) {
+            countdownDiv.remove();
+        }
+
+        // Clear timer
+        if (state.wrapupCountdown) {
+            clearInterval(state.wrapupCountdown);
+            state.wrapupCountdown = null;
+        }
+
+        state.wrapupTimeoutSeconds = null;
+        state.wrapupStartTime = null;
+    }
+
+    /**
+     * Handle call auto-disposed event
+     */
+    function handleCallAutoDisposed(data) {
+        console.log('Call auto-disposed:', data);
+
+        // Hide countdown
+        hideWrapupCountdown();
+
+        // Show notification
+        showToast(
+            `Call Auto-Dispositioned as: ${data.disposition}`,
+            'info'
+        );
+
+        // Clear call UI
+        clearCallUI();
+
+        // Update status to available
+        updateStatusUI('available');
+    }
+
+
+    // ========================================
     // Status Updates
     // ========================================
 
@@ -458,7 +635,7 @@
         if (state.status !== data.status) {
             state.status = data.status;
             updateStatusUI(data.status);
-            
+
             if (data.message) {
                 showToast(data.message, 'info');
             } else {
@@ -487,14 +664,14 @@
 
         // Update body data attribute for CSS
         document.body.dataset.agentStatus = status;
-        
+
         // Also update the dashboard data attribute
         const dashboard = document.querySelector('[data-agent-dashboard]');
         if (dashboard) {
             dashboard.dataset.status = status;
         }
     }
-    
+
     function getStatusDisplayText(status) {
         const statusMap = {
             'available': 'Available',
@@ -652,12 +829,15 @@
 
     function submitDisposition(callId, dispositionId, notes) {
         console.log('submitDisposition called with:', { callId, dispositionId, notes, url: state.urls.disposition });
-        
+
         if (!state.urls.disposition) {
             console.error('Disposition URL is not configured');
             showToast('Error: Disposition URL not configured', 'error');
             return;
         }
+
+        // Phase 1.1: Cancel wrapup timer on manual disposition
+        hideWrapupCountdown();
 
         // Disable submit button to prevent double submission
         const submitBtn = document.querySelector('#disposition-form button[type="submit"]');
@@ -740,7 +920,7 @@
         const previousStatus = state.status;
         state.status = newStatus;
         updateStatusUI(newStatus);
-        
+
         const formData = new FormData();
         formData.append('status', newStatus);
 
@@ -856,9 +1036,9 @@
             if (e.target && e.target.id === 'disposition-form') {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 console.log('Disposition form submitted');
-                
+
                 const callId = document.getElementById('disposition-call-id')?.value;
                 const dispositionId = document.getElementById('disposition-select')?.value;
                 const notes = document.getElementById('disposition-notes')?.value;
@@ -949,13 +1129,13 @@
         if (cookie) {
             return cookie.split('=')[1];
         }
-        
+
         // Fallback to meta tag
         const metaTag = document.querySelector('meta[name="csrf-token"]');
         if (metaTag) {
             return metaTag.getAttribute('content');
         }
-        
+
         console.error('CSRF token not found in cookie or meta tag');
         return '';
     }

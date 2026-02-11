@@ -64,3 +64,13 @@ urlpatterns += [
     path('recycle-rules/<int:rule_id>/toggle/', views_progress.toggle_recycle_rule, name='toggle_recycle_rule'),
     path('recycle-rules/<int:rule_id>/delete/', views_progress.delete_recycle_rule, name='delete_recycle_rule'),
 ]
+
+# Phase 2: Enhanced Lead Recycling System
+from . import views_recycling
+
+urlpatterns += [
+    path('list/<int:list_id>/recycle-enhanced/', views_recycling.lead_recycling_page, name='lead_recycling_enhanced'),
+    path('list/<int:list_id>/recycle/action/', views_recycling.recycle_leads_action, name='recycle_leads_action'),
+    path('list/<int:list_id>/fix-problematic/', views_recycling.fix_problematic_leads_action, name='fix_problematic_leads'),
+    path('list/<int:list_id>/status-report/', views_recycling.lead_status_report, name='lead_status_report'),
+]

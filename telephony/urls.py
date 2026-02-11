@@ -65,6 +65,12 @@ urlpatterns = [
     path('ivrs/<int:ivr_pk>/options/create/', views.IVROptionCreateView.as_view(), name='create_ivr_option'),
     path('ivr-options/<int:pk>/edit/', views.IVROptionUpdateView.as_view(), name='update_ivr_option'),
     path('ivr-options/<int:pk>/delete/', views.IVROptionDeleteView.as_view(), name='delete_ivr_option'),
+    path('ivrs/test-call/', views.test_ivr_call, name='test_ivr_call'),
+    path('ivrs/<int:pk>/export/', views.export_ivr_config, name='export_ivr_config'),
+    path('ivrs/<int:pk>/clone/', views.clone_ivr, name='clone_ivr'),
+    path('ivrs/<int:pk>/toggle-status/', views.toggle_ivr_status, name='toggle_ivr_status'),
+    path('ivrs/<int:pk>/stats/', views.ivr_stats, name='ivr_stats'),
+    path('ivrs/<int:pk>/confirm-delete/', views.ivr_confirm_delete, name='ivr_confirm_delete'),
     
     # Call Queue Management
     path('queues/', views.CallQueueListView.as_view(), name='queues'),
@@ -119,6 +125,7 @@ urlpatterns = [
     path('api/stats/', views.telephony_stats_api, name='stats_api'),
     path('api/servers/<int:pk>/status/', views.server_status_api, name='server_status_api'),
     path('api/phones/available/', views.available_phones_api, name='available_phones_api'),
+    path('api/extensions/available/', views.available_extensions_api, name='available_extensions'),
     path('api/extensions/validate/', views.validate_extension_api, name='validate_extension_api'),
     path('api/dids/check/', views.check_did_availability_api, name='check_did_availability_api'),
     

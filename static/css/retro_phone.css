@@ -1,0 +1,380 @@
+/**
+ * Retro Phone UI - Vintage Rotary Phone Aesthetic
+ * Inspired by classic 1970s desk phones
+ */
+
+:root {
+    --retro-beige: #f5e6d3;
+    --retro-cream: #fff8dc;
+    --retro-brown: #8b4513;
+    --retro-chrome: #c0c0c0;
+    --retro-gold: #ffd700;
+    --retro-red: #dc143c;
+    --retro-green: #228b22;
+    --retro-shadow: rgba(0, 0, 0, 0.3);
+    --retro-glow: rgba(255, 215, 0, 0.6);
+}
+
+/* Main Phone Container */
+.retro-phone {
+    background: linear-gradient(145deg, var(--retro-beige), var(--retro-cream));
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 
+        0 10px 30px var(--retro-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    position: relative;
+    border: 3px solid var(--retro-brown);
+}
+
+/* LED Status Display */
+.retro-display {
+    background: #1a1a1a;
+    border: 3px solid var(--retro-chrome);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 
+        inset 0 2px 10px rgba(0, 0, 0, 0.8),
+        0 2px 5px var(--retro-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.retro-display::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent);
+    pointer-events: none;
+}
+
+.retro-number {
+    font-family: 'Courier New', monospace;
+    font-size: 1.8rem;
+    color: var(--retro-gold);
+    text-align: center;
+    text-shadow: 0 0 10px var(--retro-glow);
+    letter-spacing: 0.2em;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.retro-status {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #00ff00;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+    margin-top: 0.5rem;
+}
+
+/* Status Indicator LEDs */
+.retro-leds {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.retro-led {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #333;
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.5),
+        0 0 0 2px var(--retro-chrome);
+    position: relative;
+}
+
+.retro-led.active {
+    animation: led-pulse 1s infinite;
+}
+
+.retro-led.green.active {
+    background: var(--retro-green);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.5),
+        0 0 0 2px var(--retro-chrome),
+        0 0 15px rgba(34, 139, 34, 0.8);
+}
+
+.retro-led.red.active {
+    background: var(--retro-red);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.5),
+        0 0 0 2px var(--retro-chrome),
+        0 0 15px rgba(220, 20, 60, 0.8);
+}
+
+.retro-led.yellow.active {
+    background: var(--retro-gold);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.5),
+        0 0 0 2px var(--retro-chrome),
+        0 0 15px rgba(255, 215, 0, 0.8);
+}
+
+@keyframes led-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Retro Dialpad */
+.retro-dialpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+}
+
+.retro-btn {
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #e8e8e8, #d0d0d0);
+    box-shadow: 
+        0 4px 8px var(--retro-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.1s ease;
+    position: relative;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+}
+
+.retro-btn:hover {
+    background: linear-gradient(145deg, #f0f0f0, #d8d8d8);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 12px var(--retro-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.retro-btn:active {
+    transform: translateY(1px);
+    box-shadow: 
+        0 2px 4px var(--retro-shadow),
+        inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.retro-btn-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.retro-btn-number {
+    font-size: 1.5rem;
+    color: #333;
+    line-height: 1;
+}
+
+.retro-btn-letters {
+    font-size: 0.65rem;
+    color: #666;
+    margin-top: 0.2rem;
+    letter-spacing: 0.1em;
+}
+
+/* Call Control Buttons */
+.retro-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.retro-control-btn {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    font-size: 1.5rem;
+    box-shadow: 
+        0 6px 12px var(--retro-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.retro-control-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 
+        0 8px 16px var(--retro-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.retro-control-btn:active {
+    transform: translateY(0) scale(0.95);
+    box-shadow: 
+        0 3px 6px var(--retro-shadow),
+        inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.retro-control-btn.answer {
+    background: linear-gradient(145deg, #2ecc71, #27ae60);
+    color: white;
+}
+
+.retro-control-btn.hangup {
+    background: linear-gradient(145deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.retro-control-btn.mute {
+    background: linear-gradient(145deg, #f39c12, #e67e22);
+    color: white;
+}
+
+.retro-control-btn.hold {
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    color: white;
+}
+
+.retro-control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.retro-control-btn.active {
+    box-shadow: 
+        inset 0 3px 8px rgba(0, 0, 0, 0.4),
+        0 2px 4px var(--retro-shadow);
+}
+
+/* Handset Visual */
+.retro-handset {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: linear-gradient(90deg, var(--retro-brown), #654321);
+    border-radius: 50px;
+    box-shadow: 
+        0 4px 8px var(--retro-shadow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.retro-handset-icon {
+    font-size: 2rem;
+    color: var(--retro-cream);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.retro-handset.ringing {
+    animation: handset-ring 0.5s infinite;
+}
+
+@keyframes handset-ring {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+/* Vintage Texture Overlay */
+.retro-phone::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.03) 2px,
+            rgba(0, 0, 0, 0.03) 4px
+        );
+    pointer-events: none;
+    border-radius: 20px;
+}
+
+/* Call Timer */
+.retro-timer {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    color: var(--retro-gold);
+    text-align: center;
+    text-shadow: 0 0 8px var(--retro-glow);
+    margin-top: 0.5rem;
+}
+
+/* Backspace Button */
+.retro-backspace {
+    background: none;
+    border: none;
+    color: var(--retro-brown);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.retro-backspace:hover {
+    color: var(--retro-red);
+    transform: scale(1.2);
+}
+
+.retro-backspace:active {
+    transform: scale(0.9);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .retro-phone {
+        padding: 1rem;
+    }
+    
+    .retro-btn-number {
+        font-size: 1.2rem;
+    }
+    
+    .retro-btn-letters {
+        font-size: 0.55rem;
+    }
+    
+    .retro-control-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.2rem;
+    }
+}
+
+/* Dark Mode Support */
+.dark-mode .retro-phone {
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border-color: #444;
+}
+
+.dark-mode .retro-btn {
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+}
+
+.dark-mode .retro-btn:hover {
+    background: linear-gradient(145deg, #4a4a4a, #3a3a3a);
+}
+
+.dark-mode .retro-btn-number {
+    color: #ddd;
+}
+
+.dark-mode .retro-btn-letters {
+    color: #999;
+}

@@ -86,7 +86,19 @@ def agent_dashboard(request):
         is_active=True
     ).order_by('key_combination')
     
+    # WebRTC Configuration
+    from telephony.models import AsteriskServer
+    asterisk_server = AsteriskServer.objects.filter(is_active=True).first()
+    agent_extension = f'1{agent.id:03d}'  # e.g., 1001, 1002, etc.
+    
+    webrtc_config = {
+        'ws_server': f'wss://{asterisk_server.ari_host}:8089/ws' if asterisk_server else 'wss://localhost:8089/ws',
+        'sip_uri': f'sip:{agent_extension}@{asterisk_server.ari_host}' if asterisk_server else f'sip:{agent_extension}@localhost',
+        'password': 'agent123',  # TODO: Store SIP passwords securely
+    }
+    
     context = {
+        'user': agent,  # Add user to context for WebSocket connection
         'agent': agent,
         'agent_status': agent_status,
         'assigned_campaigns': assigned_campaigns,
@@ -96,6 +108,7 @@ def agent_dashboard(request):
         'available_scripts': available_scripts,
         'agent_hotkeys': agent_hotkeys,
         'break_codes': AgentBreakCode.objects.filter(is_active=True),
+        'webrtc_config': webrtc_config,
     }
     
     return render(request, 'agents/dashboard.html', context)

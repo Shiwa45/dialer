@@ -571,15 +571,6 @@
             <div class="nav-section-title">Agent Tools</div>
             <a href="{% url 'agents:dashboard' %}" class="sidebar-nav-link"><i class="fas fa-headset"></i><span>Agent
                     Panel</span></a>
-            <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'agentSub')"><i
-                    class="fas fa-phone"></i><span>Dialer</span><i class="fas fa-chevron-down ms-auto small"></i></a>
-            <div class="submenu" id="agentSub">
-                <a href="#" class="submenu-link">Manual Dial</a>
-                <a href="#" class="submenu-link">Auto Dial</a>
-                <a href="#" class="submenu-link">Preview Dial</a>
-            </div>
-            <a href="#" class="sidebar-nav-link"><i class="fas fa-address-book"></i><span>My Leads</span></a>
-            <a href="#" class="sidebar-nav-link"><i class="fas fa-history"></i><span>Call History</span></a>
             {% endif %}
 
             {% if user.is_staff or user.profile.is_manager %}

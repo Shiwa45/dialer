@@ -731,8 +731,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- JsSIP Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jssip/3.9.1/jssip.min.js"></script>
+<!-- JsSIP Library (official unpkg CDN) -->
+<script src="https://unpkg.com/jssip@3.10.0/dist/jssip.min.js"></script>
 
 <!-- WebRTC Phone Class -->
 <script src="{% static 'js/webrtc_phone.js' %}"></script>
@@ -819,7 +819,8 @@ function initWebRTCPhone() {
  */
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/agent/`;
+    // Connect to the per-agent WebSocket channel that matches agents.routing
+    const wsUrl = `${protocol}//${window.location.host}/ws/agent/{{ user.id }}/`;
     
     ws = new WebSocket(wsUrl);
     
@@ -1162,11 +1163,12 @@ function loadTodayStats() {
     fetch('{% url "agents:statistics" %}')
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                document.getElementById('statCalls').textContent = data.stats.calls || 0;
-                document.getElementById('statContacts').textContent = data.stats.contacts || 0;
-                document.getElementById('statSales').textContent = data.stats.sales || 0;
-                document.getElementById('statTalkTime').textContent = data.stats.talk_time || '0:00';
+            if (data.success && data.stats) {
+                const stats = data.stats || {};
+                document.getElementById('statCalls').textContent = stats.calls || 0;
+                document.getElementById('statContacts').textContent = stats.contacts || 0;
+                document.getElementById('statSales').textContent = stats.sales || 0;
+                document.getElementById('statTalkTime').textContent = stats.talk_time || '0:00';
             }
         });
 }

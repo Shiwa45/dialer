@@ -1,0 +1,730 @@
+"""
+Campaign Tasks - Phase 1.1+ Complete
+
+This module includes all Celery tasks for:
+- Phase 1.1: Auto wrapup timeout checking
+- Phase 2.3: Dropped call re-attempt
+- Phase 2.4: Lead recycling  
+- Phase 2.5: Recording sync
+- Predictive dialing
+- Hopper management
+"""
+
+import logging
+from datetime import timedelta
+
+from celery import shared_task
+from django.utils import timezone
+from django.db.models import Q, Count
+from campaigns.predictive_dialer import DialerManager
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# PHASE 1.1: Auto Wrapup Timeout Checking
+# ============================================================================
+
+@shared_task
+def check_auto_wrapup_timeouts():
+    """
+    PHASE 1.1: Check agents in wrapup and auto-dispose if timeout reached
+    
+    Schedule: Every 5 seconds
+    
+    This task monitors all agents in wrapup status and automatically
+    applies disposition when the configured timeout is exceeded.
+    """
+    from campaigns.auto_wrapup_service import get_auto_wrapup_service
+    
+    try:
+        service = get_auto_wrapup_service()
+        stats = service.check_and_process_timeouts()
+        
+        # Only log if there were timeouts or errors
+        if stats.get('timed_out', 0) > 0 or stats.get('errors', 0) > 0:
+            logger.info(f"Auto-wrapup check completed: {stats}")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in check_auto_wrapup_timeouts: {e}", exc_info=True)
+        return {'error': str(e)}
+
+@shared_task
+def predictive_dial():
+    """
+    PHASE 4.1: Runs every second to dial calls based on predictive algorithm
+    """
+    from campaigns.models import Campaign
+    
+    total_dialed = 0
+    
+    for campaign in Campaign.objects.filter(status='active', dial_mode='predictive'):
+        try:
+            dialed = DialerManager.dial_for_campaign(campaign.id)
+            total_dialed += dialed
+        except Exception as e:
+            logger.error(f"Error dialing for campaign {campaign.id}: {e}")
+    
+    return {'dialed': total_dialed}
+
+
+# ============================================================================
+# PHASE 2.3: Dropped/Failed Call Re-attempt
+# ============================================================================
+
+@shared_task
+def recycle_failed_calls():
+    """
+    PHASE 2.3: Recycle failed/dropped calls back to hopper
+    
+    Finds calls that failed (no answer, busy, dropped) and
+    re-adds eligible leads to the hopper for retry.
+    
+    Schedule: Every 5 minutes
+    """
+    from campaigns.models import Campaign
+    from campaigns.services import HopperService
+    from calls.models import CallLog
+    from leads.models import Lead
+    
+    stats = {
+        'total_recycled': 0,
+        'by_campaign': {},
+        'by_status': {}
+    }
+    
+    try:
+        now = timezone.now()
+        cutoff = now - timedelta(hours=4)
+        
+        recycle_statuses = ['failed', 'no_answer', 'busy', 'dropped', 'congestion']
+        
+        for campaign in Campaign.objects.filter(status='active'):
+            max_attempts = campaign.max_attempts or 3
+            
+            failed_calls = CallLog.objects.filter(
+                campaign=campaign,
+                call_status__in=recycle_statuses,
+                start_time__gte=cutoff,
+                lead__isnull=False,
+                lead__call_count__lt=max_attempts
+            ).values_list('lead_id', flat=True).distinct()
+            
+            if not failed_calls:
+                continue
+            
+            existing_in_hopper = HopperService.get_queued_lead_ids(campaign.id)
+            
+            leads_to_add = Lead.objects.filter(
+                id__in=failed_calls,
+                status__in=['no_answer', 'busy', 'callback']
+            ).exclude(id__in=existing_in_hopper)
+            
+            if leads_to_add.exists():
+                count = HopperService.add_leads(campaign.id, leads_to_add)
+                stats['total_recycled'] += count
+                stats['by_campaign'][campaign.name] = count
+                logger.info(f"Recycled {count} failed calls for campaign {campaign.name}")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in recycle_failed_calls: {e}", exc_info=True)
+        return {'error': str(e)}
+
+
+@shared_task
+def retry_dropped_calls():
+    """
+    Handle dropped calls (customer answered but no agent available)
+    These get immediate high-priority retry.
+    
+    Schedule: Every 2 minutes
+    """
+    from campaigns.models import Campaign, DialerHopper
+    from calls.models import CallLog
+    
+    stats = {'retried': 0}
+    
+    try:
+        cutoff = timezone.now() - timedelta(hours=1)
+        
+        dropped_calls = CallLog.objects.filter(
+            call_status='dropped',
+            start_time__gte=cutoff,
+            lead__isnull=False,
+            campaign__isnull=False
+        ).select_related('lead', 'campaign')
+        
+        for call in dropped_calls:
+            lead = call.lead
+            
+            # Check if already in hopper
+            if DialerHopper.objects.filter(
+                campaign=call.campaign,
+                lead=lead,
+                status__in=['new', 'locked', 'dialing']
+            ).exists():
+                continue
+            
+            # Add to hopper with high priority
+            DialerHopper.objects.create(
+                campaign=call.campaign,
+                lead=lead,
+                phone_number=lead.phone_number,
+                priority=90,
+                status='new'
+            )
+            
+            stats['retried'] += 1
+        
+        if stats['retried'] > 0:
+            logger.info(f"Queued {stats['retried']} dropped calls for retry")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in retry_dropped_calls: {e}")
+        return {'error': str(e)}
+
+
+# ============================================================================
+# PHASE 2.4: Lead Recycling by Rules
+# ============================================================================
+
+@shared_task
+def process_recycle_rules():
+    """
+    PHASE 2.4: Process all active lead recycle rules
+    
+    Schedule: Every 15 minutes
+    """
+    from leads.models import LeadRecycleRule, LeadRecycleLog
+    
+    stats = {
+        'rules_processed': 0,
+        'total_recycled': 0,
+        'by_rule': {}
+    }
+    
+    try:
+        now = timezone.now()
+        rules = LeadRecycleRule.objects.filter(is_active=True)
+        
+        for rule in rules:
+            if not rule.is_currently_active():
+                continue
+            
+            eligible_leads = rule.get_eligible_leads()
+            
+            if not eligible_leads.exists():
+                continue
+            
+            recycled = 0
+            
+            for lead in eligible_leads[:500]:  # Batch limit
+                try:
+                    LeadRecycleLog.objects.create(
+                        rule=rule,
+                        lead=lead,
+                        old_status=lead.status,
+                        new_status=rule.target_status,
+                        old_call_count=lead.call_count
+                    )
+                    
+                    lead.status = rule.target_status
+                    lead.save(update_fields=['status'])
+                    recycled += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error recycling lead {lead.id}: {e}")
+            
+            rule.last_run = now
+            rule.total_recycled += recycled
+            rule.save(update_fields=['last_run', 'total_recycled'])
+            
+            stats['rules_processed'] += 1
+            stats['total_recycled'] += recycled
+            stats['by_rule'][rule.name] = recycled
+            
+            logger.info(f"Rule '{rule.name}' recycled {recycled} leads")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in process_recycle_rules: {e}", exc_info=True)
+        return {'error': str(e)}
+
+
+# ============================================================================
+# PHASE 2.5: Recording Sync
+# ============================================================================
+
+@shared_task
+def sync_call_recordings():
+    """
+    PHASE 2.5: Sync recordings from disk to database
+    
+    Schedule: Every 10 minutes
+    """
+    try:
+        from telephony.recording_service import RecordingService
+        
+        service = RecordingService()
+        synced = service.sync_recordings()
+        
+        logger.info(f"Synced {synced} recordings")
+        return {'synced': synced}
+        
+    except ImportError:
+        logger.warning("RecordingService not available")
+        return {'error': 'RecordingService not available'}
+    except Exception as e:
+        logger.error(f"Error in sync_call_recordings: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def cleanup_old_recordings(days=90):
+    """
+    Clean up recordings older than specified days
+    
+    Schedule: Daily at 3 AM
+    """
+    try:
+        from telephony.recording_service import RecordingService
+        
+        service = RecordingService()
+        deleted = service.cleanup_old_recordings(days)
+        
+        logger.info(f"Cleaned up {deleted} old recordings")
+        return {'deleted': deleted}
+        
+    except ImportError:
+        return {'error': 'RecordingService not available'}
+    except Exception as e:
+        logger.error(f"Error in cleanup_old_recordings: {e}")
+        return {'error': str(e)}
+
+
+# ============================================================================
+# Hopper Management Tasks
+# ============================================================================
+
+@shared_task
+def fill_hopper():
+    """
+    Fill hopper for active campaigns
+    
+    Schedule: Every minute
+    """
+    from campaigns.models import Campaign
+    from campaigns.services import HopperService
+    
+    try:
+        for campaign in Campaign.objects.filter(status='active'):
+            current_count = HopperService.get_hopper_count(campaign.id)
+            target = campaign.hopper_level or 100
+            
+            if current_count < target * 0.5:
+                filled = HopperService.fill_hopper(campaign.id, target - current_count)
+                if filled > 0:
+                    logger.info(f"Filled hopper for {campaign.name}: +{filled} leads")
+        
+        return {'success': True}
+        
+    except Exception as e:
+        logger.error(f"Error in fill_hopper: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def cleanup_stale_hopper_entries():
+    """
+    Remove stale entries from hopper (locked for too long)
+    
+    Schedule: Every 5 minutes
+    """
+    from campaigns.models import DialerHopper
+    
+    try:
+        cutoff = timezone.now() - timedelta(minutes=10)
+        
+        # Reset entries locked for too long
+        stale = DialerHopper.objects.filter(
+            status='locked',
+            locked_at__lt=cutoff
+        )
+        
+        count = stale.update(status='new', locked_at=None, locked_by=None)
+        
+        if count > 0:
+            logger.info(f"Reset {count} stale hopper entries")
+        
+        return {'reset': count}
+        
+    except Exception as e:
+        logger.error(f"Error in cleanup_stale_hopper_entries: {e}")
+        return {'error': str(e)}
+
+
+# ============================================================================
+# Statistics Update Tasks
+# ============================================================================
+
+@shared_task
+def update_campaign_stats():
+    """
+    Update campaign statistics
+    
+    Schedule: Every 5 minutes
+    """
+    from campaigns.models import Campaign, CampaignStats
+    from calls.models import CallLog
+    from django.db.models import Avg, Sum
+    
+    try:
+        today = timezone.now().date()
+        
+        for campaign in Campaign.objects.filter(status='active'):
+            calls = CallLog.objects.filter(
+                campaign=campaign,
+                start_time__date=today
+            )
+            
+            total_calls = calls.count()
+            answered_calls = calls.filter(
+                Q(call_status='answered') | Q(answer_time__isnull=False)
+            ).count()
+            dropped_calls = calls.filter(call_status='dropped').count()
+            
+            # Get dispositions marked as sale
+            sales = calls.filter(disposition__is_sale=True).count()
+            
+            # Calculate average duration
+            avg_duration = calls.filter(
+                talk_duration__gt=0
+            ).aggregate(avg=Avg('talk_duration'))['avg'] or 0
+            
+            # Calculate rates
+            contact_rate = (answered_calls / total_calls * 100) if total_calls > 0 else 0
+            conversion_rate = (sales / answered_calls * 100) if answered_calls > 0 else 0
+            
+            CampaignStats.objects.update_or_create(
+                campaign=campaign,
+                date=today,
+                defaults={
+                    'calls_made': total_calls,
+                    'calls_answered': answered_calls,
+                    'calls_dropped': dropped_calls,
+                    'sales': sales,
+                    'contact_rate': round(contact_rate, 2),
+                    'conversion_rate': round(conversion_rate, 2),
+                    'average_call_duration': int(avg_duration)
+                }
+            )
+        
+        return {'success': True}
+        
+    except Exception as e:
+        logger.error(f"Error in update_campaign_stats: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def update_agent_daily_stats():
+    """
+    Update agent daily statistics
+    
+    Schedule: Every 10 minutes
+    """
+    from django.contrib.auth.models import User
+    from users.models import AgentDailyStats
+    from calls.models import CallLog
+    from django.db.models import Sum, Avg
+    
+    try:
+        today = timezone.now().date()
+        
+        # Get all agents who made calls today
+        agents_with_calls = CallLog.objects.filter(
+            start_time__date=today,
+            agent__isnull=False
+        ).values_list('agent_id', flat=True).distinct()
+        
+        for agent_id in agents_with_calls:
+            calls = CallLog.objects.filter(
+                agent_id=agent_id,
+                start_time__date=today
+            )
+            
+            total_calls = calls.count()
+            answered_calls = calls.filter(answer_time__isnull=False).count()
+            total_talk_time = calls.aggregate(
+                total=Sum('talk_duration')
+            )['total'] or 0
+            
+            sales = calls.filter(disposition__is_sale=True).count()
+            
+            AgentDailyStats.objects.update_or_create(
+                agent_id=agent_id,
+                date=today,
+                defaults={
+                    'calls_made': total_calls,
+                    'calls_answered': answered_calls,
+                    'talk_time': total_talk_time,
+                    'sales': sales
+                }
+            )
+        
+        return {'agents_updated': len(agents_with_calls)}
+        
+    except Exception as e:
+        logger.error(f"Error in update_agent_daily_stats: {e}")
+        return {'error': str(e)}
+
+
+# ============================================================================
+# Session Cleanup Tasks (from Phase 1)
+# ============================================================================
+
+@shared_task
+def cleanup_orphaned_sessions():
+    """
+    Clean up orphaned agent sessions and stuck calls
+    
+    Schedule: Every 30 seconds
+    """
+    from agents.models import AgentDialerSession
+    from users.models import AgentStatus
+    from calls.models import CallLog
+    
+    now = timezone.now()
+    stats = {
+        'stuck_busy_reset': 0,
+        'stuck_wrapup_reset': 0,
+        'orphaned_sessions_cleared': 0
+    }
+    
+    try:
+        # Reset agents stuck in 'busy' for > 5 minutes without active call
+        busy_cutoff = now - timedelta(minutes=5)
+        stuck_busy = AgentStatus.objects.filter(
+            status='busy',
+            call_start_time__lt=busy_cutoff
+        )
+        
+        for agent_status in stuck_busy:
+            active_call = CallLog.objects.filter(
+                agent=agent_status.user,
+                end_time__isnull=True,
+                start_time__gte=busy_cutoff
+            ).exists()
+            
+            if not active_call:
+                agent_status.status = 'available'
+                agent_status.current_call_id = ''
+                agent_status.call_start_time = None
+                agent_status.status_changed_at = now
+                agent_status.save()
+                stats['stuck_busy_reset'] += 1
+        
+        # Reset agents stuck in wrapup for > 5 minutes
+        wrapup_cutoff = now - timedelta(minutes=5)
+        stats['stuck_wrapup_reset'] = AgentStatus.objects.filter(
+            status='wrapup',
+            status_changed_at__lte=wrapup_cutoff
+        ).update(
+            status='available',
+            current_call_id='',
+            call_start_time=None,
+            status_changed_at=now
+        )
+        
+        # Clean up orphaned sessions
+        connecting_cutoff = now - timedelta(minutes=2)
+        stats['orphaned_sessions_cleared'] = AgentDialerSession.objects.filter(
+            status='connecting',
+            created_at__lt=connecting_cutoff
+        ).update(status='offline')
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in cleanup_orphaned_sessions: {e}")
+        return {'error': str(e)}
+
+
+@shared_task
+def check_agent_registrations():
+    """
+    Check if available agents are actually registered in Asterisk.
+    If not, mark them offline.
+    Also cleans up zombie sessions for offline agents.
+    Schedule: Every 15 seconds
+    """
+    from users.models import AgentStatus
+    from agents.models import AgentDialerSession
+    from telephony.models import AsteriskServer
+    from telephony.services import AsteriskService
+    from django.db.models import Q
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    server = AsteriskServer.objects.filter(is_active=True).first()
+    if not server:
+        return
+        
+    service = AsteriskService(server)
+    
+    # 1. Bulk get all endpoint statuses first (Optimization)
+    all_endpoints = service.get_all_endpoint_statuses()
+    
+    # 2. Check agents marked as ONLINE (Available/Busy/Wrapup)
+    online_agents = AgentStatus.objects.exclude(status='offline').select_related('user', 'user__profile')
+    
+    count_offline = 0
+    
+    for agent_status in online_agents:
+        user = agent_status.user
+        
+        # Determine extension to check
+        extension = None
+        
+        # Check active session first
+        try:
+            session = AgentDialerSession.objects.filter(agent=user, status__in=['ready', 'connecting', 'incall']).order_by('-created_at').first()
+            if session:
+                extension = session.agent_extension
+            else:
+                # Safer profile access
+                if hasattr(user, 'profile'):
+                    extension = user.profile.extension
+        except Exception:
+            extension = None
+            
+        if not extension:
+            # No extension found, should be offline
+            if agent_status.status != 'offline':
+                logger.warning(f"Agent {user.username} has no extension/session. Marking offline.")
+                agent_status.status = 'offline'
+                agent_status.status_changed_at = timezone.now()
+                agent_status.save()
+                
+                # Kill all sessions
+                AgentDialerSession.objects.filter(
+                    agent=user, status__in=['ready', 'connecting', 'incall']
+                ).delete()
+                
+                count_offline += 1
+            continue
+            
+        # Skip if busy (in call) to avoid race conditions during call setup
+        if agent_status.status == 'busy':
+            continue
+
+        # Check registration using cached bulk data
+        # We assume extension is the string resource name (e.g. '101')
+        endpoint_info = all_endpoints.get(str(extension))
+        is_registered = endpoint_info.get('registered', False) if endpoint_info else False
+        
+        if not is_registered:
+            logger.warning(f"Agent {user.username} (Ext {extension}) not registered. Marking offline and deleting sessions.")
+            
+            # Update AgentStatus
+            agent_status.status = 'offline'
+            agent_status.status_changed_at = timezone.now()
+            agent_status.save()
+            count_offline += 1
+            
+            # Delete ALL active sessions
+            AgentDialerSession.objects.filter(
+                agent=user, status__in=['ready', 'connecting', 'incall']
+            ).delete()
+
+    # 2. Cleanup Zombie Sessions: Agents who are OFFLINE but have READY sessions
+    # This fixes the dashboard showing them as 'Available' (or 'Offline' in list)
+    zombie_count, _ = AgentDialerSession.objects.filter(
+        status__in=['ready', 'connecting', 'incall'],
+        agent__agent_status__status='offline'
+    ).delete()
+    
+    # 3. Cleanup Sessions for agents with NO AgentStatus (rare but possible)
+    orphaned_count, _ = AgentDialerSession.objects.filter(
+        status__in=['ready', 'connecting', 'incall'],
+        agent__agent_status__isnull=True
+    ).delete()
+    
+    if zombie_count > 0 or orphaned_count > 0:
+        logger.warning(f"Deleted {zombie_count} zombie and {orphaned_count} orphaned sessions")
+
+    return {
+        'checked': online_agents.count(), 
+        'marked_offline': count_offline, 
+        'zombies_deleted': zombie_count + orphaned_count
+    }
+
+
+# ============================================================================
+# Celery Beat Schedule Configuration
+# ============================================================================
+"""
+Add to your settings.py CELERY_BEAT_SCHEDULE:
+
+CELERY_BEAT_SCHEDULE = {
+    # Phase 1: Session cleanup
+    'cleanup-orphaned-sessions': {
+        'task': 'campaigns.tasks.cleanup_orphaned_sessions',
+        'schedule': 30.0,
+    },
+    
+    # Phase 2.3: Failed call recycling
+    'recycle-failed-calls': {
+        'task': 'campaigns.tasks.recycle_failed_calls',
+        'schedule': 300.0,  # 5 minutes
+    },
+    'retry-dropped-calls': {
+        'task': 'campaigns.tasks.retry_dropped_calls',
+        'schedule': 120.0,  # 2 minutes
+    },
+    
+    # Phase 2.4: Lead recycling rules
+    'process-recycle-rules': {
+        'task': 'campaigns.tasks.process_recycle_rules',
+        'schedule': 900.0,  # 15 minutes
+    },
+    
+    # Phase 2.5: Recording sync
+    'sync-call-recordings': {
+        'task': 'campaigns.tasks.sync_call_recordings',
+        'schedule': 600.0,  # 10 minutes
+    },
+    'cleanup-old-recordings': {
+        'task': 'campaigns.tasks.cleanup_old_recordings',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
+    },
+    
+    # Hopper management
+    'fill-hopper': {
+        'task': 'campaigns.tasks.fill_hopper',
+        'schedule': 60.0,
+    },
+    'cleanup-stale-hopper': {
+        'task': 'campaigns.tasks.cleanup_stale_hopper_entries',
+        'schedule': 300.0,
+    },
+    
+    # Statistics
+    'update-campaign-stats': {
+        'task': 'campaigns.tasks.update_campaign_stats',
+        'schedule': 300.0,
+    },
+    'update-agent-daily-stats': {
+        'task': 'campaigns.tasks.update_agent_daily_stats',
+        'schedule': 600.0,
+    },
+}
+"""

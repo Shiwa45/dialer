@@ -7,7 +7,11 @@
     <title>Agent Call Assistant</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/retro_phone.css' %}">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JsSIP for WebRTC - Using jsDelivr CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jssip@3.10.1/dist/jssip.min.js"></script>
     <style>
         :root {
             --primary-color: #4285f4;
@@ -570,35 +574,133 @@
             </div>
         </div>
 
-        <!-- Right Panel -->
+        <!-- Right Panel - Retro Phone -->
         <div class="right-panel">
-            <h3 class="text-lg font-semibold mb-4">Phone</h3>
+            <h3 class="text-lg font-semibold mb-4">WebRTC Phone</h3>
 
-            <div class="number-display">
-                <div class="flex items-center justify-between w-full">
-                    <span id="numberDisplay"></span>
-                    <button class="backspace-btn" onclick="backspace()">⌫</button>
+            <!-- Retro Phone Component -->
+            <div class="retro-phone">
+                <!-- Handset Visual -->
+                <div class="retro-handset" id="retroHandset">
+                    <span class="retro-handset-icon">📞</span>
+                </div>
+
+                <!-- LED Status Indicators -->
+                <div class="retro-leds">
+                    <div class="retro-led green" id="ledRegistered" title="Registered"></div>
+                    <div class="retro-led yellow" id="ledRinging" title="Ringing"></div>
+                    <div class="retro-led red" id="ledInCall" title="In Call"></div>
+                </div>
+
+                <!-- LED Display -->
+                <div class="retro-display">
+                    <div class="retro-number" id="retroNumber">—</div>
+                    <div class="retro-status" id="retroStatus">CONNECTING...</div>
+                    <div class="retro-timer" id="retroTimer" style="display: none;">00:00</div>
+                </div>
+
+                <!-- Retro Dialpad -->
+                <div class="retro-dialpad">
+                    <button class="retro-btn" onclick="dialpadPress('1')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">1</span>
+                            <span class="retro-btn-letters">&nbsp;</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('2')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">2</span>
+                            <span class="retro-btn-letters">ABC</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('3')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">3</span>
+                            <span class="retro-btn-letters">DEF</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('4')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">4</span>
+                            <span class="retro-btn-letters">GHI</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('5')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">5</span>
+                            <span class="retro-btn-letters">JKL</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('6')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">6</span>
+                            <span class="retro-btn-letters">MNO</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('7')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">7</span>
+                            <span class="retro-btn-letters">PQRS</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('8')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">8</span>
+                            <span class="retro-btn-letters">TUV</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('9')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">9</span>
+                            <span class="retro-btn-letters">WXYZ</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('*')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">*</span>
+                            <span class="retro-btn-letters">&nbsp;</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('0')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">0</span>
+                            <span class="retro-btn-letters">+</span>
+                        </div>
+                    </button>
+                    <button class="retro-btn" onclick="dialpadPress('#')">
+                        <div class="retro-btn-content">
+                            <span class="retro-btn-number">#</span>
+                            <span class="retro-btn-letters">&nbsp;</span>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Call Controls -->
+                <div class="retro-controls">
+                    <button class="retro-control-btn answer" id="btnAnswer" onclick="answerCall()"
+                        style="display: none;" title="Answer">
+                        <span class="material-icons">call</span>
+                    </button>
+                    <button class="retro-control-btn mute" id="btnMute" onclick="toggleMute()" disabled title="Mute">
+                        <span class="material-icons">mic</span>
+                    </button>
+                    <button class="retro-control-btn hangup" id="btnHangup" onclick="hangupCall()"
+                        style="display: none;" title="Hangup">
+                        <span class="material-icons">call_end</span>
+                    </button>
+                    <button class="retro-control-btn hold" id="btnHold" onclick="toggleHold()" disabled title="Hold">
+                        <span class="material-icons">pause</span>
+                    </button>
+                </div>
+
+                <!-- Backspace for number display -->
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button class="retro-backspace" onclick="backspaceNumber()" title="Backspace">⌫</button>
                 </div>
             </div>
 
-            <div class="dialpad">
-                <button onclick="addDigit('1')">1</button>
-                <button onclick="addDigit('2')">2</button>
-                <button onclick="addDigit('3')">3</button>
-                <button onclick="addDigit('4')">4</button>
-                <button onclick="addDigit('5')">5</button>
-                <button onclick="addDigit('6')">6</button>
-                <button onclick="addDigit('7')">7</button>
-                <button onclick="addDigit('8')">8</button>
-                <button onclick="addDigit('9')">9</button>
-                <button onclick="addDigit('*')">*</button>
-                <button onclick="addDigit('0')">0</button>
-                <button onclick="addDigit('#')">#</button>
-            </div>
-
-            <button id="mainCallBtn" class="call-btn" onclick="makeCall()">📞 Call</button>
-
-            <div class="status-buttons">
+            <!-- Status Buttons -->
+            <div class="status-buttons" style="margin-top: 1.5rem;">
                 <button class="status break" onclick="setStatus('BREAK')">BREAK</button>
                 <button class="status lunch" onclick="setStatus('LUNCH')">LUNCH</button>
                 <button class="status coffee" onclick="setStatus('COFFEE')">COFFEE</button>
@@ -903,6 +1005,18 @@
             });
         }
     </script>
+
+    <!-- WebRTC Configuration -->
+    <script>
+        window.WEBRTC_CONFIG = {
+            wsServer: '{{ webrtc_config.ws_server|default:"wss://localhost:8089/ws" }}',
+            sipUri: '{{ webrtc_config.sip_uri|default:"sip:1001@localhost" }}',
+            password: '{{ webrtc_config.password|default:"" }}',
+            displayName: '{{ user.get_full_name|default:user.username }}'
+        };
+    </script>
+    <script src="{% static 'js/webrtc_integration.js' %}"></script>
+
 </body>
 
 </html>

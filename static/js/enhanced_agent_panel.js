@@ -48,7 +48,10 @@ class EnhancedAgentPanel {
         }
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/agent/`;
+        // Expect a global AGENT_ID (injected by template) for per-agent channel
+        const agentId = window.AGENT_ID || window.agentId || null;
+        const wsPath = agentId ? `/ws/agent/${agentId}/` : '/ws/agent/';
+        const wsUrl = `${protocol}//${window.location.host}${wsPath}`;
 
         console.log('🔌 Connecting to WebSocket:', wsUrl);
 

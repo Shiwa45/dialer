@@ -1,12 +1,13 @@
 """
-Campaign Tasks - Phase 2 Complete
+Campaign Tasks - Phase 1.1+ Complete
 
 This module includes all Celery tasks for:
+- Phase 1.1: Auto wrapup timeout checking
 - Phase 2.3: Dropped call re-attempt
-- Phase 2.4: Lead recycling
+- Phase 2.4: Lead recycling  
 - Phase 2.5: Recording sync
-
-Add these to your existing campaigns/tasks.py
+- Predictive dialing
+- Hopper management
 """
 
 import logging
@@ -18,6 +19,37 @@ from django.db.models import Q, Count
 from campaigns.predictive_dialer import DialerManager
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# PHASE 1.1: Auto Wrapup Timeout Checking
+# ============================================================================
+
+@shared_task
+def check_auto_wrapup_timeouts():
+    """
+    PHASE 1.1: Check agents in wrapup and auto-dispose if timeout reached
+    
+    Schedule: Every 5 seconds
+    
+    This task monitors all agents in wrapup status and automatically
+    applies disposition when the configured timeout is exceeded.
+    """
+    from campaigns.auto_wrapup_service import get_auto_wrapup_service
+    
+    try:
+        service = get_auto_wrapup_service()
+        stats = service.check_and_process_timeouts()
+        
+        # Only log if there were timeouts or errors
+        if stats.get('timed_out', 0) > 0 or stats.get('errors', 0) > 0:
+            logger.info(f"Auto-wrapup check completed: {stats}")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in check_auto_wrapup_timeouts: {e}", exc_info=True)
+        return {'error': str(e)}
 
 @shared_task
 def predictive_dial():
@@ -223,6 +255,114 @@ def process_recycle_rules():
         
     except Exception as e:
         logger.error(f"Error in process_recycle_rules: {e}", exc_info=True)
+        return {'error': str(e)}
+
+
+# ============================================================================
+# PHASE 2.4: Lead Status Reconciliation
+# ============================================================================
+
+@shared_task
+def reconcile_lead_status():
+    """
+    PHASE 2.4: Daily reconciliation of lead status
+    
+    Finds and fixes leads with missing or incorrect status
+    
+    Schedule: Daily at 2 AM
+    """
+    from leads.lead_status_service import get_lead_status_service
+    
+    try:
+        service = get_lead_status_service()
+        
+        # Find issues
+        issues = service.find_leads_with_missing_status()
+        
+        if issues.get('total_issues', 0) > 0:
+            logger.warning(
+                f"Found {issues['total_issues']} leads with status issues: "
+                f"dialed_but_new={issues['dialed_but_new']}, "
+                f"missing_tracking={issues['missing_dial_tracking']}"
+            )
+            
+            # Auto-fix if under threshold
+            if issues['total_issues'] < 1000:
+                result = service.fix_leads_with_missing_status(dry_run=False)
+                logger.info(
+                    f"Auto-fixed {result.get('leads_fixed', 0)} leads. "
+                    f"Status distribution: {result.get('status_assigned', {})}"
+                )
+                return result
+            else:
+                logger.error(
+                    f"Too many issues ({issues['total_issues']}) - manual review required"
+                )
+                return {'needs_manual_review': True, 'issues': issues}
+        
+        return {'status': 'ok', 'issues_found': 0}
+        
+    except Exception as e:
+        logger.error(f"Error in reconcile_lead_status: {e}", exc_info=True)
+        return {'error': str(e)}
+
+
+@shared_task
+def sync_call_log_to_lead_status():
+    """
+    PHASE 2.4: Sync CallLog status back to Lead
+    
+    Ensures every CallLog has updated corresponding Lead
+    
+    Schedule: Every 10 minutes
+    """
+    from calls.models import CallLog
+    from leads.lead_status_service import get_lead_status_service
+    
+    stats = {
+        'checked': 0,
+        'updated': 0,
+        'errors': 0
+    }
+    
+    try:
+        service = get_lead_status_service()
+        
+        # Get recent calls without proper lead updates
+        cutoff = timezone.now() - timedelta(hours=2)
+        
+        calls_needing_sync = CallLog.objects.filter(
+            lead__isnull=False,
+            end_time__gte=cutoff,
+            call_status__in=['no_answer', 'busy', 'failed', 'dropped', 'answered']
+        ).select_related('lead')[:500]  # Batch of 500
+        
+        for call in calls_needing_sync:
+            stats['checked'] += 1
+            
+            try:
+                # Update lead from call result
+                result = service.update_lead_from_call_result(
+                    lead_id=call.lead.id,
+                    call_status=call.call_status,
+                    disposition=call.disposition_status,
+                    increment_dial=False  # Don't double-count
+                )
+                
+                if result.get('success'):
+                    stats['updated'] += 1
+                
+            except Exception as e:
+                logger.error(f"Error syncing call {call.id}: {e}")
+                stats['errors'] += 1
+        
+        if stats['updated'] > 0:
+            logger.info(f"Lead status sync: {stats}")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in sync_call_log_to_lead_status: {e}", exc_info=True)
         return {'error': str(e)}
 
 

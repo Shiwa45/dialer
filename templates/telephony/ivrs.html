@@ -99,23 +99,30 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Search IVRs..." 
-                           value="{{ request.GET.search }}">
+                    <input type="text" name="search" class="form-control" placeholder="Search IVRs..."
+                        value="{{ request.GET.search }}">
                 </div>
                 <div class="col-md-2">
-                    <select name="status" class="form-select">
-                        <option value="">All Status</option>
-                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
-                    </select>
+                <option value="active"
+                    {% if request.GET.status == 'active' %}selected{% endif %}>
+                    Active
+                </option>
+
+                <option value="inactive"
+                    {% if request.GET.status == 'inactive' %}selected{% endif %}>
+                    Inactive
+                </option>
                 </div>
                 <div class="col-md-3">
                     <select name="server" class="form-select">
                         <option value="">All Servers</option>
                         {% for server in servers %}
-                            <option value="{{ server.id }}" {% if request.GET.server == server.id|stringformat:"s" %}selected{% endif %}>
-                                {{ server.name }}
-                            </option>
+                            {% with server_id=server.id|stringformat:"s" %}
+                                <option value="{{ server.id }}"
+                                    {% if request.GET.server == server_id %}selected{% endif %}>
+                                    {{ server.name }}
+                                </option>
+                            {% endwith %}
                         {% endfor %}
                     </select>
                 </div>
@@ -140,163 +147,173 @@
         </div>
         <div class="card-body p-0">
             {% if ivrs %}
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" id="ivrsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Description</th>
-                                <th>Options</th>
-                                <th>Server</th>
-                                <th>Direct Dial</th>
-                                <th>Timeouts</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ivr in ivrs %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'telephony:ivr_detail' ivr.pk %}" class="text-decoration-none fw-bold">
-                                            {{ ivr.name }}
-                                        </a>
-                                        <br>
-                                        <small class="text-muted">ID: {{ ivr.ivr_id }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="text-truncate" style="max-width: 200px;" title="{{ ivr.description }}">
-                                            {{ ivr.description|default:"No description" }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <span class="badge bg-primary me-2">{{ ivr.options.count }}</span>
-                                            {% if ivr.options.count > 0 %}
-                                                <small class="text-muted">
-                                                    {% for option in ivr.options.all|slice:":3" %}
-                                                        {{ option.digit }}{% if not forloop.last %},{% endif %}
-                                                    {% endfor %}
-                                                    {% if ivr.options.count > 3 %}...{% endif %}
-                                                </small>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ ivr.asterisk_server.name }}</small>
-                                    </td>
-                                    <td>
-                                        {% if ivr.allow_direct_dial %}
-                                            <i class="fas fa-check text-success" title="Direct dial enabled"></i>
-                                        {% else %}
-                                            <i class="fas fa-times text-muted" title="Direct dial disabled"></i>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            D: {{ ivr.digit_timeout|floatformat:0 }}ms<br>
-                                            R: {{ ivr.response_timeout|floatformat:0 }}ms
-                                        </small>
-                                    </td>
-                                    <td>
-                                        {% if ivr.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ ivr.created_at|date:"M d, Y" }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                Actions
-                                            </button>
-                                            <ul class="dropdown-menu">
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'telephony:ivr_detail' ivr.pk %}">
-                                                        <i class="fas fa-eye"></i> View Details
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'telephony:ivr_options' ivr.pk %}">
-                                                        <i class="fas fa-list"></i> Manage Options
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'telephony:update_ivr' ivr.pk %}">
-                                                        <i class="fas fa-edit"></i> Edit
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" onclick="testIVR('{{ ivr.pk }}')">
-                                                        <i class="fas fa-phone"></i> Test IVR
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" onclick="exportIVR('{{ ivr.pk }}')">
-                                                        <i class="fas fa-download"></i> Export Config
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDelete('{{ ivr.pk }}', '{{ ivr.name }}')">
-                                                        <i class="fas fa-trash"></i> Delete
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Pagination -->
-                {% if is_paginated %}
-                    <div class="card-footer bg-white">
-                        <nav aria-label="IVR pagination">
-                            <ul class="pagination justify-content-center mb-0">
-                                {% if page_obj.has_previous %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">First</a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">Previous</a>
-                                    </li>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="ivrsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Options</th>
+                            <th>Server</th>
+                            <th>Direct Dial</th>
+                            <th>Timeouts</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ivr in ivrs %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'telephony:ivr_detail' ivr.pk %}" class="text-decoration-none fw-bold">
+                                    {{ ivr.name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">ID: {{ ivr.ivr_id }}</small>
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 200px;" title="{{ ivr.description }}">
+                                    {{ ivr.description|default:"No description" }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary me-2">{{ ivr.options.count }}</span>
+                                    {% if ivr.options.count > 0 %}
+                                    <small class="text-muted">
+                                        {% for option in ivr.options.all|slice:":3" %}
+                                        {{ option.digit }}{% if not forloop.last %},{% endif %}
+                                        {% endfor %}
+                                        {% if ivr.options.count > 3 %}...{% endif %}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ ivr.asterisk_server.name }}</small>
+                            </td>
+                            <td>
+                                {% if ivr.allow_direct_dial %}
+                                <i class="fas fa-check text-success" title="Direct dial enabled"></i>
+                                {% else %}
+                                <i class="fas fa-times text-muted" title="Direct dial disabled"></i>
                                 {% endif %}
-
-                                <li class="page-item active">
-                                    <span class="page-link">
-                                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                                    </span>
-                                </li>
-
-                                {% if page_obj.has_next %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">Next</a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">Last</a>
-                                    </li>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    D: {{ ivr.digit_timeout|floatformat:0 }}ms<br>
+                                    R: {{ ivr.response_timeout|floatformat:0 }}ms
+                                </small>
+                            </td>
+                            <td>
+                                {% if ivr.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
                                 {% endif %}
-                            </ul>
-                        </nav>
-                    </div>
-                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ ivr.created_at|date:"M d, Y" }}</small>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'telephony:ivr_detail' ivr.pk %}">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'telephony:ivr_options' ivr.pk %}">
+                                                <i class="fas fa-list"></i> Manage Options
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'telephony:update_ivr' ivr.pk %}">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="testIVR('{{ ivr.pk }}')">
+                                                <i class="fas fa-phone"></i> Test IVR
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="exportIVR('{{ ivr.pk }}')">
+                                                <i class="fas fa-download"></i> Export Config
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#"
+                                                onclick="confirmDelete('{{ ivr.pk }}', '{{ ivr.name }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="card-footer bg-white">
+                <nav aria-label="IVR pagination">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">Previous</a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}">Last</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
             {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-phone-volume fa-3x text-muted mb-3"></i>
-                    <h5>No IVRs found</h5>
-                    <p class="text-muted">Get started by creating your first IVR menu.</p>
-                    <a href="{% url 'telephony:create_ivr' %}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Create IVR
-                    </a>
-                </div>
+            <div class="text-center py-5">
+                <i class="fas fa-phone-volume fa-3x text-muted mb-3"></i>
+                <h5>No IVRs found</h5>
+                <p class="text-muted">Get started by creating your first IVR menu.</p>
+                <a href="{% url 'telephony:create_ivr' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create IVR
+                </a>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -363,82 +380,82 @@
 <script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
 <script src="{% static 'js/dataTables.bootstrap5.min.js' %}"></script>
 <script>
-$(document).ready(function() {
-    $('#ivrsTable').DataTable({
-        "pageLength": 25,
-        "ordering": true,
-        "searching": false,
-        "info": false,
-        "lengthChange": false,
-        "paging": false,
-        "columnDefs": [
-            { "orderable": false, "targets": -1 }
-        ]
-    });
-});
-
-function confirmDelete(ivrId, ivrName) {
-    $('#ivrName').text(ivrName);
-    $('#confirmDeleteBtn').attr('href', '{% url "telephony:ivrs" %}' + ivrId + '/delete/');
-    $('#deleteModal').modal('show');
-}
-
-function testIVR(ivrId) {
-    // Load available extensions
-    $.get('{% url "telephony:available_extensions" %}')
-        .done(function(data) {
-            const select = $('#testExtension');
-            select.empty().append('<option value="">Select extension...</option>');
-            data.extensions.forEach(function(ext) {
-                select.append(`<option value="${ext.extension}">${ext.extension} - ${ext.name}</option>`);
-            });
+    $(document).ready(function () {
+        $('#ivrsTable').DataTable({
+            "pageLength": 25,
+            "ordering": true,
+            "searching": false,
+            "info": false,
+            "lengthChange": false,
+            "paging": false,
+            "columnDefs": [
+                { "orderable": false, "targets": -1 }
+            ]
         });
-    
-    $('#testIVRModal').data('ivr-id', ivrId).modal('show');
-}
+    });
 
-function executeIVRTest() {
-    const ivrId = $('#testIVRModal').data('ivr-id');
-    const phoneNumber = $('#testPhoneNumber').val();
-    const extension = $('#testExtension').val();
-    
-    if (!phoneNumber || !extension) {
-        alert('Please enter both phone number and extension');
-        return;
+    function confirmDelete(ivrId, ivrName) {
+        $('#ivrName').text(ivrName);
+        $('#confirmDeleteBtn').attr('href', '/telephony/ivrs/' + ivrId + '/delete/');
+        $('#deleteModal').modal('show');
     }
-    
-    // Initiate test call
-    $.post('{% url "telephony:test_ivr_call" %}', {
-        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
-        'ivr_id': ivrId,
-        'phone_number': phoneNumber,
-        'extension': extension
-    })
-    .done(function(data) {
-        if (data.success) {
-            alert('Test call initiated successfully. Check your phone.');
-            $('#testIVRModal').modal('hide');
-        } else {
-            alert('Failed to initiate test call: ' + data.error);
-        }
-    })
-    .fail(function() {
-        alert('Failed to initiate test call. Please try again.');
-    });
-}
 
-function exportIVR(ivrId) {
-    window.open('{% url "telephony:export_ivr_config" %}' + ivrId + '/', '_blank');
-}
+    function testIVR(ivrId) {
+        // Load available extensions
+        $.get('{% url "telephony:available_extensions" %}')
+            .done(function (data) {
+                const select = $('#testExtension');
+                select.empty().append('<option value="">Select extension...</option>');
+                data.extensions.forEach(function (ext) {
+                    select.append(`<option value="${ext.extension}">${ext.extension} - ${ext.name}</option>`);
+                });
+            });
 
-// Auto-refresh IVR status every 30 seconds
-setInterval(function() {
-    $('.badge').each(function() {
-        const badge = $(this);
-        if (badge.hasClass('bg-success') || badge.hasClass('bg-danger')) {
-            // Could implement real-time status checking here
+        $('#testIVRModal').data('ivr-id', ivrId).modal('show');
+    }
+
+    function executeIVRTest() {
+        const ivrId = $('#testIVRModal').data('ivr-id');
+        const phoneNumber = $('#testPhoneNumber').val();
+        const extension = $('#testExtension').val();
+
+        if (!phoneNumber || !extension) {
+            alert('Please enter both phone number and extension');
+            return;
         }
-    });
-}, 30000);
+
+        // Initiate test call
+        $.post('{% url "telephony:test_ivr_call" %}', {
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+            'ivr_id': ivrId,
+            'phone_number': phoneNumber,
+            'extension': extension
+        })
+            .done(function (data) {
+                if (data.success) {
+                    alert('Test call initiated successfully. Check your phone.');
+                    $('#testIVRModal').modal('hide');
+                } else {
+                    alert('Failed to initiate test call: ' + data.error);
+                }
+            })
+            .fail(function () {
+                alert('Failed to initiate test call. Please try again.');
+            });
+    }
+
+    function exportIVR(ivrId) {
+        window.open('/telephony/ivrs/' + ivrId + '/export/', '_blank');
+    }
+
+    // Auto-refresh IVR status every 30 seconds
+    setInterval(function () {
+        $('.badge').each(function () {
+            const badge = $(this);
+            if (badge.hasClass('bg-success') || badge.hasClass('bg-danger')) {
+                // Could implement real-time status checking here
+            }
+        });
+    }, 30000);
 </script>
 {% endblock %}

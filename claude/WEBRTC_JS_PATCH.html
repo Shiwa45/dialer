@@ -1,0 +1,663 @@
+<!-- 
+    WEBRTC_DASHBOARD_JS_PATCH.html
+    ==============================
+    
+    INSTRUCTIONS:
+    1. Open templates/agents/webrtc_dashboard.html
+    2. Find the line:  {{ webrtc_config|json_script:"agent-webrtc-config" }}
+       If it doesn't exist, add it BEFORE the closing </div> of agent-app div.
+    
+    3. REPLACE everything from:
+         <script src="{% static 'js/jssip.min.js' %}"></script>
+         <script>
+         /* WEBRTC AGENT DASHBOARD ... */
+       
+       ALL THE WAY TO the closing:
+         </script>
+         </body>
+         </html>
+    
+    4. PASTE this entire file content in its place.
+    
+    THE CRITICAL FIX: ICE servers are now read from json_script tag (safe JSON)
+    instead of Django template escapejs (which was mangling the JSON).
+-->
+
+    <!-- ICE servers as safe JSON (no escapejs mangling) -->
+    {{ webrtc_config.ice_servers|json_script:"webrtc-ice-servers" }}
+
+    <!-- JsSIP -->
+    <script src="{% static 'js/jssip.min.js' %}"></script>
+    <script>
+    /* ==================================================================
+       WEBRTC AGENT DASHBOARD v3 — Fixed ICE + Auto-Answer + Full Controls
+       ================================================================== */
+    (function(){
+    'use strict';
+
+    // ── Read ICE servers from json_script (SAFE — no template escaping) ─
+    let ICE_SERVERS;
+    try {
+        const el = document.getElementById('webrtc-ice-servers');
+        ICE_SERVERS = el ? JSON.parse(el.textContent) : null;
+    } catch(e) {
+        console.warn('[WebRTC] Failed to parse ICE servers from json_script:', e);
+        ICE_SERVERS = null;
+    }
+    // Validate & fallback
+    if (!Array.isArray(ICE_SERVERS) || ICE_SERVERS.length === 0) {
+        ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+    }
+    // Ensure every entry has "urls" as a string (not array of objects)
+    ICE_SERVERS = ICE_SERVERS.map(function(s) {
+        if (typeof s === 'string') return { urls: s };
+        if (s && s.urls) return s;
+        return null;
+    }).filter(Boolean);
+
+    console.log('[WebRTC] ICE Servers:', JSON.stringify(ICE_SERVERS));
+
+    // ── Config from Django data attributes / template vars ──────────
+    const CFG = {
+        ws:     '{{ webrtc_config.ws_server|default:"" }}',
+        uri:    '{{ webrtc_config.sip_uri|default:"" }}',
+        ext:    '{{ webrtc_config.extension|default:"" }}',
+        pw:     '{{ webrtc_config.password|default:"" }}',
+        domain: '{{ webrtc_config.domain|default:"" }}',
+        name:   '{{ webrtc_config.display_name|default:agent.username }}',
+    };
+    const AGENT_ID = '{{ agent.id }}';
+    const CSRF     = '{{ csrf_token }}';
+    const URL_STATUS      = '{% url "agents:update_status" %}';
+    const URL_DISP        = '{% url "agents:set_disposition" %}';
+    const URL_HANGUP      = '{% url "agents:hangup" %}';
+    const URL_LEAD        = '{% url "agents:get_lead_info" %}';
+    const URL_CALL_STATUS = '{% url "agents:call_status" %}';
+
+    // ── State ───────────────────────────────────────────────────────
+    let ua = null, session = null, dialNum = '', callTimer = null, callSec = 0;
+    let muted = false, held = false, autoAns = false, callId = null, selDisp = null;
+
+    // ── DOM ─────────────────────────────────────────────────────────
+    const $ = function(id) { return document.getElementById(id); };
+    const numDisp    = $('phone-number-display');
+    const stDisp     = $('phone-status-display');
+    const tmDisp     = $('phone-timer');
+    const btnCall    = $('btn-call');
+    const btnHang    = $('btn-hangup');
+    const btnMute    = $('btn-mute');
+    const btnHold    = $('btn-hold');
+    const btnXfer    = $('btn-transfer');
+    const btnClear   = $('btn-clear');
+    const wDot       = $('webrtc-dot');
+    const wText      = $('webrtc-status-text');
+    const regText    = $('reg-text');
+    const remAudio   = $('remote-audio');
+    const badge      = $('call-badge');
+    const placeH     = $('call-placeholder');
+    const detailsDiv = $('call-details');
+    const pill       = $('status-pill');
+    const dispOver   = $('disposition-overlay');
+
+    // ── Helpers ─────────────────────────────────────────────────────
+    function toast(m, t) {
+        var e = $('toast');
+        e.textContent = m;
+        e.className = 'toast-notification show ' + (t || 'info');
+        console.log('[TOAST] ' + m);
+        setTimeout(function() { e.classList.remove('show'); }, 3500);
+    }
+
+    function post(url, data) {
+        var b = new URLSearchParams();
+        if (data) Object.keys(data).forEach(function(k) { b.append(k, data[k]); });
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': CSRF,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: b.toString()
+        }).then(function(r) { return r.json(); });
+    }
+
+    function setStatus(t) { stDisp.textContent = t; }
+    function updNum() { numDisp.textContent = dialNum; }
+
+    function startTm() {
+        stopTm(); callSec = 0;
+        tmDisp.style.display = 'block'; tmDisp.textContent = '00:00';
+        callTimer = setInterval(function() {
+            callSec++;
+            var m = String(Math.floor(callSec/60)).padStart(2,'0');
+            var s = String(callSec%60).padStart(2,'0');
+            tmDisp.textContent = m + ':' + s;
+            $('call-duration').textContent = m + ':' + s;
+        }, 1000);
+    }
+
+    function stopTm() {
+        if (callTimer) { clearInterval(callTimer); callTimer = null; }
+        tmDisp.style.display = 'none';
+    }
+
+    function setCallUI(on) {
+        btnCall.style.display = on ? 'none' : 'flex';
+        btnHang.style.display = on ? 'flex' : 'none';
+        btnMute.disabled = !on;
+        btnHold.disabled = !on;
+        btnXfer.disabled = !on;
+        if (on) { placeH.style.display = 'none'; detailsDiv.style.display = 'block'; }
+    }
+
+    function resetCallUI() {
+        setCallUI(false);
+        placeH.style.display = 'block'; detailsDiv.style.display = 'none';
+        badge.className = 'call-status-badge idle';
+        badge.innerHTML = '<i class="fa-solid fa-phone-slash"></i> No Active Call';
+        $('call-number').textContent = '—';
+        $('call-duration').textContent = '00:00';
+        $('call-status-text').textContent = '—';
+        $('call-lead-name').textContent = '—';
+        stopTm(); muted = false; held = false;
+        btnMute.classList.remove('active');
+        btnMute.innerHTML = '<i class="fa-solid fa-microphone"></i> Mute';
+        btnHold.classList.remove('active');
+        btnHold.innerHTML = '<i class="fa-solid fa-pause"></i> Hold';
+        btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> CALL';
+        setStatus(ua && ua.isRegistered() ? 'READY' : 'OFFLINE');
+    }
+
+    // ── JsSIP Init ──────────────────────────────────────────────────
+    function initJsSIP() {
+        if (!CFG.ws || !CFG.uri) {
+            wDot.className = 'webrtc-dot failed';
+            wText.textContent = 'Config missing';
+            regText.textContent = 'WebRTC config error';
+            regText.style.color = 'var(--danger)';
+            return;
+        }
+
+        console.log('[WebRTC] Connecting to:', CFG.ws, 'URI:', CFG.uri);
+        console.log('[WebRTC] ICE config:', JSON.stringify(ICE_SERVERS));
+
+        wDot.className = 'webrtc-dot connecting';
+        wText.textContent = 'Connecting...';
+        setStatus('CONNECTING...');
+
+        try {
+            var sock = new JsSIP.WebSocketInterface(CFG.ws);
+            ua = new JsSIP.UA({
+                sockets: [sock],
+                uri: CFG.uri,
+                password: CFG.pw,
+                display_name: CFG.name,
+                register: true,
+                session_timers: false,
+                user_agent: 'EasyianWebRTC/1.0'
+            });
+
+            ua.on('registered', function() {
+                console.log('[WebRTC] Registered!');
+                wDot.className = 'webrtc-dot registered';
+                wText.textContent = 'Registered (' + CFG.ext + ')';
+                regText.textContent = 'WebRTC registered ✓';
+                regText.style.color = 'var(--success)';
+                setStatus('READY');
+                btnCall.disabled = false;
+                toast('Phone registered', 'success');
+            });
+
+            ua.on('unregistered', function() {
+                wDot.className = 'webrtc-dot';
+                wText.textContent = 'Unregistered';
+                regText.textContent = 'Unregistered';
+                regText.style.color = 'var(--warning)';
+                setStatus('OFFLINE');
+                btnCall.disabled = true;
+            });
+
+            ua.on('registrationFailed', function(e) {
+                console.error('[WebRTC] Registration failed:', e.cause);
+                wDot.className = 'webrtc-dot failed';
+                wText.textContent = 'Failed: ' + (e.cause || '');
+                regText.textContent = 'Registration failed';
+                regText.style.color = 'var(--danger)';
+                setStatus('REG FAILED');
+                btnCall.disabled = true;
+                toast('Registration failed: ' + (e.cause || ''), 'error');
+            });
+
+            ua.on('newRTCSession', function(e) { handleSession(e); });
+            ua.start();
+
+        } catch(err) {
+            console.error('[WebRTC] Init error:', err);
+            wDot.className = 'webrtc-dot failed';
+            wText.textContent = 'Error';
+            setStatus('ERROR');
+            toast('Init failed: ' + err.message, 'error');
+        }
+    }
+
+    // ── Session handling ────────────────────────────────────────────
+    function handleSession(e) {
+        var s = e.session;
+        var dir = s.direction;
+
+        console.log('[WebRTC] New session:', dir);
+
+        if (session) {
+            // Already in a call — reject new incoming
+            if (dir === 'incoming') s.terminate({ status_code: 486 });
+            return;
+        }
+
+        session = s;
+
+        // Remote audio stream
+        s.on('peerconnection', function(pc) {
+            pc.peerconnection.addEventListener('track', function(ev) {
+                if (ev.streams && ev.streams[0]) {
+                    remAudio.srcObject = ev.streams[0];
+                }
+            });
+        });
+
+        s.on('progress', function() {
+            setStatus(dir === 'incoming' ? 'RINGING...' : 'CALLING...');
+            badge.className = 'call-status-badge ringing';
+            badge.innerHTML = '<i class="fa-solid fa-phone-volume"></i> ' +
+                (dir === 'incoming' ? 'Incoming' : 'Ringing');
+            $('call-status-text').textContent = dir === 'incoming' ? 'Incoming' : 'Ringing';
+        });
+
+        s.on('accepted', function() {
+            setStatus('CONNECTED');
+            badge.className = 'call-status-badge connected';
+            badge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
+            $('call-status-text').textContent = 'Connected';
+            setCallUI(true);
+            startTm();
+        });
+
+        s.on('confirmed', function() {
+            setStatus('CONNECTED');
+            setCallUI(true);
+            if (!callTimer) startTm();
+        });
+
+        s.on('ended', function() { endSession('Call ended'); });
+        s.on('failed', function(ev) { endSession('Failed: ' + (ev.cause || '')); });
+
+        // Show caller info
+        var rNum = (s.remote_identity && s.remote_identity.uri)
+            ? s.remote_identity.uri.user : (dialNum || 'Unknown');
+        $('call-number').textContent = rNum;
+        numDisp.textContent = rNum;
+        setCallUI(true);
+        placeH.style.display = 'none';
+        detailsDiv.style.display = 'block';
+
+        // Handle incoming
+        if (dir === 'incoming') {
+            setStatus('INCOMING: ' + rNum);
+            if (autoAns) {
+                toast('Auto-answering...', 'info');
+                setTimeout(function() { answerCall(); }, 500);
+            } else {
+                btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> ANSWER';
+                btnCall.style.display = 'flex';
+                btnCall.disabled = false;
+                btnHang.style.display = 'flex';
+            }
+        }
+    }
+
+    function endSession(reason) {
+        console.log('[WebRTC] Session ended:', reason);
+        session = null;
+        resetCallUI();
+        dialNum = ''; updNum();
+        setStatus('READY');
+        if (callId) { openDisposition(); }
+        toast(reason, 'info');
+    }
+
+    // ── Call Actions ────────────────────────────────────────────────
+    function makeCall() {
+        if (!ua || !ua.isRegistered()) { toast('Not registered', 'error'); return; }
+        if (!dialNum) { toast('Enter a number', 'error'); return; }
+
+        var target = 'sip:' + dialNum + '@' + CFG.domain;
+        console.log('[WebRTC] Calling:', target);
+
+        try {
+            ua.call(target, {
+                mediaConstraints: { audio: true, video: false },
+                pcConfig: { iceServers: ICE_SERVERS },
+                rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: false }
+            });
+            setCallUI(true);
+            setStatus('CALLING...');
+        } catch(err) {
+            toast('Call failed: ' + err.message, 'error');
+        }
+    }
+
+    function answerCall() {
+        if (!session) {
+            console.warn('[WebRTC] No session to answer');
+            return;
+        }
+
+        btnCall.disabled = true;
+        console.log('[WebRTC] Answering call. Session status:', session.status);
+
+        // Skip if already answered
+        if (session.isEstablished && session.isEstablished()) {
+            console.log('[WebRTC] Already connected');
+            setCallUI(true);
+            return;
+        }
+
+        try {
+            session.answer({
+                mediaConstraints: { audio: true, video: false },
+                pcConfig: { iceServers: ICE_SERVERS }
+            });
+            console.log('[WebRTC] Answer sent successfully');
+        } catch(e) {
+            console.error('[WebRTC] Answer error:', e);
+            if (e.message && e.message.indexOf('Invalid status') !== -1) {
+                console.warn('[WebRTC] Race condition — session may already be answered');
+            } else {
+                toast('Answer failed: ' + e.message, 'error');
+                btnCall.disabled = false;
+            }
+        }
+    }
+
+    function hangupCall() {
+        if (session) {
+            try { session.terminate(); } catch(e) { console.warn(e); }
+        }
+        if (callId) {
+            post(URL_HANGUP, { call_id: callId })['catch'](function(){});
+        }
+        resetCallUI();
+        dialNum = ''; updNum();
+    }
+
+    function toggleMute() {
+        if (!session) return;
+        muted = !muted;
+        if (muted) {
+            session.mute({ audio: true });
+            btnMute.classList.add('active');
+            btnMute.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> Unmute';
+        } else {
+            session.unmute({ audio: true });
+            btnMute.classList.remove('active');
+            btnMute.innerHTML = '<i class="fa-solid fa-microphone"></i> Mute';
+        }
+    }
+
+    function toggleHold() {
+        if (!session) return;
+        held = !held;
+        if (held) {
+            session.hold();
+            btnHold.classList.add('active');
+            btnHold.innerHTML = '<i class="fa-solid fa-play"></i> Resume';
+            setStatus('ON HOLD');
+        } else {
+            session.unhold();
+            btnHold.classList.remove('active');
+            btnHold.innerHTML = '<i class="fa-solid fa-pause"></i> Hold';
+            setStatus('CONNECTED');
+        }
+    }
+
+    function sendDTMF(digit) {
+        if (session) {
+            try { session.sendDTMF(digit); } catch(e) {}
+        }
+    }
+
+    // ── Disposition ─────────────────────────────────────────────────
+    function openDisposition() {
+        dispOver.style.display = 'flex';
+        selDisp = null;
+        $('btn-save-disp').disabled = true;
+        document.querySelectorAll('.disposition-btn').forEach(function(b) {
+            b.classList.remove('selected');
+        });
+    }
+
+    function closeDisposition() {
+        dispOver.style.display = 'none';
+        callId = null; selDisp = null;
+    }
+
+    function saveDisposition() {
+        if (!selDisp) return;
+        var notes = $('disposition-notes').value;
+        if (callId) {
+            post(URL_DISP, { call_id: callId, disposition_id: selDisp, notes: notes })
+                .then(function(r) {
+                    if (r.success) toast('Disposition saved', 'success');
+                    else toast(r.error || 'Save failed', 'error');
+                })['catch'](function() { toast('Network error', 'error'); });
+        }
+        closeDisposition();
+        $('disposition-notes').value = '';
+    }
+
+    // ── WebSocket ───────────────────────────────────────────────────
+    var wsConn = null, wsRetry = 0;
+
+    function connectWS() {
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var url = proto + '//' + location.host + '/ws/agent/' + AGENT_ID + '/';
+        try { wsConn = new WebSocket(url); } catch(e) { return; }
+        wsConn.onopen = function() { wsRetry = 0; };
+        wsConn.onmessage = function(ev) {
+            try { handleWSMsg(JSON.parse(ev.data)); } catch(e) {}
+        };
+        wsConn.onclose = function() {
+            if (wsRetry < 10) {
+                wsRetry++;
+                setTimeout(connectWS, Math.min(1000 * Math.pow(2, wsRetry), 30000));
+            }
+        };
+    }
+
+    function handleWSMsg(d) {
+        var t = d.type || '';
+        if (t === 'call_incoming' || t === 'call_started' || t === 'call_connecting') {
+            callId = d.call_id || (d.call && d.call.id) || null;
+            var num = d.phone_number || (d.call && d.call.number) || d.called_number || '';
+            if (num) { $('call-number').textContent = num; numDisp.textContent = num; }
+            if (d.lead_id || (d.call && d.call.lead_id)) {
+                fetchLead(d.lead_id || d.call.lead_id);
+            }
+            placeH.style.display = 'none';
+            detailsDiv.style.display = 'block';
+            badge.className = 'call-status-badge ringing';
+            badge.innerHTML = '<i class="fa-solid fa-phone-volume"></i> Incoming';
+        }
+        if (t === 'call_connected' || t === 'call_update') {
+            callId = d.call_id || (d.call && d.call.id) || callId;
+            badge.className = 'call-status-badge connected';
+            badge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
+            $('call-status-text').textContent = 'Connected';
+        }
+        if (t === 'call_ended' || t === 'call_cleared') {
+            var cid = d.call_id || callId;
+            if (cid && !session) { callId = cid; openDisposition(); }
+            resetCallUI();
+        }
+        if (t === 'status_update') {
+            pill.textContent = d.display || d.status || '';
+        }
+    }
+
+    function fetchLead(lid) {
+        fetch(URL_LEAD + '?lead_id=' + lid, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function(r) { return r.json(); }).then(function(d) {
+            if (!d.success) return;
+            var l = d.lead;
+            $('call-lead-name').textContent = ((l.first_name || '') + ' ' + (l.last_name || '')).trim() || '—';
+            $('lead-name').textContent = ((l.first_name || '') + ' ' + (l.last_name || '')).trim() || 'Unknown';
+            $('lead-phone').textContent = l.phone_number || '—';
+            $('lead-email').textContent = l.email || '—';
+            $('lead-company').textContent = l.company || '—';
+            $('lead-city').textContent = [l.city, l.state].filter(Boolean).join(', ') || '—';
+            $('lead-status').textContent = l.status || '—';
+        })['catch'](function() {});
+    }
+
+    // ── Init ────────────────────────────────────────────────────────
+    function init() {
+        // Theme toggle
+        var html = document.documentElement;
+        var theme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', theme);
+        $('theme-icon').className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+        $('theme-toggle').onclick = function() {
+            var c = html.getAttribute('data-theme');
+            var n = c === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', n);
+            localStorage.setItem('theme', n);
+            $('theme-icon').className = n === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+        };
+
+        // Tabs
+        document.querySelectorAll('.tab-button').forEach(function(b) {
+            b.onclick = function() {
+                document.querySelectorAll('.tab-button').forEach(function(x) { x.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function(x) { x.classList.remove('active'); });
+                this.classList.add('active');
+                document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+            };
+        });
+
+        // Status chips
+        document.querySelectorAll('[data-set-status]').forEach(function(b) {
+            b.onclick = function() {
+                var st = this.dataset.setStatus;
+                var chip = this;
+                post(URL_STATUS, { status: st }).then(function(r) {
+                    if (r.success) {
+                        document.querySelectorAll('.status-chip').forEach(function(x) { x.classList.remove('is-active'); });
+                        chip.classList.add('is-active');
+                        pill.textContent = r.display || st;
+                        toast('Status: ' + st, 'success');
+                    }
+                });
+            };
+        });
+
+        // Set initial active chip
+        var curSt = '{{ agent_status.status }}';
+        document.querySelectorAll('[data-set-status]').forEach(function(b) {
+            if (b.dataset.setStatus === curSt) b.classList.add('is-active');
+        });
+
+        // Keypad
+        document.querySelectorAll('.phone-key').forEach(function(k) {
+            k.onclick = function() {
+                var d = this.dataset.digit;
+                dialNum += d; updNum();
+                if (session) sendDTMF(d);
+                btnCall.disabled = !dialNum && !(ua && ua.isRegistered());
+            };
+        });
+
+        // Call / Answer / Hangup
+        btnCall.onclick = function() {
+            if (session && session.direction === 'incoming') {
+                answerCall();
+            } else {
+                makeCall();
+            }
+        };
+        btnHang.onclick = hangupCall;
+        btnMute.onclick = toggleMute;
+        btnHold.onclick = toggleHold;
+        btnClear.onclick = function() { dialNum = ''; updNum(); btnCall.disabled = true; };
+
+        // Auto-answer
+        $('auto-answer-toggle').onchange = function() {
+            autoAns = this.checked;
+            toast('Auto-answer ' + (autoAns ? 'ON' : 'OFF'), 'info');
+        };
+
+        // Transfer
+        btnXfer.onclick = function() {
+            if (!session) return;
+            var target = prompt('Enter transfer extension/number:');
+            if (target) {
+                try {
+                    session.refer('sip:' + target + '@' + CFG.domain);
+                    toast('Transferring to ' + target, 'info');
+                } catch(e) {
+                    toast('Transfer failed: ' + e.message, 'error');
+                }
+            }
+        };
+
+        // Disposition buttons
+        document.querySelectorAll('.disposition-btn').forEach(function(b) {
+            b.onclick = function() {
+                document.querySelectorAll('.disposition-btn').forEach(function(x) { x.classList.remove('selected'); });
+                this.classList.add('selected');
+                selDisp = this.dataset.dispId;
+                $('btn-save-disp').disabled = false;
+            };
+        });
+        $('btn-save-disp').onclick = saveDisposition;
+        $('btn-cancel-disp').onclick = closeDisposition;
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if ('0123456789*#'.indexOf(e.key) !== -1) { dialNum += e.key; updNum(); if (session) sendDTMF(e.key); }
+            if (e.key === 'Backspace') { e.preventDefault(); dialNum = dialNum.slice(0, -1); updNum(); }
+            if (e.key === 'Enter' && dialNum && !session) { makeCall(); }
+            if (e.key === 'Escape' && session) { hangupCall(); }
+        });
+
+        // Start JsSIP + WebSocket
+        initJsSIP();
+        connectWS();
+
+        // Poll call status every 10s
+        setInterval(function() {
+            fetch(URL_CALL_STATUS, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.success && d.current_call) {
+                        callId = d.current_call.id;
+                        $('call-number').textContent = d.current_call.number || '—';
+                        if (d.current_call.lead_id) fetchLead(d.current_call.lead_id);
+                        placeH.style.display = 'none';
+                        detailsDiv.style.display = 'block';
+                    }
+                })['catch'](function() {});
+        }, 10000);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    })();
+    </script>
+</body>
+</html>

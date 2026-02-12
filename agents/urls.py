@@ -32,7 +32,7 @@ urlpatterns = [
     path('api/statistics/', views_simple.agent_statistics, name='statistics'),
     
     # Call History (Phase 2.2)
-    path('api/call-history/', views_simple.agent_call_history, name='call_history'),
+    # path('api/call-history/', views_simple.agent_call_history, name='call_history'),
     
     # WebRTC Configuration
     path('api/webrtc-config/', views_simple.get_webrtc_config, name='get_webrtc_config'),

@@ -105,6 +105,21 @@ class Command(BaseCommand):
             "; Command: manage.py render_carrier_configs",
             "; ---------------------------------------------------------------------",
             "",
+            "; WebRTC Transports (Auto-generated)",
+            "[transport-ws]",
+            "type=transport",
+            "protocol=ws",
+            "bind=0.0.0.0",
+            "",
+            "[transport-wss]",
+            "type=transport",
+            "protocol=wss",
+            "bind=0.0.0.0",
+            "cert_file=/etc/asterisk/keys/asterisk.pem",
+            "priv_key_file=/etc/asterisk/keys/asterisk.key",
+            "method=tlsv1",
+            "cipher=ADH-AES256-SHA,ADH-AES128-SHA",
+            "",
         ]
 
         for item in items:

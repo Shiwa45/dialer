@@ -1,12 +1,12 @@
 # users/views.py
 #
-# UPDATED: WebRTC vs Softphone login enforcement
-# - WebRTC agents: always allowed (browser registers JsSIP after login)
-# - Non-WebRTC agents: must have softphone registered on Asterisk
-# - Superusers/staff: always allowed
+# UPDATED v3:
+# - Multi-device login prevention for agents
+# - WebRTC vs Softphone login enforcement
+# - Session invalidation on new login
 #
-# IMPORTANT: Replace ONLY the CustomLoginView class in your existing users/views.py.
-# Keep all other views (CustomLogoutView, user management, etc.) unchanged.
+# IMPORTANT: Replace ONLY CustomLoginView and CustomLogoutView.
+# Keep all other views unchanged.
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.views import LoginView as BaseLoginView, LogoutView as BaseLogoutView
 from django.contrib import messages
+from django.contrib.sessions.models import Session as DjangoSession
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.http import JsonResponse
@@ -33,107 +34,154 @@ logger = logging.getLogger(__name__)
 
 class CustomLoginView(BaseLoginView):
     """
-    Custom login view with phone registration enforcement.
-
-    Logic:
-    - Superusers / staff → always allowed
-    - Agent with NO extension → blocked
-    - Agent with WebRTC-enabled phone → allowed (browser registers via JsSIP)
-    - Agent with non-WebRTC phone → check Asterisk for softphone registration
+    Custom login view with:
+    1. Multi-device prevention (agents can only be logged in on ONE device)
+    2. WebRTC agents: always allowed
+    3. Non-WebRTC agents: softphone must be registered
+    4. Superusers/staff: always allowed
     """
     template_name = 'users/login.html'
     redirect_authenticated_user = True
 
     def form_valid(self, form):
         user = form.get_user()
+        is_agent = hasattr(user, 'profile') and user.profile.is_agent()
 
-        # Skip all checks for superusers and staff (admin/supervisor)
-        if not user.is_superuser and not user.is_staff:
-            if hasattr(user, 'profile') and user.profile.is_agent():
-                extension = (user.profile.extension or '').strip()
+        # ── AGENT CHECKS (skip for superusers/staff) ────────────────
+        if not user.is_superuser and not user.is_staff and is_agent:
+            extension = (user.profile.extension or '').strip()
 
-                if not extension:
-                    messages.error(
-                        self.request,
-                        'Your account does not have an extension assigned. '
-                        'Please contact your supervisor.'
-                    )
-                    return self.form_invalid(form)
+            if not extension:
+                messages.error(
+                    self.request,
+                    'Your account does not have an extension assigned. '
+                    'Please contact your supervisor.'
+                )
+                return self.form_invalid(form)
 
-                # Find agent's phone record
-                from telephony.models import Phone
-                phone = Phone.objects.filter(user=user, is_active=True).first()
-                if not phone:
-                    phone = Phone.objects.filter(extension=extension, is_active=True).first()
-
-                if phone and phone.webrtc_enabled:
-                    # WebRTC agent → allow login, JsSIP registers in browser
-                    pass
-                else:
-                    # Non-WebRTC agent → must have softphone registered
-                    from telephony.models import AsteriskServer
-                    from telephony.services import AsteriskService
-
+            # ── MULTI-DEVICE CHECK ──────────────────────────────────
+            # Kill ALL existing active sessions for this agent
+            active_sessions = UserSession.objects.filter(
+                user=user, is_active=True
+            )
+            if active_sessions.exists():
+                for old_session in active_sessions:
+                    # Invalidate the Django session itself
                     try:
-                        server = AsteriskServer.objects.filter(is_active=True).first()
-                        if server:
-                            service = AsteriskService(server)
-                            status = service.get_endpoint_status(extension)
+                        DjangoSession.objects.filter(
+                            session_key=old_session.session_key
+                        ).delete()
+                    except Exception:
+                        pass
+                    old_session.is_active = False
+                    old_session.logout_time = timezone.now()
+                    old_session.save()
 
-                            if not status.get('registered', False):
-                                messages.error(
-                                    self.request,
-                                    f'Your extension ({extension}) is not registered. '
-                                    f'Please connect your softphone before logging in.'
-                                )
-                                return self.form_invalid(form)
-                    except Exception as e:
-                        # Fail open: if Asterisk is unreachable, allow login
-                        logger.error(f"Extension check failed for {user.username}: {e}")
+                # Set agent offline on old session
+                try:
+                    agent_status = AgentStatus.objects.filter(user=user).first()
+                    if agent_status:
+                        agent_status.set_status('offline')
+                except Exception:
+                    pass
 
-        # Log the user in
+                logger.info(
+                    f"Agent {user.username} had {active_sessions.count()} active "
+                    f"session(s) — all terminated for new login from "
+                    f"{self.get_client_ip()}"
+                )
+
+            # ── PHONE / WEBRTC CHECK ────────────────────────────────
+            from telephony.models import Phone
+            phone = Phone.objects.filter(user=user, is_active=True).first()
+            if not phone:
+                phone = Phone.objects.filter(
+                    extension=extension, is_active=True
+                ).first()
+
+            if phone and phone.webrtc_enabled:
+                # WebRTC agent → always allow, browser registers via JsSIP
+                pass
+            else:
+                # Non-WebRTC agent → softphone must be registered
+                from telephony.models import AsteriskServer
+                from telephony.services import AsteriskService
+
+                try:
+                    server = AsteriskServer.objects.filter(is_active=True).first()
+                    if server:
+                        service = AsteriskService(server)
+                        status = service.get_endpoint_status(extension)
+
+                        if not status.get('registered', False):
+                            messages.error(
+                                self.request,
+                                f'Your extension ({extension}) is not registered. '
+                                f'Please connect your softphone before logging in.'
+                            )
+                            return self.form_invalid(form)
+                except Exception as e:
+                    # Fail open if Asterisk is unreachable
+                    logger.error(
+                        f"Extension check failed for {user.username}: {e}"
+                    )
+
+        # ── LOG THE USER IN ─────────────────────────────────────────
         response = super().form_valid(form)
 
-        # Create user session record
-        UserSession.objects.create(
-            user=self.request.user,
-            session_key=self.request.session.session_key,
-            ip_address=self.get_client_ip(),
-            user_agent=self.request.META.get('HTTP_USER_AGENT', '')[:500]
-        )
+        # Ensure session exists
+        if not self.request.session.session_key:
+            self.request.session.create()
 
-        # Set agent status to available
-        if hasattr(self.request.user, 'profile') and self.request.user.profile.is_agent():
-            agent_status, _ = AgentStatus.objects.get_or_create(user=self.request.user)
-            agent_status.set_status('available')
+        # Create session tracking record
+        try:
+            UserSession.objects.create(
+                user=self.request.user,
+                session_key=self.request.session.session_key,
+                ip_address=self.get_client_ip(),
+                user_agent=self.request.META.get('HTTP_USER_AGENT', '')[:500]
+            )
+        except Exception as e:
+            logger.error(f"Failed to create UserSession: {e}")
+
+        # Set agent status
+        if is_agent:
+            try:
+                agent_status, _ = AgentStatus.objects.get_or_create(
+                    user=self.request.user
+                )
+                agent_status.set_status('available')
+            except Exception:
+                pass
 
         messages.success(
             self.request,
-            f'Welcome back, {self.request.user.get_full_name() or self.request.user.username}!'
+            f'Welcome back, '
+            f'{self.request.user.get_full_name() or self.request.user.username}!'
         )
         return response
 
     def get_client_ip(self):
-        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return self.request.META.get('REMOTE_ADDR')
+        xff = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        if xff:
+            return xff.split(',')[0].strip()
+        return self.request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
 class CustomLogoutView(View):
-    """Custom logout view with session cleanup"""
+    """Custom logout with session cleanup"""
+
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             try:
-                session = UserSession.objects.filter(
+                UserSession.objects.filter(
                     user=request.user,
                     session_key=request.session.session_key,
                     is_active=True
-                ).first()
-                if session:
-                    session.logout_time = timezone.now()
-                    session.is_active = False
-                    session.save()
+                ).update(
+                    is_active=False,
+                    logout_time=timezone.now()
+                )
             except Exception as e:
                 logger.error(f"Logout cleanup error: {e}")
 

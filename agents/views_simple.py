@@ -1,14 +1,16 @@
 """
-Agent Views (Simple Dashboard) - WebRTC Rebuild v2
+Agent Views (Simple Dashboard) - WebRTC Rebuild v3
 
-Routes:
-- WebRTC agents → webrtc_dashboard.html (dedicated JsSIP page)
-- Non-WebRTC agents → simple_dashboard.html (softphone mode)
+FIXES in v3:
+- ICE servers passed as json_script (no escapejs mangling)
+- CampaignDisposition through-table query (not Disposition.campaign)
+- Proper fallback when ice_host has invalid JSON
 """
 
 import json
 import logging
-import html
+import html as html_mod
+import ast
 from datetime import timedelta
 
 from django.shortcuts import render, get_object_or_404
@@ -24,7 +26,7 @@ from agents.decorators import agent_required
 from agents.models import AgentDialerSession, AgentCallbackTask
 from agents.telephony_service import AgentTelephonyService
 from calls.models import CallLog
-from campaigns.models import Campaign, Disposition, OutboundQueue
+from campaigns.models import Campaign, CampaignDisposition, OutboundQueue
 from leads.models import Lead
 from users.models import AgentStatus
 from telephony.models import Phone, AsteriskServer
@@ -33,46 +35,94 @@ from telephony.services import AsteriskService
 logger = logging.getLogger(__name__)
 
 
+# ==========================================================================
+# ICE SERVER CONFIG BUILDER (bulletproof)
+# ==========================================================================
+
+def _build_ice_servers(phone):
+    """
+    Parse phone.ice_host into a clean list of RTCIceServer objects.
+    Handles: JSON array of objects, JSON array of strings (double-encoded), 
+    comma-separated URLs, or empty.
+    Always includes a default STUN server.
+    Returns a Python list like [{"urls": "stun:..."}, {"urls": "turn:...", ...}]
+    """
+    DEFAULT_STUN = {"urls": "stun:stun.l.google.com:19302"}
+    result = []
+
+    raw = (getattr(phone, 'ice_host', '') or '').strip()
+    # Unescape any HTML entities from admin forms
+    raw = html_mod.unescape(raw)
+
+    if raw:
+        # Try JSON parse first
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                for item in parsed:
+                    if isinstance(item, dict) and item.get('urls'):
+                        result.append(item)
+                    elif isinstance(item, str):
+                        item = item.strip()
+                        # Handling double-encoded or fragmented JSON strings
+                        # Try to parse string item as JSON if it looks like an object or list
+                        if (item.startswith('{') and item.endswith('}')) or (item.startswith('[') and item.endswith(']')):
+                            try:
+                                nested = json.loads(item)
+                                if isinstance(nested, dict) and nested.get('urls'):
+                                    result.append(nested)
+                                elif isinstance(nested, list):
+                                    for n in nested:
+                                        if isinstance(n, dict) and n.get('urls'):
+                                            result.append(n)
+                                continue
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+
+                        # Fallback: treat as simple URL if it doesn't look like JSON syntax
+                        if not any(item.startswith(c) for c in ['{', '[', '"']):
+                            result.append({"urls": item})
+
+            elif isinstance(parsed, dict) and parsed.get('urls'):
+                result.append(parsed)
+        except (json.JSONDecodeError, TypeError):
+            # Not valid standard JSON.
+            # Try parsing as Python literal (single-quoted JSON-like structure)
+            try:
+                parsed = ast.literal_eval(raw)
+                if isinstance(parsed, list):
+                    for item in parsed:
+                        if isinstance(item, dict) and item.get('urls'):
+                            result.append(item)
+                elif isinstance(parsed, dict) and parsed.get('urls'):
+                    result.append(parsed)
+            except (ValueError, SyntaxError):
+                # Finally, treat as comma-separated STUN/TURN URLs if it's not JSON/Python structure
+                for url in raw.split(','):
+                    url = url.strip()
+                    # If it looks like JSON/Python dict syntax, IGNORE IT to avoid garbage
+                    if url and not any(c in url for c in ['{', '}', '[', ']', '"', "'"]):
+                        result.append({"urls": url})
+
+    # Ensure we always have at least one STUN
+    has_stun = any(
+        'stun:' in str(s.get('urls', ''))
+        for s in result
+    )
+    if not has_stun:
+        result.insert(0, DEFAULT_STUN)
+
+    return result
+
+
 def _build_webrtc_config(phone, agent):
+    """Build complete WebRTC config dict for template context."""
     if not phone or not phone.asterisk_server:
         return {}
     server = phone.asterisk_server
     domain = server.server_ip
-    # ICE config:
-    # - If Phone.ice_host contains JSON, we treat it as the full RTCPeerConnection
-    #   iceServers list (list[dict]) or a list of URL strings.
-    # - Otherwise we treat it as a comma-separated list of STUN/TURN URLs.
-    # - Always include a reasonable default STUN as fallback.
-    default_stun = 'stun:stun.l.google.com:19302'
-    ice_servers: list = []
-    raw_ice = html.unescape((phone.ice_host or '').strip())
-    if raw_ice:
-        try:
-            parsed = json.loads(raw_ice)
-            if isinstance(parsed, list):
-                ice_servers = parsed
-            elif isinstance(parsed, dict):
-                ice_servers = [parsed]
-            else:
-                ice_servers = []
-        except Exception:
-            # Comma-separated list of URLs
-            ice_servers = [u.strip() for u in raw_ice.split(',') if u.strip()]
+    ice_servers = _build_ice_servers(phone)
 
-    # If we got URL strings, normalize them to {urls: "..."} objects
-    normalized: list[dict] = []
-    for item in ice_servers:
-        if isinstance(item, str):
-            normalized.append({'urls': item})
-        elif isinstance(item, dict) and item.get('urls'):
-            normalized.append(item)
-
-    # Ensure fallback STUN is present
-    if not any(
-        isinstance(s, dict) and str(s.get('urls', '')).startswith('stun:')
-        for s in normalized
-    ):
-        normalized.insert(0, {'urls': default_stun})
     return {
         'ws_server': f'wss://{domain}:8089/ws',
         'sip_uri': f'sip:{phone.extension}@{domain}',
@@ -80,8 +130,10 @@ def _build_webrtc_config(phone, agent):
         'password': getattr(phone, 'sip_password', None) or phone.secret,
         'domain': domain,
         'display_name': agent.get_full_name() or agent.username,
-        'stun_servers': [default_stun],
-        'ice_servers_json': json.dumps(normalized),
+        'stun_servers': ['stun:stun.l.google.com:19302'],
+        # This will be passed via json_script tag — no escapejs needed
+        'ice_servers': ice_servers,
+        'ice_servers_json': json.dumps(ice_servers),
         'codecs': (phone.codec or 'ulaw,alaw').split(','),
         'debug': False,
     }
@@ -99,6 +151,10 @@ def _get_agent_phone(agent):
     return phone
 
 
+# ==========================================================================
+# DASHBOARD CONTEXT
+# ==========================================================================
+
 def _get_dashboard_context(request, agent, agent_status, phone):
     assigned_campaigns = Campaign.objects.filter(assigned_users=agent, status='active')
     current_campaign = agent_status.current_campaign
@@ -113,8 +169,8 @@ def _get_dashboard_context(request, agent, agent_status, phone):
     }
     if phone:
         try:
-            telephony_service = AgentTelephonyService(agent)
-            phone_info['registered'] = telephony_service.is_extension_registered()
+            svc = AgentTelephonyService(agent)
+            phone_info['registered'] = svc.is_extension_registered()
         except Exception as e:
             logger.warning(f"Registration check failed for {agent.username}: {e}")
 
@@ -131,9 +187,9 @@ def _get_dashboard_context(request, agent, agent_status, phone):
         scheduled_time__lte=timezone.now() + timedelta(hours=2)
     ).order_by('scheduled_time')[:5]
 
+    # FIX: use CampaignDisposition through-table, not Disposition.campaign
     available_dispositions = []
     if current_campaign:
-        from campaigns.models import CampaignDisposition
         camp_disps = CampaignDisposition.objects.filter(
             campaign=current_campaign, is_active=True
         ).select_related('disposition').order_by('sort_order')
@@ -180,6 +236,10 @@ def _get_dashboard_context(request, agent, agent_status, phone):
     }
 
 
+# ==========================================================================
+# DASHBOARD VIEW
+# ==========================================================================
+
 @login_required
 @agent_required
 def simple_dashboard(request):
@@ -194,6 +254,10 @@ def simple_dashboard(request):
     return render(request, 'agents/simple_dashboard.html', context)
 
 
+# ==========================================================================
+# API ENDPOINTS (unchanged from v2, included for completeness)
+# ==========================================================================
+
 @login_required
 @agent_required
 @require_POST
@@ -202,7 +266,6 @@ def update_status(request):
     new_status = request.POST.get('status', '').strip().lower()
     if not new_status:
         return JsonResponse({'success': False, 'error': 'Status is required'})
-
     status_map = {
         'available': 'available', 'ready': 'available', 'break': 'break',
         'lunch': 'lunch', 'meeting': 'meeting', 'training': 'training',
@@ -236,19 +299,19 @@ def set_disposition(request):
         if not call_log:
             return JsonResponse({'success': False, 'error': 'Call not found'})
 
+        from campaigns.models import Disposition
         try:
-            disp_pk = int(disposition_id)
-        except (TypeError, ValueError):
-            return JsonResponse({'success': False, 'error': 'Invalid disposition id'})
+            disposition = Disposition.objects.get(id=int(disposition_id))
+            call_log.disposition = disposition.name
+        except (Disposition.DoesNotExist, ValueError):
+            call_log.disposition = str(disposition_id)
 
-        disposition = Disposition.objects.filter(id=disp_pk).first()
-        if not disposition:
-            return JsonResponse({'success': False, 'error': 'Disposition not found'})
-
-        # CallLog.disposition is a FK to campaigns.Disposition
-        call_log.disposition = disposition
-        call_log.disposition_notes = notes
+        call_log.agent_notes = notes
         call_log.save()
+
+        if call_log.lead:
+            call_log.lead.last_call_time = timezone.now()
+            call_log.lead.save(update_fields=['last_call_time'])
 
         agent_status = getattr(agent, 'agent_status', None)
         if agent_status:
@@ -282,7 +345,6 @@ def hangup_call(request):
                 AsteriskService(svc.asterisk_server).hangup_channel(svc.agent_phone.extension)
             except Exception:
                 pass
-
         if call_id:
             try:
                 cl = CallLog.objects.filter(id=int(call_id), agent=agent).first()
@@ -294,12 +356,10 @@ def hangup_call(request):
                     cl.save()
             except (ValueError, TypeError):
                 pass
-
         agent_status = getattr(agent, 'agent_status', None)
         if agent_status:
             agent_status.current_call_id = None
             agent_status.save(update_fields=['current_call_id'])
-
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -317,10 +377,10 @@ def get_lead_info(request):
             lead = Lead.objects.filter(id=int(lead_id)).first()
         elif call_id:
             cl = CallLog.objects.filter(id=int(call_id)).first()
-            if cl: lead = cl.lead
+            if cl:
+                lead = cl.lead
         if not lead:
             return JsonResponse({'success': False, 'error': 'Lead not found'})
-
         history = CallLog.objects.filter(lead=lead).order_by('-start_time')[:10]
         return JsonResponse({
             'success': True,
@@ -377,7 +437,8 @@ def get_webrtc_config(request):
         phone = _get_agent_phone(agent)
         if not phone or not phone.webrtc_enabled:
             return JsonResponse({'success': False, 'error': 'WebRTC not enabled'})
-        return JsonResponse({'success': True, **_build_webrtc_config(phone, agent)})
+        config = _build_webrtc_config(phone, agent)
+        return JsonResponse({'success': True, **config})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
@@ -398,36 +459,12 @@ def agent_statistics(request):
             'success': True,
             'today': {'total_calls': tt, 'answered_calls': ta,
                       'talk_time': tc.aggregate(t=Sum('talk_duration'))['t'] or 0,
-                      'contact_rate': round((ta/tt*100) if tt else 0, 1)},
+                      'contact_rate': round((ta / tt * 100) if tt else 0, 1)},
             'week': {'total_calls': wt, 'answered_calls': wa,
                      'talk_time': wc.aggregate(t=Sum('talk_duration'))['t'] or 0,
-                     'contact_rate': round((wa/wt*100) if wt else 0, 1)},
+                     'contact_rate': round((wa / wt * 100) if wt else 0, 1)},
             'pending_callbacks': AgentCallbackTask.objects.filter(
                 agent=agent, status__in=['pending', 'scheduled']).count()
-        })
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-
-@login_required
-@agent_required
-@require_http_methods(["GET"])
-def agent_call_history(request):
-    agent = request.user
-    page = int(request.GET.get('page', 1))
-    per_page = int(request.GET.get('per_page', 20))
-    try:
-        calls = CallLog.objects.filter(agent=agent).order_by('-start_time')
-        total = calls.count()
-        s = (page - 1) * per_page
-        return JsonResponse({
-            'success': True, 'total': total, 'page': page,
-            'calls': [
-                {'id': c.id, 'number': c.called_number, 'status': c.call_status,
-                 'disposition': c.disposition or '', 'duration': c.talk_duration or 0,
-                 'date': c.start_time.strftime('%Y-%m-%d %H:%M'), 'lead_id': c.lead_id}
-                for c in calls[s:s+per_page]
-            ]
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

@@ -25,13 +25,13 @@ logger = logging.getLogger(__name__)
 
 class CustomLoginView(BaseLoginView):
     """
-    Custom login view with phone registration enforcement.
+    Custom login view with session tracking and phone registration enforcement.
 
     Logic:
-    - Superusers / staff → always allowed
+    - Superusers / staff (admin/supervisor) → always allowed
     - Agent with NO extension → blocked
-    - Agent with WebRTC-enabled phone → allowed (browser registers via JsSIP)
-    - Agent with non-WebRTC phone → check Asterisk for softphone registration
+    - Agent with WebRTC-enabled phone → allowed (browser registers after page load)
+    - Agent with non-WebRTC phone → must have softphone registered on Asterisk
     """
     template_name = 'users/login.html'
     redirect_authenticated_user = True
@@ -39,7 +39,7 @@ class CustomLoginView(BaseLoginView):
     def form_valid(self, form):
         user = form.get_user()
 
-        # Skip all checks for superusers and staff (admin/supervisor)
+        # Skip checks for superusers and staff
         if not user.is_superuser and not user.is_staff:
             if hasattr(user, 'profile') and user.profile.is_agent():
                 extension = (user.profile.extension or '').strip()
@@ -52,17 +52,23 @@ class CustomLoginView(BaseLoginView):
                     )
                     return self.form_invalid(form)
 
-                # Find agent's phone record
+                # Check if agent has a WebRTC-enabled phone
                 from telephony.models import Phone
-                phone = Phone.objects.filter(user=user, is_active=True).first()
+                phone = Phone.objects.filter(
+                    user=user, is_active=True
+                ).first()
+
+                # Also check by extension if no direct assignment
                 if not phone:
-                    phone = Phone.objects.filter(extension=extension, is_active=True).first()
+                    phone = Phone.objects.filter(
+                        extension=extension, is_active=True
+                    ).first()
 
                 if phone and phone.webrtc_enabled:
-                    # WebRTC agent → allow login, JsSIP registers in browser
+                    # WebRTC agent: allow login, browser will register via JsSIP
                     pass
                 else:
-                    # Non-WebRTC agent → must have softphone registered
+                    # Non-WebRTC agent: verify softphone is registered on Asterisk
                     from telephony.models import AsteriskServer
                     from telephony.services import AsteriskService
 
@@ -80,8 +86,9 @@ class CustomLoginView(BaseLoginView):
                                 )
                                 return self.form_invalid(form)
                     except Exception as e:
-                        # Fail open: if Asterisk is unreachable, allow login
-                        logger.error(f"Extension check failed for {user.username}: {e}")
+                        logger.error(f"Error checking extension registration for {user.username}: {e}")
+                        # Fail open: allow login if we can't reach Asterisk
+                        # (prevents lockout when Asterisk is down)
 
         # Log the user in
         response = super().form_valid(form)
@@ -94,9 +101,9 @@ class CustomLoginView(BaseLoginView):
             user_agent=self.request.META.get('HTTP_USER_AGENT', '')[:500]
         )
 
-        # Set agent status to available
+        # Set agent status to available if they're an agent
         if hasattr(self.request.user, 'profile') and self.request.user.profile.is_agent():
-            agent_status, _ = AgentStatus.objects.get_or_create(user=self.request.user)
+            agent_status, created = AgentStatus.objects.get_or_create(user=self.request.user)
             agent_status.set_status('available')
 
         messages.success(
@@ -106,15 +113,20 @@ class CustomLoginView(BaseLoginView):
         return response
 
     def get_client_ip(self):
+        """Get client IP address"""
         x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return self.request.META.get('REMOTE_ADDR')
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = self.request.META.get('REMOTE_ADDR')
+        return ip
 
 
 
 class CustomLogoutView(View):
-    """Custom logout view with session cleanup"""
+    """
+    Custom logout view with session cleanup
+    """
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             try:
@@ -130,6 +142,7 @@ class CustomLogoutView(View):
             except Exception as e:
                 logger.error(f"Logout cleanup error: {e}")
 
+            # Set agent status to offline
             try:
                 if hasattr(request.user, 'agent_status'):
                     request.user.agent_status.set_status('offline')
@@ -138,7 +151,7 @@ class CustomLogoutView(View):
 
         logout(request)
         messages.info(request, 'You have been successfully logged out.')
-        return redirect('users:login')
+        return redirect('login')
 
     def get(self, request, *args, **kwargs):
         return self.post(request, *args, **kwargs)

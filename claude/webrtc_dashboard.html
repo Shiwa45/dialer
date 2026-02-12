@@ -1,0 +1,595 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard - WebRTC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root{--bg:#f5f5f5;--bg-secondary:#eaeaea;--card:#fff;--card-light:#fafafa;--text:#111;--text-secondary:#555;--text-muted:#888;--border:#e0e0e0;--border-light:#ccc;--accent:#dc2626;--accent-light:rgba(220,38,38,.08);--success:#16a34a;--danger:#dc2626;--warning:#f59e0b;--shadow:rgba(0,0,0,.06)}
+        [data-theme="dark"]{--bg:#0a0a0a;--bg-secondary:#141414;--card:#1a1a1a;--card-light:#222;--text:#f0f0f0;--text-secondary:#bbb;--text-muted:#777;--border:#2a2a2a;--border-light:#3a3a3a;--accent:#ef4444;--accent-light:rgba(239,68,68,.1);--success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--shadow:rgba(0,0,0,.3)}
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh}
+        .agent-subtitle{color:var(--text-muted);font-size:.875rem;margin-top:.25rem}
+        .agent-header{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;border-bottom:1px solid var(--border);background:var(--card);box-shadow:0 1px 4px var(--shadow)}
+        .agent-header h1{font-size:1.25rem;font-weight:700}
+        .header-right{display:flex;align-items:center;gap:1rem}
+        .theme-toggle{width:56px;height:28px;border-radius:14px;border:2px solid var(--border);background:var(--card-light);cursor:pointer;position:relative;transition:all .3s}
+        .theme-toggle-slider{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--accent);transition:transform .3s;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.75rem}
+        [data-theme="dark"] .theme-toggle-slider{transform:translateX(26px)}
+        .agent-status-pill{padding:.625rem 1.5rem;border-radius:6px;background:var(--accent);border:none;font-weight:600;display:inline-flex;align-items:center;gap:.625rem;box-shadow:0 4px 12px rgba(220,38,38,.3);text-transform:uppercase;font-size:.75rem;letter-spacing:.05em;color:#fff}
+        .agent-status-pill::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        .agent-layout{flex:1;display:grid;grid-template-columns:1fr 1fr 380px;gap:1.5rem;padding:1.5rem 2rem 2rem;max-width:1920px;width:100%;margin:0 auto}
+        .panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.5rem;box-shadow:0 4px 16px var(--shadow);transition:all .3s}
+        .panel h2{margin:0 0 1rem;font-size:1.125rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--accent);padding-bottom:.5rem}
+        .status-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-top:1.25rem}
+        .status-chip{border:1px solid var(--border-light);border-radius:6px;padding:.75rem 1rem;background:var(--card-light);color:var(--text);font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem}
+        .status-chip i{font-size:1rem}
+        .status-chip.is-active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,.4)}
+        .status-chip:hover:not(.is-active){border-color:var(--accent);background:var(--accent-light);transform:translateY(-2px)}
+        .grid-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+        .info-card{background:var(--card-light);border:1px solid var(--border);border-radius:6px;padding:1.25rem;transition:all .2s}
+        .info-card:hover{border-color:var(--border-light)}
+        .info-card label{display:block;color:var(--text-muted);font-size:.75rem;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+        .info-card strong{font-size:1.125rem;font-weight:700}
+        .tab-container{margin-top:1.5rem}
+        .tab-buttons{display:flex;gap:.5rem;border-bottom:2px solid var(--border);margin-bottom:1rem}
+        .tab-button{padding:.75rem 1.5rem;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text-secondary);font-weight:600;font-size:.875rem;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em;position:relative;top:2px}
+        .tab-button:hover{color:var(--text);background:var(--card-light)}
+        .tab-button.active{color:var(--accent);border-bottom-color:var(--accent)}
+        .tab-content{display:none}.tab-content.active{display:block;animation:fadeIn .3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .call-panel{background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:1.5rem}
+        .call-panel h3{margin:0 0 .5rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:1rem}
+        .call-placeholder{border:2px dashed var(--border-light);border-radius:6px;padding:2rem;text-align:center;color:var(--text-muted);background:var(--card)}
+        .call-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;background:var(--card);padding:1rem;border-radius:6px;border:1px solid var(--border)}
+        .call-meta label{display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:.375rem;text-transform:uppercase;font-weight:600}
+        .call-meta strong{font-size:1.125rem;font-weight:700}
+        .call-status-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:6px;font-weight:600;font-size:.875rem;text-transform:uppercase}
+        .call-status-badge.idle{background:var(--card-light);color:var(--text-muted)}
+        .call-status-badge.ringing{background:#fef3c7;color:#92400e}
+        .call-status-badge.connected{background:#dcfce7;color:#166534}
+        .lead-card{border:1px solid var(--border);border-radius:6px;padding:1rem;background:var(--card);margin-top:1rem}
+        .lead-card__header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+        .lead-status-pill{padding:.25rem .75rem;border-radius:4px;font-size:.75rem;font-weight:600;background:var(--card-light);color:var(--text-muted)}
+        /* RETRO PHONE */
+        .retro-phone{text-align:center}
+        .phone-header{margin-bottom:.75rem}
+        .phone-brand{font-weight:800;font-size:1rem;text-transform:uppercase;letter-spacing:.15em;color:var(--accent)}
+        .phone-screen{background:#1a1a2e;border-radius:8px;padding:1.25rem;margin-bottom:1rem;border:2px solid #333}
+        .phone-input-display{font-family:'Courier New',monospace;font-size:1.5rem;color:#00ff88;min-height:2rem;letter-spacing:.1em;word-break:break-all;margin-bottom:.25rem}
+        .phone-display{font-family:'Courier New',monospace;font-size:.85rem;color:#66ffaa;margin-bottom:.25rem}
+        .phone-timer{font-family:'Courier New',monospace;font-size:1.25rem;color:#ffaa00;margin-top:.25rem}
+        .phone-status-line{font-size:.7rem;color:#668899;margin-top:.5rem;text-transform:uppercase;letter-spacing:.05em}
+        .phone-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1rem}
+        .phone-key{aspect-ratio:1.4;border:1px solid var(--border);border-radius:6px;background:var(--card-light);color:var(--text);font-size:1.25rem;font-weight:700;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;justify-content:center}
+        .phone-key:hover{background:var(--accent-light);border-color:var(--accent)}
+        .phone-key:active{transform:scale(.95)}
+        .phone-key-sub{font-size:.55rem;color:var(--text-muted);margin-top:.1rem;letter-spacing:.1em}
+        .phone-controls{display:flex;gap:.5rem;margin-bottom:.75rem}
+        .phone-control-btn{flex:1;padding:.75rem;border:none;border-radius:6px;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;text-transform:uppercase;letter-spacing:.05em}
+        .phone-control-btn.call{background:var(--success);color:#fff}
+        .phone-control-btn.call:hover{filter:brightness(1.1)}
+        .phone-control-btn.call:disabled{opacity:.5;cursor:not-allowed}
+        .phone-control-btn.hangup{background:var(--danger);color:#fff}
+        .phone-control-btn.hangup:hover{filter:brightness(1.1)}
+        .phone-extras{display:flex;gap:.5rem;flex-wrap:wrap}
+        .phone-extra-btn{flex:1;min-width:70px;padding:.6rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--card-light);color:var(--text);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.375rem;text-transform:uppercase}
+        .phone-extra-btn:hover{border-color:var(--accent);background:var(--accent-light)}
+        .phone-extra-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+        .phone-extra-btn:disabled{opacity:.4;cursor:not-allowed}
+        .webrtc-status{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border-radius:6px;background:var(--card-light);border:1px solid var(--border);font-size:.8rem;font-weight:600;margin-bottom:.75rem}
+        .webrtc-dot{width:10px;height:10px;border-radius:50%;background:#888;transition:all .3s}
+        .webrtc-dot.connecting{background:var(--warning);animation:pulse 1s infinite}
+        .webrtc-dot.registered{background:var(--success);box-shadow:0 0 8px rgba(22,163,74,.5)}
+        .webrtc-dot.failed{background:var(--danger)}
+        .auto-answer-toggle{display:flex;align-items:center;justify-content:space-between;padding:.6rem .75rem;border-radius:6px;background:var(--card-light);border:1px solid var(--border);margin-bottom:.75rem;font-size:.8rem;font-weight:600}
+        .toggle-switch{position:relative;width:44px;height:24px;cursor:pointer}
+        .toggle-switch input{opacity:0;width:0;height:0}
+        .toggle-slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:12px;transition:.3s}
+        .toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+        .toggle-switch input:checked+.toggle-slider{background:var(--success)}
+        .toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
+        /* Disposition modal */
+        .disposition-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center}
+        .disposition-modal{background:var(--card);border-radius:12px;padding:2rem;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .disposition-modal h3{margin:0 0 1rem;font-size:1.125rem;font-weight:700;text-transform:uppercase;border-bottom:2px solid var(--accent);padding-bottom:.5rem}
+        .disposition-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:1rem}
+        .disposition-btn{padding:.75rem;border:2px solid var(--border);border-radius:6px;background:var(--card-light);color:var(--text);font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s;text-align:center}
+        .disposition-btn:hover{border-color:var(--accent);background:var(--accent-light)}
+        .disposition-btn.selected{border-color:var(--accent);background:var(--accent);color:#fff}
+        .agent-note-input{width:100%;background:var(--card-light);border:1px solid var(--border);border-radius:6px;padding:.75rem;color:var(--text);resize:vertical;min-height:80px;margin-top:.75rem;font-family:inherit}
+        .modal-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem}
+        .btn-muted{border:1px solid var(--border);background:transparent;color:var(--text-secondary);border-radius:6px;padding:.75rem 1.5rem;cursor:pointer;font-weight:600;text-transform:uppercase;font-size:.875rem}
+        .btn-primary-solid{border:none;background:var(--accent);color:#fff;border-radius:6px;padding:.75rem 1.5rem;cursor:pointer;font-weight:600;text-transform:uppercase;font-size:.875rem}
+        .btn-primary-solid:disabled{opacity:.5;cursor:not-allowed}
+        .toast-notification{position:fixed;bottom:2rem;right:2rem;padding:.75rem 1.5rem;border-radius:8px;color:#fff;font-weight:600;font-size:.875rem;z-index:2000;transform:translateY(100px);opacity:0;transition:all .3s}
+        .toast-notification.show{transform:translateY(0);opacity:1}
+        .toast-notification.success{background:var(--success)}.toast-notification.error{background:var(--danger)}.toast-notification.info{background:#3b82f6}
+        @media(max-width:1400px){.agent-layout{grid-template-columns:1fr 1fr}.panel:last-child{grid-column:span 2;max-width:420px;margin:0 auto}}
+        @media(max-width:1100px){.agent-layout{grid-template-columns:1fr}.panel:last-child{grid-column:span 1}}
+        @media(max-width:720px){.agent-header{flex-direction:column;align-items:flex-start}.agent-layout{padding:1rem}.status-actions{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="agent-app" id="agent-app" data-agent-id="{{ agent.id }}" data-status="{{ agent_status.status }}">
+    <header class="agent-header">
+        <div>
+            <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
+            <p class="agent-subtitle">WebRTC Agent — {{ assigned_campaigns|length }} campaign{{ assigned_campaigns|length|pluralize }} assigned</p>
+            <div style="margin-top:10px;">
+                <a href="{% url 'agents:call_history_page' %}" style="text-decoration:none;color:var(--accent);border:1px solid var(--border);padding:5px 10px;border-radius:4px;font-size:.8rem;font-weight:600;">
+                    <i class="fas fa-history"></i> Call History
+                </a>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="theme-toggle" id="theme-toggle" title="Toggle theme">
+                <div class="theme-toggle-slider"><i class="fas fa-sun" id="theme-icon"></i></div>
+            </div>
+            <div class="agent-status-pill" id="status-pill">{{ agent_status.get_status_display }}</div>
+        </div>
+    </header>
+    <main class="agent-layout">
+        <!-- LEFT PANEL -->
+        <section class="panel">
+            <h2>Availability</h2>
+            <p class="agent-subtitle">Update your state so the dialer knows when to connect calls.</p>
+            <div class="status-actions">
+                <button class="status-chip" data-set-status="available"><i class="fa-solid fa-headset"></i> Available</button>
+                <button class="status-chip" data-set-status="break"><i class="fa-solid fa-mug-hot"></i> Break</button>
+                <button class="status-chip" data-set-status="lunch"><i class="fa-solid fa-utensils"></i> Lunch</button>
+                <button class="status-chip" data-set-status="training"><i class="fa-solid fa-graduation-cap"></i> Training</button>
+                <button class="status-chip" data-set-status="meeting"><i class="fa-solid fa-people-group"></i> Meeting</button>
+                <button class="status-chip" data-set-status="offline"><i class="fa-solid fa-power-off"></i> Offline</button>
+            </div>
+            <div class="grid-two" style="margin-top:1.5rem;">
+                <div class="info-card"><label>Extension</label><strong>{{ phone_info.extension|default:"N/A" }}</strong><p class="agent-subtitle" id="reg-text" style="color:var(--success)">WebRTC connecting...</p></div>
+                <div class="info-card"><label>Campaign</label><strong>{{ current_campaign.name|default:"None" }}</strong></div>
+                <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls }}</strong></div>
+                <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls }}</strong></div>
+            </div>
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="call-info">Call Info</button>
+                    <button class="tab-button" data-tab="lead">Lead</button>
+                    <button class="tab-button" data-tab="scripts">Scripts</button>
+                    <button class="tab-button" data-tab="notes">Notes</button>
+                </div>
+                <div class="tab-content active" id="tab-call-info">
+                    <div class="call-panel">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <h3>Current Call</h3>
+                            <span class="call-status-badge idle" id="call-badge"><i class="fa-solid fa-phone-slash"></i> No Active Call</span>
+                        </div>
+                        <div id="call-placeholder" class="call-placeholder">
+                            <i class="fa-solid fa-headset" style="font-size:2rem;margin-bottom:.75rem;display:block;"></i>
+                            <p>Waiting for a call...</p>
+                            <p class="agent-subtitle">Set status to <strong>Available</strong> to receive calls.</p>
+                        </div>
+                        <div id="call-details" style="display:none;">
+                            <div class="call-meta">
+                                <div><label>Number</label><strong id="call-number">—</strong></div>
+                                <div><label>Duration</label><strong id="call-duration">00:00</strong></div>
+                                <div><label>Status</label><strong id="call-status-text">—</strong></div>
+                                <div><label>Lead</label><strong id="call-lead-name">—</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-lead">
+                    <div class="lead-card">
+                        <div class="lead-card__header"><strong id="lead-name">No lead loaded</strong><span class="lead-status-pill" id="lead-status">—</span></div>
+                        <div class="grid-two">
+                            <div><label>Phone</label><strong id="lead-phone">—</strong></div>
+                            <div><label>Email</label><strong id="lead-email">—</strong></div>
+                            <div><label>Company</label><strong id="lead-company">—</strong></div>
+                            <div><label>City</label><strong id="lead-city">—</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-scripts">
+                    <div class="call-panel"><h3>Call Script</h3><pre style="white-space:pre-wrap;font-size:.9rem;line-height:1.6;">{{ script_content|default:"No script available." }}</pre></div>
+                </div>
+                <div class="tab-content" id="tab-notes">
+                    <div class="call-panel"><h3>Quick Notes</h3><textarea id="agent-notes" class="agent-note-input" placeholder="e.g. Customer asked for pricing..." style="min-height:300px;"></textarea></div>
+                </div>
+            </div>
+        </section>
+        <!-- CENTER PANEL -->
+        <section class="panel">
+            <h2>Callbacks & History</h2>
+            {% if pending_callbacks %}
+            {% for cb in pending_callbacks %}
+            <div class="info-card" style="margin-bottom:.5rem;"><label>{{ cb.scheduled_time|date:"M d, H:i" }}</label><strong>{{ cb.lead.first_name }} {{ cb.lead.last_name }} — {{ cb.lead.phone_number }}</strong></div>
+            {% endfor %}
+            {% else %}
+            <p class="agent-subtitle" style="margin-bottom:1rem;">No pending callbacks.</p>
+            {% endif %}
+            <h2 style="margin-top:1.5rem;">Today's Performance</h2>
+            <div class="grid-two">
+                <div class="info-card"><label>Total Calls</label><strong id="perf-total">{{ today_stats.total_calls }}</strong></div>
+                <div class="info-card"><label>Answered</label><strong id="perf-ans">{{ today_stats.answered_calls }}</strong></div>
+                <div class="info-card"><label>Talk Time</label><strong id="perf-talk">{{ today_stats.talk_time }}s</strong></div>
+                <div class="info-card"><label>Contact Rate</label><strong id="perf-rate">{% if today_stats.total_calls > 0 %}{{ today_stats.answered_calls }}%{% else %}0%{% endif %}</strong></div>
+            </div>
+        </section>
+        <!-- RIGHT PANEL: WEBRTC PHONE -->
+        <section class="panel">
+            <div class="retro-phone">
+                <div class="phone-header"><div class="phone-brand">EASYIAN PHONE</div></div>
+                <div class="webrtc-status"><span class="webrtc-dot" id="webrtc-dot"></span><span id="webrtc-status-text">Initializing...</span></div>
+                <div class="auto-answer-toggle"><span><i class="fa-solid fa-bolt"></i> Auto Answer</span><label class="toggle-switch"><input type="checkbox" id="auto-answer-toggle"><span class="toggle-slider"></span></label></div>
+                <div class="phone-screen">
+                    <div class="phone-input-display" id="phone-number-display"></div>
+                    <div class="phone-display" id="phone-status-display">CONNECTING...</div>
+                    <div class="phone-timer" id="phone-timer" style="display:none;">00:00</div>
+                    <div class="phone-status-line">Extension: {{ phone_info.extension|default:"N/A" }}</div>
+                </div>
+                <div class="phone-keypad">
+                    <button class="phone-key" data-digit="1">1<span class="phone-key-sub"></span></button>
+                    <button class="phone-key" data-digit="2">2<span class="phone-key-sub">ABC</span></button>
+                    <button class="phone-key" data-digit="3">3<span class="phone-key-sub">DEF</span></button>
+                    <button class="phone-key" data-digit="4">4<span class="phone-key-sub">GHI</span></button>
+                    <button class="phone-key" data-digit="5">5<span class="phone-key-sub">JKL</span></button>
+                    <button class="phone-key" data-digit="6">6<span class="phone-key-sub">MNO</span></button>
+                    <button class="phone-key" data-digit="7">7<span class="phone-key-sub">PQRS</span></button>
+                    <button class="phone-key" data-digit="8">8<span class="phone-key-sub">TUV</span></button>
+                    <button class="phone-key" data-digit="9">9<span class="phone-key-sub">WXYZ</span></button>
+                    <button class="phone-key" data-digit="*">*<span class="phone-key-sub"></span></button>
+                    <button class="phone-key" data-digit="0">0<span class="phone-key-sub">+</span></button>
+                    <button class="phone-key" data-digit="#">#<span class="phone-key-sub"></span></button>
+                </div>
+                <div class="phone-controls">
+                    <button class="phone-control-btn call" id="btn-call" disabled><i class="fa-solid fa-phone"></i> CALL</button>
+                    <button class="phone-control-btn hangup" id="btn-hangup" style="display:none;"><i class="fa-solid fa-phone-slash"></i> HANG UP</button>
+                </div>
+                <div class="phone-extras">
+                    <button class="phone-extra-btn" id="btn-mute" disabled><i class="fa-solid fa-microphone"></i> Mute</button>
+                    <button class="phone-extra-btn" id="btn-hold" disabled><i class="fa-solid fa-pause"></i> Hold</button>
+                    <button class="phone-extra-btn" id="btn-transfer" disabled><i class="fa-solid fa-right-left"></i> Xfer</button>
+                    <button class="phone-extra-btn" id="btn-clear"><i class="fa-solid fa-delete-left"></i> Clear</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Disposition modal -->
+    <div id="disposition-overlay" class="disposition-overlay" style="display:none;">
+        <div class="disposition-modal">
+            <h3>Set Disposition</h3>
+            <div class="disposition-grid" id="disposition-grid">
+                {% for d in available_dispositions %}
+                <button class="disposition-btn" data-disp-id="{{ d.id }}">{{ d.name }}</button>
+                {% empty %}
+                <button class="disposition-btn" data-disp-id="sale">Sale</button>
+                <button class="disposition-btn" data-disp-id="callback">Callback</button>
+                <button class="disposition-btn" data-disp-id="no_answer">No Answer</button>
+                <button class="disposition-btn" data-disp-id="busy">Busy</button>
+                <button class="disposition-btn" data-disp-id="voicemail">Voicemail</button>
+                <button class="disposition-btn" data-disp-id="dnc">Do Not Call</button>
+                <button class="disposition-btn" data-disp-id="not_interested">Not Interested</button>
+                <button class="disposition-btn" data-disp-id="wrong_number">Wrong Number</button>
+                {% endfor %}
+            </div>
+            <label style="margin-top:.75rem;">Notes</label>
+            <textarea id="disposition-notes" class="agent-note-input" placeholder="Add remarks..."></textarea>
+            <div class="modal-actions">
+                <button class="btn-muted" id="btn-cancel-disp">Cancel</button>
+                <button class="btn-primary-solid" id="btn-save-disp" disabled>Save Disposition</button>
+            </div>
+        </div>
+    </div>
+    <div class="toast-notification" id="toast"></div>
+    <audio id="remote-audio" autoplay playsinline></audio>
+</div>
+
+<!-- JsSIP CDN -->
+<script src="https://cdn.jsdelivr.net/npm/jssip@3.10.1/dist/jssip.min.js"></script>
+<script>
+/* ==================================================================
+   WEBRTC AGENT DASHBOARD - Full JsSIP Integration
+   ================================================================== */
+(function(){
+'use strict';
+
+// ── Config from Django ──────────────────────────────────────────
+const CFG={
+    ws:'{{ webrtc_config.ws_server|default:"" }}',
+    uri:'{{ webrtc_config.sip_uri|default:"" }}',
+    ext:'{{ webrtc_config.extension|default:"" }}',
+    pw:'{{ webrtc_config.password|default:"" }}',
+    domain:'{{ webrtc_config.domain|default:"" }}',
+    name:'{{ webrtc_config.display_name|default:agent.username }}',
+    stun:'{{ webrtc_config.stun_servers.0|default:"stun:stun.l.google.com:19302" }}'
+};
+const AGENT_ID='{{ agent.id }}';
+const CSRF='{{ csrf_token }}';
+const URL_STATUS='{% url "agents:update_status" %}';
+const URL_DISP='{% url "agents:set_disposition" %}';
+const URL_HANGUP='{% url "agents:hangup" %}';
+const URL_LEAD='{% url "agents:get_lead_info" %}';
+const URL_CALL_STATUS='{% url "agents:call_status" %}';
+
+// ── State ───────────────────────────────────────────────────────
+let ua=null, session=null, dialNum='', callTimer=null, callSec=0;
+let muted=false, held=false, autoAns=false, callId=null, selDisp=null;
+
+// ── DOM ─────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const numDisp=$('phone-number-display'), stDisp=$('phone-status-display');
+const tmDisp=$('phone-timer'), btnCall=$('btn-call'), btnHang=$('btn-hangup');
+const btnMute=$('btn-mute'), btnHold=$('btn-hold'), btnXfer=$('btn-transfer');
+const btnClear=$('btn-clear'), wDot=$('webrtc-dot'), wText=$('webrtc-status-text');
+const regText=$('reg-text'), remAudio=$('remote-audio'), badge=$('call-badge');
+const placeH=$('call-placeholder'), detailsDiv=$('call-details'), pill=$('status-pill');
+const dispOver=$('disposition-overlay');
+
+// ── Toast ───────────────────────────────────────────────────────
+function toast(m,t){const e=$('toast');e.textContent=m;e.className='toast-notification show '+(t||'info');setTimeout(()=>e.classList.remove('show'),3500);}
+
+// ── API helper ──────────────────────────────────────────────────
+function post(url,data={}){
+    const b=new URLSearchParams();
+    Object.entries(data).forEach(([k,v])=>b.append(k,v));
+    return fetch(url,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','X-CSRFToken':CSRF,'Content-Type':'application/x-www-form-urlencoded'},body:b.toString()}).then(r=>r.json());
+}
+
+// ── Phone display helpers ───────────────────────────────────────
+function setStatus(t){stDisp.textContent=t;}
+function updNum(){numDisp.textContent=dialNum;}
+function startTm(){stopTm();callSec=0;tmDisp.style.display='block';tmDisp.textContent='00:00';callTimer=setInterval(()=>{callSec++;const m=String(Math.floor(callSec/60)).padStart(2,'0'),s=String(callSec%60).padStart(2,'0');tmDisp.textContent=m+':'+s;$('call-duration').textContent=m+':'+s;},1000);}
+function stopTm(){if(callTimer){clearInterval(callTimer);callTimer=null;}tmDisp.style.display='none';}
+
+function setCallUI(on){
+    btnCall.style.display=on?'none':'flex';
+    btnHang.style.display=on?'flex':'none';
+    btnMute.disabled=!on;btnHold.disabled=!on;btnXfer.disabled=!on;
+    if(on){placeH.style.display='none';detailsDiv.style.display='block';}
+}
+
+function resetCallUI(){
+    setCallUI(false);placeH.style.display='block';detailsDiv.style.display='none';
+    badge.className='call-status-badge idle';badge.innerHTML='<i class="fa-solid fa-phone-slash"></i> No Active Call';
+    $('call-number').textContent='—';$('call-duration').textContent='00:00';
+    $('call-status-text').textContent='—';$('call-lead-name').textContent='—';
+    stopTm();muted=false;held=false;
+    btnMute.classList.remove('active');btnMute.innerHTML='<i class="fa-solid fa-microphone"></i> Mute';
+    btnHold.classList.remove('active');btnHold.innerHTML='<i class="fa-solid fa-pause"></i> Hold';
+    btnCall.innerHTML='<i class="fa-solid fa-phone"></i> CALL';
+    setStatus(ua&&ua.isRegistered()?'READY':'OFFLINE');
+}
+
+// ── JsSIP Init ──────────────────────────────────────────────────
+function initJsSIP(){
+    if(!CFG.ws||!CFG.uri){wDot.className='webrtc-dot failed';wText.textContent='Config missing';regText.textContent='WebRTC config error';regText.style.color='var(--danger)';return;}
+    wDot.className='webrtc-dot connecting';wText.textContent='Connecting...';setStatus('CONNECTING...');
+    try{
+        const sock=new JsSIP.WebSocketInterface(CFG.ws);
+        ua=new JsSIP.UA({sockets:[sock],uri:CFG.uri,password:CFG.pw,display_name:CFG.name,register:true,session_timers:false,user_agent:'EasyianWebRTC/1.0'});
+        ua.on('registered',()=>{wDot.className='webrtc-dot registered';wText.textContent='Registered ('+CFG.ext+')';regText.textContent='WebRTC registered ✓';regText.style.color='var(--success)';setStatus('READY');btnCall.disabled=false;toast('Phone registered','success');});
+        ua.on('unregistered',()=>{wDot.className='webrtc-dot';wText.textContent='Unregistered';regText.textContent='Unregistered';regText.style.color='var(--warning)';setStatus('OFFLINE');btnCall.disabled=true;});
+        ua.on('registrationFailed',(e)=>{wDot.className='webrtc-dot failed';wText.textContent='Failed: '+(e.cause||'');regText.textContent='Registration failed';regText.style.color='var(--danger)';setStatus('REG FAILED');btnCall.disabled=true;toast('Registration failed: '+(e.cause||''),'error');});
+        ua.on('newRTCSession',(e)=>handleSession(e));
+        ua.start();
+    }catch(err){wDot.className='webrtc-dot failed';wText.textContent='Error';setStatus('ERROR');toast('Init failed: '+err.message,'error');}
+}
+
+// ── Session handling ────────────────────────────────────────────
+function handleSession(e){
+    const s=e.session, dir=s.direction;
+    if(session){if(dir==='incoming')s.terminate({status_code:486});return;}
+    session=s;
+
+    s.on('peerconnection',(pc)=>{pc.peerconnection.addEventListener('track',(ev)=>{if(ev.streams&&ev.streams[0])remAudio.srcObject=ev.streams[0];});});
+    s.on('progress',()=>{setStatus(dir==='incoming'?'RINGING...':'CALLING...');badge.className='call-status-badge ringing';badge.innerHTML='<i class="fa-solid fa-phone-volume"></i> '+(dir==='incoming'?'Incoming':'Ringing');$('call-status-text').textContent=dir==='incoming'?'Incoming':'Ringing';});
+    s.on('accepted',()=>{setStatus('CONNECTED');badge.className='call-status-badge connected';badge.innerHTML='<i class="fa-solid fa-phone"></i> Connected';$('call-status-text').textContent='Connected';setCallUI(true);startTm();});
+    s.on('confirmed',()=>{setStatus('CONNECTED');setCallUI(true);if(!callTimer)startTm();});
+    s.on('ended',()=>endSession('Call ended'));
+    s.on('failed',(ev)=>endSession('Failed: '+(ev.cause||'')));
+
+    const rNum=s.remote_identity?.uri?.user||dialNum||'Unknown';
+    $('call-number').textContent=rNum;numDisp.textContent=rNum;
+    setCallUI(true);placeH.style.display='none';detailsDiv.style.display='block';
+
+    if(dir==='incoming'){
+        setStatus('INCOMING: '+rNum);
+        if(autoAns){setTimeout(()=>answerCall(),300);}
+        else{btnCall.innerHTML='<i class="fa-solid fa-phone"></i> ANSWER';btnCall.style.display='flex';btnCall.disabled=false;btnHang.style.display='flex';}
+    }
+}
+
+function endSession(reason){
+    session=null;resetCallUI();dialNum='';updNum();setStatus('READY');
+    if(callId){openDisposition();}
+    toast(reason,'info');
+}
+
+// ── Call actions ─────────────────────────────────────────────────
+function makeCall(){
+    if(!ua||!ua.isRegistered()){toast('Not registered','error');return;}
+    if(!dialNum){toast('Enter a number','error');return;}
+    const target='sip:'+dialNum+'@'+CFG.domain;
+    const opts={mediaConstraints:{audio:true,video:false},pcConfig:{iceServers:[{urls:CFG.stun}]},rtcOfferConstraints:{offerToReceiveAudio:true,offerToReceiveVideo:false}};
+    try{ua.call(target,opts);setCallUI(true);setStatus('CALLING...');}catch(err){toast('Call failed: '+err.message,'error');}
+}
+
+function answerCall(){
+    if(!session)return;
+    session.answer({mediaConstraints:{audio:true,video:false},pcConfig:{iceServers:[{urls:CFG.stun}]}});
+}
+
+function hangupCall(){
+    if(session){try{session.terminate();}catch(e){}}
+    if(callId){post(URL_HANGUP,{call_id:callId}).catch(()=>{});}
+    resetCallUI();dialNum='';updNum();
+}
+
+function toggleMute(){
+    if(!session)return;
+    muted=!muted;
+    if(muted){session.mute({audio:true});btnMute.classList.add('active');btnMute.innerHTML='<i class="fa-solid fa-microphone-slash"></i> Unmute';}
+    else{session.unmute({audio:true});btnMute.classList.remove('active');btnMute.innerHTML='<i class="fa-solid fa-microphone"></i> Mute';}
+}
+
+function toggleHold(){
+    if(!session)return;
+    held=!held;
+    if(held){session.hold();btnHold.classList.add('active');btnHold.innerHTML='<i class="fa-solid fa-play"></i> Resume';setStatus('ON HOLD');}
+    else{session.unhold();btnHold.classList.remove('active');btnHold.innerHTML='<i class="fa-solid fa-pause"></i> Hold';setStatus('CONNECTED');}
+}
+
+function sendDTMF(digit){
+    if(session){try{session.sendDTMF(digit);}catch(e){}}
+}
+
+// ── Disposition ─────────────────────────────────────────────────
+function openDisposition(){dispOver.style.display='flex';selDisp=null;$('btn-save-disp').disabled=true;document.querySelectorAll('.disposition-btn').forEach(b=>b.classList.remove('selected'));}
+function closeDisposition(){dispOver.style.display='none';callId=null;selDisp=null;}
+
+function saveDisposition(){
+    if(!selDisp)return;
+    const notes=$('disposition-notes').value;
+    if(callId){
+        post(URL_DISP,{call_id:callId,disposition_id:selDisp,notes:notes}).then(r=>{
+            if(r.success)toast('Disposition saved','success');else toast(r.error||'Save failed','error');
+        }).catch(()=>toast('Network error','error'));
+    }
+    closeDisposition();$('disposition-notes').value='';
+}
+
+// ── WebSocket for backend events ────────────────────────────────
+let ws=null,wsRetry=0;
+function connectWS(){
+    const proto=location.protocol==='https:'?'wss:':'ws:';
+    const url=proto+'//'+location.host+'/ws/agent/'+AGENT_ID+'/';
+    try{ws=new WebSocket(url);}catch(e){return;}
+    ws.onopen=()=>{wsRetry=0;};
+    ws.onmessage=(ev)=>{try{handleWSMsg(JSON.parse(ev.data));}catch(e){}};
+    ws.onclose=()=>{if(wsRetry<10){wsRetry++;setTimeout(connectWS,Math.min(1000*Math.pow(2,wsRetry),30000));}};
+}
+
+function handleWSMsg(d){
+    const t=d.type||'';
+    if(t==='call_incoming'||t==='call_started'||t==='call_connecting'){
+        callId=d.call_id||d.call?.id||null;
+        const num=d.phone_number||d.call?.number||d.called_number||'';
+        if(num){$('call-number').textContent=num;numDisp.textContent=num;}
+        if(d.lead_id||d.call?.lead_id)fetchLead(d.lead_id||d.call.lead_id);
+        placeH.style.display='none';detailsDiv.style.display='block';
+        badge.className='call-status-badge ringing';badge.innerHTML='<i class="fa-solid fa-phone-volume"></i> Incoming';
+    }
+    if(t==='call_connected'||t==='call_update'){
+        callId=d.call_id||d.call?.id||callId;
+        badge.className='call-status-badge connected';badge.innerHTML='<i class="fa-solid fa-phone"></i> Connected';
+        $('call-status-text').textContent='Connected';
+    }
+    if(t==='call_ended'||t==='call_cleared'){
+        const cid=d.call_id||callId;
+        if(cid&&!session){callId=cid;openDisposition();}
+        resetCallUI();
+    }
+    if(t==='status_update'){pill.textContent=d.display||d.status||'';}
+}
+
+function fetchLead(lid){
+    fetch(URL_LEAD+'?lead_id='+lid,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{
+        if(!d.success)return;const l=d.lead;
+        $('call-lead-name').textContent=(l.first_name+' '+l.last_name).trim()||'—';
+        $('lead-name').textContent=(l.first_name+' '+l.last_name).trim()||'Unknown';
+        $('lead-phone').textContent=l.phone_number||'—';
+        $('lead-email').textContent=l.email||'—';
+        $('lead-company').textContent=l.company||'—';
+        $('lead-city').textContent=[l.city,l.state].filter(Boolean).join(', ')||'—';
+        $('lead-status').textContent=l.status||'—';
+    }).catch(()=>{});
+}
+
+// ── UI Bindings ─────────────────────────────────────────────────
+function init(){
+    // Theme toggle
+    const html=document.documentElement;
+    const theme=localStorage.getItem('theme')||'light';
+    html.setAttribute('data-theme',theme);
+    $('theme-icon').className=theme==='dark'?'fas fa-moon':'fas fa-sun';
+    $('theme-toggle').onclick=()=>{const c=html.getAttribute('data-theme'),n=c==='dark'?'light':'dark';html.setAttribute('data-theme',n);localStorage.setItem('theme',n);$('theme-icon').className=n==='dark'?'fas fa-moon':'fas fa-sun';};
+
+    // Tabs
+    document.querySelectorAll('.tab-button').forEach(b=>b.onclick=function(){document.querySelectorAll('.tab-button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));this.classList.add('active');document.getElementById('tab-'+this.dataset.tab).classList.add('active');});
+
+    // Status chips
+    document.querySelectorAll('[data-set-status]').forEach(b=>b.onclick=function(){
+        const st=this.dataset.setStatus;
+        post(URL_STATUS,{status:st}).then(r=>{
+            if(r.success){document.querySelectorAll('.status-chip').forEach(x=>x.classList.remove('is-active'));this.classList.add('is-active');pill.textContent=r.display||st;toast('Status: '+st,'success');}
+        });
+    });
+
+    // Set initial active status chip
+    const curSt='{{ agent_status.status }}';
+    document.querySelectorAll('[data-set-status]').forEach(b=>{if(b.dataset.setStatus===curSt)b.classList.add('is-active');});
+
+    // Keypad
+    document.querySelectorAll('.phone-key').forEach(k=>k.onclick=function(){
+        const d=this.dataset.digit;dialNum+=d;updNum();
+        if(session)sendDTMF(d);
+        btnCall.disabled=!dialNum&&!(ua&&ua.isRegistered());
+    });
+
+    // Call/Answer
+    btnCall.onclick=()=>{if(session&&session.direction==='incoming'){answerCall();}else{makeCall();}};
+    btnHang.onclick=hangupCall;
+    btnMute.onclick=toggleMute;
+    btnHold.onclick=toggleHold;
+    btnClear.onclick=()=>{dialNum='';updNum();btnCall.disabled=true;};
+
+    // Auto-answer
+    $('auto-answer-toggle').onchange=function(){autoAns=this.checked;toast('Auto-answer '+(autoAns?'ON':'OFF'),'info');};
+
+    // Transfer (prompt for number)
+    btnXfer.onclick=()=>{
+        if(!session)return;
+        const target=prompt('Enter transfer number:');
+        if(target){try{session.refer('sip:'+target+'@'+CFG.domain);toast('Transferring to '+target,'info');}catch(e){toast('Transfer failed','error');}}
+    };
+
+    // Disposition buttons
+    document.querySelectorAll('.disposition-btn').forEach(b=>b.onclick=function(){
+        document.querySelectorAll('.disposition-btn').forEach(x=>x.classList.remove('selected'));
+        this.classList.add('selected');selDisp=this.dataset.dispId;$('btn-save-disp').disabled=false;
+    });
+    $('btn-save-disp').onclick=saveDisposition;
+    $('btn-cancel-disp').onclick=closeDisposition;
+
+    // Keyboard support
+    document.addEventListener('keydown',(e)=>{
+        if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+        if('0123456789*#'.includes(e.key)){dialNum+=e.key;updNum();if(session)sendDTMF(e.key);}
+        if(e.key==='Backspace'){dialNum=dialNum.slice(0,-1);updNum();}
+        if(e.key==='Enter'&&dialNum&&!session){makeCall();}
+        if(e.key==='Escape'&&session){hangupCall();}
+    });
+
+    // Init JsSIP & WebSocket
+    initJsSIP();
+    connectWS();
+
+    // Poll call status every 10s
+    setInterval(()=>{
+        fetch(URL_CALL_STATUS,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{
+            if(d.success&&d.current_call){
+                callId=d.current_call.id;
+                $('call-number').textContent=d.current_call.number||'—';
+                if(d.current_call.lead_id)fetchLead(d.current_call.lead_id);
+                placeH.style.display='none';detailsDiv.style.display='block';
+            }
+        }).catch(()=>{});
+    },10000);
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+</body>
+</html>

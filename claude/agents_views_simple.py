@@ -8,7 +8,6 @@ Routes:
 
 import json
 import logging
-import html
 from datetime import timedelta
 
 from django.shortcuts import render, get_object_or_404
@@ -38,41 +37,6 @@ def _build_webrtc_config(phone, agent):
         return {}
     server = phone.asterisk_server
     domain = server.server_ip
-    # ICE config:
-    # - If Phone.ice_host contains JSON, we treat it as the full RTCPeerConnection
-    #   iceServers list (list[dict]) or a list of URL strings.
-    # - Otherwise we treat it as a comma-separated list of STUN/TURN URLs.
-    # - Always include a reasonable default STUN as fallback.
-    default_stun = 'stun:stun.l.google.com:19302'
-    ice_servers: list = []
-    raw_ice = html.unescape((phone.ice_host or '').strip())
-    if raw_ice:
-        try:
-            parsed = json.loads(raw_ice)
-            if isinstance(parsed, list):
-                ice_servers = parsed
-            elif isinstance(parsed, dict):
-                ice_servers = [parsed]
-            else:
-                ice_servers = []
-        except Exception:
-            # Comma-separated list of URLs
-            ice_servers = [u.strip() for u in raw_ice.split(',') if u.strip()]
-
-    # If we got URL strings, normalize them to {urls: "..."} objects
-    normalized: list[dict] = []
-    for item in ice_servers:
-        if isinstance(item, str):
-            normalized.append({'urls': item})
-        elif isinstance(item, dict) and item.get('urls'):
-            normalized.append(item)
-
-    # Ensure fallback STUN is present
-    if not any(
-        isinstance(s, dict) and str(s.get('urls', '')).startswith('stun:')
-        for s in normalized
-    ):
-        normalized.insert(0, {'urls': default_stun})
     return {
         'ws_server': f'wss://{domain}:8089/ws',
         'sip_uri': f'sip:{phone.extension}@{domain}',
@@ -80,8 +44,7 @@ def _build_webrtc_config(phone, agent):
         'password': getattr(phone, 'sip_password', None) or phone.secret,
         'domain': domain,
         'display_name': agent.get_full_name() or agent.username,
-        'stun_servers': [default_stun],
-        'ice_servers_json': json.dumps(normalized),
+        'stun_servers': [phone.ice_host or 'stun:stun.l.google.com:19302'],
         'codecs': (phone.codec or 'ulaw,alaw').split(','),
         'debug': False,
     }
@@ -133,16 +96,14 @@ def _get_dashboard_context(request, agent, agent_status, phone):
 
     available_dispositions = []
     if current_campaign:
-        from campaigns.models import CampaignDisposition
-        camp_disps = CampaignDisposition.objects.filter(
+        dispositions = Disposition.objects.filter(
             campaign=current_campaign, is_active=True
-        ).select_related('disposition').order_by('sort_order')
+        ).order_by('display_order')
         available_dispositions = [
-            {'id': cd.disposition.id, 'name': cd.disposition.name,
-             'category': cd.disposition.category,
-             'is_sale': cd.disposition.is_sale,
-             'is_callback': cd.disposition.requires_callback}
-            for cd in camp_disps if cd.disposition.is_active
+            {'id': d.id, 'name': d.name, 'category': d.category,
+             'is_sale': getattr(d, 'is_sale', False),
+             'is_callback': getattr(d, 'is_callback', False)}
+            for d in dispositions
         ]
 
     webrtc_config = {}
@@ -237,18 +198,17 @@ def set_disposition(request):
             return JsonResponse({'success': False, 'error': 'Call not found'})
 
         try:
-            disp_pk = int(disposition_id)
-        except (TypeError, ValueError):
-            return JsonResponse({'success': False, 'error': 'Invalid disposition id'})
+            disposition = Disposition.objects.get(id=int(disposition_id))
+            call_log.disposition = disposition.name
+        except (Disposition.DoesNotExist, ValueError):
+            call_log.disposition = str(disposition_id)
 
-        disposition = Disposition.objects.filter(id=disp_pk).first()
-        if not disposition:
-            return JsonResponse({'success': False, 'error': 'Disposition not found'})
-
-        # CallLog.disposition is a FK to campaigns.Disposition
-        call_log.disposition = disposition
-        call_log.disposition_notes = notes
+        call_log.agent_notes = notes
         call_log.save()
+
+        if call_log.lead:
+            call_log.lead.last_call_time = timezone.now()
+            call_log.lead.save(update_fields=['last_call_time'])
 
         agent_status = getattr(agent, 'agent_status', None)
         if agent_status:

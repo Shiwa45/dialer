@@ -419,11 +419,15 @@ class Phone(TimeStampedModel):
     def sync_to_asterisk(self):
         """Enhanced sync with proper PJSIP realtime configuration"""
         try:
+            # Determine transport and WebRTC setting
+            transport = 'transport-wss' if self.webrtc_enabled else 'transport-udp'
+            webrtc_val = 'yes' if self.webrtc_enabled else 'no'
+
             # Create/Update PJSIP Endpoint with explicit transport
             PsEndpoint.objects.update_or_create(
                 id=self.extension,
                 defaults={
-                    'transport': 'transport-udp',  # Explicit transport
+                    'transport': transport,  # Dynamic transport
                     'aors': self.extension,
                     'auth': self.extension,
                     'context': self.context,
@@ -433,6 +437,7 @@ class Phone(TimeStampedModel):
                     'force_rport': 'yes',
                     'rewrite_contact': 'yes',
                     'dtls_auto_generate_cert': 'yes',
+                    'webrtc': webrtc_val,
                 }
             )
             

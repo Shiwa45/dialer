@@ -1,0 +1,1210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Agent Dashboard - WebRTC{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+    }
+
+    body {
+        background: #f4f6f9;
+    }
+
+    /* Main Layout */
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 300px 1fr 350px;
+        gap: 1rem;
+        padding: 1rem;
+        min-height: calc(100vh - 60px);
+    }
+
+    /* Left Panel - Phone Controls */
+    .phone-panel {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        color: white;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .phone-status {
+        text-align: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        margin-bottom: 1rem;
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+    }
+
+    .status-indicator.online { background: #28a745; }
+    .status-indicator.offline { background: #dc3545; }
+    .status-indicator.busy { background: #ffc107; }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .phone-display {
+        background: rgba(0,0,0,0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .call-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        margin-bottom: 0.5rem;
+    }
+
+    .call-status {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .call-timer {
+        font-size: 2rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+    }
+
+    /* Dialpad */
+    .dialpad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .dialpad-btn {
+        background: rgba(255,255,255,0.1);
+        border: none;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin: 0 auto;
+    }
+
+    .dialpad-btn:hover {
+        background: rgba(255,255,255,0.2);
+        transform: scale(1.05);
+    }
+
+    .dialpad-btn:active {
+        transform: scale(0.95);
+    }
+
+    .dialpad-btn .sub {
+        display: block;
+        font-size: 0.6rem;
+        opacity: 0.7;
+        font-weight: 400;
+    }
+
+    /* Call Controls */
+    .call-controls {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: auto;
+        padding-top: 1rem;
+    }
+
+    .control-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .control-btn.call { background: var(--success-color); color: white; }
+    .control-btn.hangup { background: var(--danger-color); color: white; }
+    .control-btn.mute { background: rgba(255,255,255,0.2); color: white; }
+    .control-btn.hold { background: rgba(255,255,255,0.2); color: white; }
+    .control-btn.transfer { background: rgba(255,255,255,0.2); color: white; }
+
+    .control-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .control-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .control-btn.active {
+        background: var(--warning-color);
+        color: #333;
+    }
+
+    /* Center Panel - Lead Info */
+    .lead-panel {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow-y: auto;
+    }
+
+    .lead-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .lead-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .lead-company {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .lead-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Call History in Lead Panel */
+    .lead-history {
+        margin-top: 1.5rem;
+    }
+
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .history-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Right Panel - Status & Quick Actions */
+    .status-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .status-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .status-card h5 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    /* Agent Status Selector */
+    .agent-status-selector {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .status-btn {
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        background: white;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .status-btn:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .status-btn.active {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .status-btn.available { border-color: var(--success-color); }
+    .status-btn.available.active { background: var(--success-color); border-color: var(--success-color); }
+
+    .status-btn.break { border-color: var(--warning-color); }
+    .status-btn.break.active { background: var(--warning-color); border-color: var(--warning-color); color: #333; }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #666;
+        text-transform: uppercase;
+    }
+
+    /* Disposition Modal */
+    .disposition-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .disposition-btn {
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        background: white;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .disposition-btn:hover {
+        border-color: var(--primary-color);
+        background: #f8f9ff;
+    }
+
+    .disposition-btn.sale { border-color: var(--success-color); }
+    .disposition-btn.callback { border-color: var(--warning-color); }
+    .disposition-btn.dnc { border-color: var(--danger-color); }
+
+    /* Script Panel */
+    .script-content {
+        background: #fffbea;
+        border-left: 4px solid var(--warning-color);
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .dashboard-container {
+            grid-template-columns: 280px 1fr;
+        }
+        .status-panel {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            grid-template-columns: 1fr;
+        }
+        .phone-panel {
+            order: -1;
+        }
+    }
+
+    /* Connection Status Banner */
+    .connection-banner {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        padding: 0.5rem;
+        text-align: center;
+        font-weight: 600;
+        z-index: 1000;
+        display: none;
+    }
+
+    .connection-banner.disconnected {
+        display: block;
+        background: var(--danger-color);
+        color: white;
+    }
+
+    .connection-banner.connecting {
+        display: block;
+        background: var(--warning-color);
+        color: #333;
+    }
+
+    /* Incoming Call Animation */
+    .incoming-call-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .incoming-call-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        max-width: 400px;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .caller-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 2rem;
+        color: white;
+    }
+
+    .incoming-actions {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 1.5rem;
+    }
+
+    .incoming-btn {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .incoming-btn.accept {
+        background: var(--success-color);
+        color: white;
+        animation: pulse-green 1s infinite;
+    }
+
+    .incoming-btn.reject {
+        background: var(--danger-color);
+        color: white;
+    }
+
+    @keyframes pulse-green {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        50% { box-shadow: 0 0 0 20px rgba(40, 167, 69, 0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Connection Banner -->
+<div class="connection-banner" id="connectionBanner">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span id="connectionMessage">Connecting to phone server...</span>
+</div>
+
+<!-- Incoming Call Overlay (hidden by default) -->
+<div class="incoming-call-overlay" id="incomingCallOverlay" style="display: none;">
+    <div class="incoming-call-card">
+        <div class="caller-avatar">
+            <i class="fas fa-phone-alt"></i>
+        </div>
+        <h3 id="incomingCallerName">Incoming Call</h3>
+        <p class="text-muted" id="incomingCallerNumber">+1 (555) 123-4567</p>
+        <div class="incoming-actions">
+            <button class="incoming-btn reject" onclick="rejectIncomingCall()">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+            <button class="incoming-btn accept" onclick="acceptIncomingCall()">
+                <i class="fas fa-phone-alt"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard -->
+<div class="dashboard-container">
+    <!-- Left Panel - Phone -->
+    <div class="phone-panel">
+        <div class="phone-status">
+            <span class="status-indicator" id="phoneStatusIndicator"></span>
+            <span id="phoneStatusText">Connecting...</span>
+        </div>
+
+        <div class="phone-display">
+            <div class="call-number" id="callNumber">—</div>
+            <div class="call-status" id="callStatus">Ready</div>
+            <div class="call-timer" id="callTimer" style="display: none;">0:00</div>
+        </div>
+
+        <!-- Dialpad -->
+        <div class="dialpad" id="dialpad">
+            <button class="dialpad-btn" onclick="dialpadPress('1')">1<span class="sub">&nbsp;</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('2')">2<span class="sub">ABC</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('3')">3<span class="sub">DEF</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('4')">4<span class="sub">GHI</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('5')">5<span class="sub">JKL</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('6')">6<span class="sub">MNO</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('7')">7<span class="sub">PQRS</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('8')">8<span class="sub">TUV</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('9')">9<span class="sub">WXYZ</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('*')">*</button>
+            <button class="dialpad-btn" onclick="dialpadPress('0')">0<span class="sub">+</span></button>
+            <button class="dialpad-btn" onclick="dialpadPress('#')">#</button>
+        </div>
+
+        <!-- Call Controls -->
+        <div class="call-controls">
+            <button class="control-btn mute" id="btnMute" onclick="toggleMute()" disabled title="Mute">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="control-btn hold" id="btnHold" onclick="toggleHold()" disabled title="Hold">
+                <i class="fas fa-pause"></i>
+            </button>
+            <button class="control-btn call" id="btnCall" onclick="makeCall()" title="Call">
+                <i class="fas fa-phone-alt"></i>
+            </button>
+            <button class="control-btn hangup" id="btnHangup" onclick="hangupCall()" style="display: none;" title="Hangup">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+            <button class="control-btn transfer" id="btnTransfer" onclick="showTransferModal()" disabled title="Transfer">
+                <i class="fas fa-random"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Center Panel - Lead Info -->
+    <div class="lead-panel">
+        <div id="leadPlaceholder" class="text-center py-5">
+            <i class="fas fa-user-circle fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Active Call</h4>
+            <p class="text-muted">Lead information will appear here when a call connects.</p>
+        </div>
+
+        <div id="leadInfo" style="display: none;">
+            <div class="lead-header">
+                <div>
+                    <div class="lead-name" id="leadName">John Smith</div>
+                    <div class="lead-company" id="leadCompany">Acme Corporation</div>
+                </div>
+                <span class="badge bg-primary" id="leadStatus">New</span>
+            </div>
+
+            <div class="lead-info-grid">
+                <div class="info-item">
+                    <div class="info-label">Phone</div>
+                    <div class="info-value" id="leadPhone">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value" id="leadEmail">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">City</div>
+                    <div class="info-value" id="leadCity">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">State</div>
+                    <div class="info-value" id="leadState">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Call Count</div>
+                    <div class="info-value" id="leadCallCount">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Last Contact</div>
+                    <div class="info-value" id="leadLastContact">Never</div>
+                </div>
+            </div>
+
+            <!-- Script -->
+            <div class="status-card mt-3">
+                <h5><i class="fas fa-scroll me-2"></i>Script</h5>
+                <div class="script-content" id="scriptContent">
+                    Hello, this is <strong>{{ user.first_name }}</strong> calling from <strong>{{ campaign.name }}</strong>. 
+                    Am I speaking with <span class="text-primary fw-bold" id="scriptLeadName">[Lead Name]</span>?
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="status-card mt-3">
+                <h5><i class="fas fa-sticky-note me-2"></i>Notes</h5>
+                <textarea class="form-control" id="callNotes" rows="3" placeholder="Add call notes..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel - Status & Actions -->
+    <div class="status-panel">
+        <!-- Agent Status -->
+        <div class="status-card">
+            <h5><i class="fas fa-user-circle me-2"></i>Your Status</h5>
+            <div class="agent-status-selector">
+                <button class="status-btn available active" data-status="available" onclick="setAgentStatus('available')">
+                    <i class="fas fa-check-circle me-1"></i>Available
+                </button>
+                <button class="status-btn break" data-status="break" onclick="setAgentStatus('break')">
+                    <i class="fas fa-coffee me-1"></i>Break
+                </button>
+                <button class="status-btn" data-status="lunch" onclick="setAgentStatus('lunch')">
+                    <i class="fas fa-utensils me-1"></i>Lunch
+                </button>
+                <button class="status-btn" data-status="training" onclick="setAgentStatus('training')">
+                    <i class="fas fa-graduation-cap me-1"></i>Training
+                </button>
+            </div>
+        </div>
+
+        <!-- Today's Stats -->
+        <div class="status-card">
+            <h5><i class="fas fa-chart-bar me-2"></i>Today's Stats</h5>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="statCalls">0</div>
+                    <div class="stat-label">Calls</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statContacts">0</div>
+                    <div class="stat-label">Contacts</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statSales">0</div>
+                    <div class="stat-label">Sales</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statTalkTime">0:00</div>
+                    <div class="stat-label">Talk Time</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign Info -->
+        <div class="status-card">
+            <h5><i class="fas fa-bullhorn me-2"></i>Campaign</h5>
+            <p class="mb-1 fw-bold" id="campaignName">{{ campaign.name|default:"No Campaign" }}</p>
+            <small class="text-muted" id="campaignType">{{ campaign.dial_mode|default:"Predictive" }}</small>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="status-card">
+            <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            <div class="d-grid gap-2">
+                <a href="{% url 'agents:call_history_page' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-history me-1"></i>Call History
+                </a>
+                <button class="btn btn-outline-secondary btn-sm" onclick="showCallbackModal()">
+                    <i class="fas fa-calendar-plus me-1"></i>Schedule Callback
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disposition Modal -->
+<div class="modal fade" id="dispositionModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-check me-2"></i>Call Disposition
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="disposition-grid" id="dispositionGrid">
+                    {% for disposition in dispositions %}
+                    <button class="disposition-btn {{ disposition.category }}" 
+                            onclick="setDisposition('{{ disposition.id }}', '{{ disposition.name }}')">
+                        {{ disposition.name }}
+                    </button>
+                    {% empty %}
+                    <button class="disposition-btn sale" onclick="setDisposition('sale', 'Sale')">Sale</button>
+                    <button class="disposition-btn callback" onclick="setDisposition('callback', 'Callback')">Callback</button>
+                    <button class="disposition-btn" onclick="setDisposition('no_answer', 'No Answer')">No Answer</button>
+                    <button class="disposition-btn" onclick="setDisposition('busy', 'Busy')">Busy</button>
+                    <button class="disposition-btn" onclick="setDisposition('voicemail', 'Voicemail')">Voicemail</button>
+                    <button class="disposition-btn dnc" onclick="setDisposition('dnc', 'Do Not Call')">Do Not Call</button>
+                    <button class="disposition-btn" onclick="setDisposition('not_interested', 'Not Interested')">Not Interested</button>
+                    <button class="disposition-btn" onclick="setDisposition('wrong_number', 'Wrong Number')">Wrong Number</button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Audio Elements -->
+<audio id="remoteAudio" autoplay></audio>
+<audio id="localAudio" muted></audio>
+<audio id="ringtoneAudio" loop src="{% static 'sounds/ringtone.mp3' %}"></audio>
+{% endblock %}
+
+{% block extra_js %}
+<!-- JsSIP Library (official unpkg CDN) -->
+<script src="https://unpkg.com/jssip@3.10.0/dist/jssip.min.js"></script>
+
+<!-- WebRTC Phone Class -->
+<script src="{% static 'js/webrtc_phone.js' %}"></script>
+
+<script>
+// Configuration from Django
+const webrtcConfig = {
+    wsServer: '{{ webrtc_config.ws_server|default:"wss://localhost:8089/ws" }}',
+    sipUri: '{{ webrtc_config.sip_uri|default:"sip:1001@localhost" }}',
+    password: '{{ webrtc_config.password|default:"" }}',
+    displayName: '{{ user.get_full_name|default:user.username }}',
+    debug: {{ webrtc_config.debug|default:"false"|lower }},
+    autoAnswer: false
+};
+
+// State
+let phone = null;
+let currentLead = null;
+let currentCallId = null;
+let dialedNumber = '';
+let ws = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initWebRTCPhone();
+    initWebSocket();
+    loadTodayStats();
+});
+
+/**
+ * Initialize WebRTC Phone
+ */
+function initWebRTCPhone() {
+    phone = new WebRTCPhone({
+        ...webrtcConfig,
+        
+        onRegistered: function(e) {
+            updatePhoneStatus('online', 'Registered');
+            document.getElementById('btnCall').disabled = false;
+        },
+        
+        onUnregistered: function(e) {
+            updatePhoneStatus('offline', 'Unregistered');
+        },
+        
+        onRegistrationFailed: function(e) {
+            updatePhoneStatus('offline', 'Registration Failed');
+            showToast('Phone registration failed', 'error');
+        },
+        
+        onIncomingCall: function(info) {
+            showIncomingCall(info);
+        },
+        
+        onOutgoingCall: function(info) {
+            updateCallUI('dialing', info.number);
+        },
+        
+        onCallConnected: function(info) {
+            updateCallUI('connected');
+            showLeadInfo();
+            startCallTimer();
+        },
+        
+        onCallEnded: function(info) {
+            handleCallEnded(info);
+        },
+        
+        onCallFailed: function(info) {
+            handleCallFailed(info);
+        },
+        
+        onError: function(error) {
+            console.error('WebRTC Error:', error);
+            showToast(error.message || 'Phone error', 'error');
+        }
+    });
+    
+    phone.register();
+}
+
+/**
+ * Initialize WebSocket for server events
+ */
+function initWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Connect to the per-agent WebSocket channel that matches agents.routing
+    const wsUrl = `${protocol}//${window.location.host}/ws/agent/{{ user.id }}/`;
+    
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = function() {
+        console.log('WebSocket connected');
+    };
+    
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        handleServerEvent(data);
+    };
+    
+    ws.onclose = function() {
+        console.log('WebSocket disconnected');
+        setTimeout(initWebSocket, 3000);
+    };
+}
+
+/**
+ * Handle server events
+ */
+function handleServerEvent(data) {
+    switch (data.type) {
+        case 'call_incoming':
+            currentLead = data.lead;
+            currentCallId = data.call?.id;
+            break;
+            
+        case 'call_connected':
+            if (data.lead) {
+                currentLead = data.lead;
+                displayLeadInfo(data.lead);
+            }
+            break;
+            
+        case 'call_cleared':
+            clearCallUI();
+            break;
+            
+        case 'status_update':
+            updateAgentStatusUI(data.status);
+            break;
+    }
+}
+
+/**
+ * Dialpad press
+ */
+function dialpadPress(digit) {
+    if (phone && phone.currentSession) {
+        // Send DTMF during call
+        phone.sendDTMF(digit);
+    } else {
+        // Add to dialed number
+        dialedNumber += digit;
+        document.getElementById('callNumber').textContent = dialedNumber || '—';
+    }
+}
+
+/**
+ * Make outgoing call
+ */
+function makeCall() {
+    if (!dialedNumber) {
+        showToast('Enter a number to call', 'warning');
+        return;
+    }
+    
+    if (phone.call(dialedNumber)) {
+        updateCallUI('dialing', dialedNumber);
+    }
+}
+
+/**
+ * Hangup call
+ */
+function hangupCall() {
+    phone.hangup();
+}
+
+/**
+ * Toggle mute
+ */
+function toggleMute() {
+    const isMuted = phone.toggleMute();
+    const btn = document.getElementById('btnMute');
+    btn.classList.toggle('active', isMuted);
+    btn.querySelector('i').className = isMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+}
+
+/**
+ * Toggle hold
+ */
+function toggleHold() {
+    const isHeld = phone.toggleHold();
+    const btn = document.getElementById('btnHold');
+    btn.classList.toggle('active', isHeld);
+}
+
+/**
+ * Show incoming call overlay
+ */
+function showIncomingCall(info) {
+    document.getElementById('incomingCallerNumber').textContent = info.number;
+    document.getElementById('incomingCallerName').textContent = info.displayName || 'Incoming Call';
+    document.getElementById('incomingCallOverlay').style.display = 'flex';
+}
+
+/**
+ * Accept incoming call
+ */
+function acceptIncomingCall() {
+    document.getElementById('incomingCallOverlay').style.display = 'none';
+    phone.answer();
+}
+
+/**
+ * Reject incoming call
+ */
+function rejectIncomingCall() {
+    document.getElementById('incomingCallOverlay').style.display = 'none';
+    phone.reject();
+}
+
+/**
+ * Update phone status indicator
+ */
+function updatePhoneStatus(status, text) {
+    const indicator = document.getElementById('phoneStatusIndicator');
+    const statusText = document.getElementById('phoneStatusText');
+    
+    indicator.className = 'status-indicator ' + status;
+    statusText.textContent = text;
+    
+    const banner = document.getElementById('connectionBanner');
+    if (status === 'offline') {
+        banner.className = 'connection-banner disconnected';
+        document.getElementById('connectionMessage').textContent = 'Phone disconnected';
+    } else {
+        banner.className = 'connection-banner';
+    }
+}
+
+/**
+ * Update call UI state
+ */
+function updateCallUI(state, number) {
+    const callNumber = document.getElementById('callNumber');
+    const callStatus = document.getElementById('callStatus');
+    const callTimer = document.getElementById('callTimer');
+    const btnCall = document.getElementById('btnCall');
+    const btnHangup = document.getElementById('btnHangup');
+    const btnMute = document.getElementById('btnMute');
+    const btnHold = document.getElementById('btnHold');
+    const btnTransfer = document.getElementById('btnTransfer');
+    
+    switch (state) {
+        case 'dialing':
+            callNumber.textContent = number;
+            callStatus.textContent = 'Dialing...';
+            btnCall.style.display = 'none';
+            btnHangup.style.display = 'flex';
+            break;
+            
+        case 'connected':
+            callStatus.textContent = 'Connected';
+            callTimer.style.display = 'block';
+            btnMute.disabled = false;
+            btnHold.disabled = false;
+            btnTransfer.disabled = false;
+            break;
+            
+        case 'ended':
+            callStatus.textContent = 'Call Ended';
+            callTimer.style.display = 'none';
+            btnCall.style.display = 'flex';
+            btnHangup.style.display = 'none';
+            btnMute.disabled = true;
+            btnHold.disabled = true;
+            btnTransfer.disabled = true;
+            break;
+    }
+}
+
+/**
+ * Handle call ended
+ */
+function handleCallEnded(info) {
+    stopCallTimer();
+    updateCallUI('ended');
+    
+    // Show disposition modal
+    const modal = new bootstrap.Modal(document.getElementById('dispositionModal'));
+    modal.show();
+}
+
+/**
+ * Handle call failed
+ */
+function handleCallFailed(info) {
+    updateCallUI('ended');
+    showToast('Call failed: ' + (info.cause || 'Unknown error'), 'error');
+    clearCallUI();
+}
+
+/**
+ * Clear call UI
+ */
+function clearCallUI() {
+    dialedNumber = '';
+    currentLead = null;
+    currentCallId = null;
+    
+    document.getElementById('callNumber').textContent = '—';
+    document.getElementById('callStatus').textContent = 'Ready';
+    document.getElementById('callTimer').style.display = 'none';
+    document.getElementById('callTimer').textContent = '0:00';
+    
+    document.getElementById('leadPlaceholder').style.display = 'block';
+    document.getElementById('leadInfo').style.display = 'none';
+    
+    // Reset controls
+    const btnMute = document.getElementById('btnMute');
+    const btnHold = document.getElementById('btnHold');
+    btnMute.classList.remove('active');
+    btnHold.classList.remove('active');
+    btnMute.querySelector('i').className = 'fas fa-microphone';
+}
+
+/**
+ * Start call timer
+ */
+let callTimerInterval = null;
+function startCallTimer() {
+    const timerEl = document.getElementById('callTimer');
+    let seconds = 0;
+    
+    callTimerInterval = setInterval(() => {
+        seconds++;
+        timerEl.textContent = WebRTCPhone.formatDuration(seconds);
+    }, 1000);
+}
+
+function stopCallTimer() {
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+}
+
+/**
+ * Display lead info
+ */
+function displayLeadInfo(lead) {
+    if (!lead) return;
+    
+    document.getElementById('leadPlaceholder').style.display = 'none';
+    document.getElementById('leadInfo').style.display = 'block';
+    
+    document.getElementById('leadName').textContent = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown';
+    document.getElementById('leadCompany').textContent = lead.company || '';
+    document.getElementById('leadPhone').textContent = lead.phone_number || '—';
+    document.getElementById('leadEmail').textContent = lead.email || '—';
+    document.getElementById('leadCity').textContent = lead.city || '—';
+    document.getElementById('leadState').textContent = lead.state || '—';
+    document.getElementById('leadCallCount').textContent = lead.call_count || 0;
+    document.getElementById('leadStatus').textContent = lead.status || 'New';
+    document.getElementById('scriptLeadName').textContent = lead.first_name || 'Customer';
+}
+
+function showLeadInfo() {
+    if (currentLead) {
+        displayLeadInfo(currentLead);
+    }
+}
+
+/**
+ * Set disposition
+ */
+function setDisposition(dispositionId, dispositionName) {
+    const notes = document.getElementById('callNotes').value;
+    
+    fetch('{% url "agents:set_disposition" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `disposition_id=${dispositionId}&notes=${encodeURIComponent(notes)}&call_id=${currentCallId || ''}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('dispositionModal')).hide();
+            showToast(`Disposition set: ${dispositionName}`, 'success');
+            clearCallUI();
+            document.getElementById('callNotes').value = '';
+            loadTodayStats();
+        } else {
+            showToast(data.error || 'Failed to set disposition', 'error');
+        }
+    });
+}
+
+/**
+ * Set agent status
+ */
+function setAgentStatus(status) {
+    fetch('{% url "agents:update_status" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `status=${status}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateAgentStatusUI(status);
+        } else {
+            showToast(data.error || 'Failed to update status', 'error');
+        }
+    });
+}
+
+function updateAgentStatusUI(status) {
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.status === status) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+/**
+ * Load today's stats
+ */
+function loadTodayStats() {
+    fetch('{% url "agents:statistics" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.stats) {
+                const stats = data.stats || {};
+                document.getElementById('statCalls').textContent = stats.calls || 0;
+                document.getElementById('statContacts').textContent = stats.contacts || 0;
+                document.getElementById('statSales').textContent = stats.sales || 0;
+                document.getElementById('statTalkTime').textContent = stats.talk_time || '0:00';
+            }
+        });
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    const bgClass = {
+        'success': 'bg-success',
+        'error': 'bg-danger',
+        'warning': 'bg-warning',
+        'info': 'bg-info'
+    }[type] || 'bg-info';
+    
+    const toastHtml = `
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+            <div class="toast align-items-center text-white ${bgClass}" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', toastHtml);
+    
+    const toastContainer = document.body.lastElementChild;
+    const toastEl = toastContainer.querySelector('.toast');
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    
+    toastEl.addEventListener('hidden.bs.toast', () => toastContainer.remove());
+}
+
+// Refresh stats periodically
+setInterval(loadTodayStats, 60000);
+</script>
+{% endblock %}

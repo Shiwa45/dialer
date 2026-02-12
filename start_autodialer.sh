@@ -139,7 +139,7 @@ sleep 1
 # Start Django Server (ASGI/Channels)
 echo "6️⃣  Starting Django Server (Daphne)..."
 # Port 80 requires sudo
-start_service "Django Server" "sudo ./env/bin/daphne -b 0.0.0.0 -p 80 autodialer.asgi:application"
+start_service "Django Server" "sudo ./env/bin/daphne -e tcp:port=80:interface=0.0.0.0 -e ssl:port=443:privateKey=/etc/asterisk/keys/asterisk.key:certKey=/etc/asterisk/keys/asterisk.pem:interface=0.0.0.0 autodialer.asgi:application"
 sleep 2
 
 echo ""

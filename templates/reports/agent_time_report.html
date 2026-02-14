@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Agent Time Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --available: #16a34a;
+        --busy:      #dc2626;
+        --wrapup:    #7c3aed;
+        --break:     #d97706;
+        --offline:   #6b7280;
+        --blue:      #2563eb;
+        --border:    #e5e7eb;
+        --muted:     #6b7280;
+        --font-mono: 'Courier New', monospace;
+    }
+    .rpt-wrap { padding: 1.25rem 2rem 2rem; max-width: 1700px; margin: 0 auto; }
+    .rpt-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.25rem; flex-wrap: wrap; gap: .75rem;
+    }
+    .rpt-title { font-size: 1.2rem; font-weight: 800; }
+
+    /* ── Summary cards ────────────────────────────────────── */
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: .875rem;
+        margin-bottom: 1.25rem;
+    }
+    .sum-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: .875rem 1rem;
+        text-align: center;
+        box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    }
+    .sum-card .val { font-size: 1.5rem; font-weight: 800; font-family: var(--font-mono); }
+    .sum-card .lbl { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing:.05em; font-weight:600; margin-top:.2rem; }
+    .c-login    .val { color: var(--blue); }
+    .c-avail    .val { color: var(--available); }
+    .c-busy     .val { color: var(--busy); }
+    .c-wrapup   .val { color: var(--wrapup); }
+    .c-break    .val { color: var(--break); }
+
+    /* ── Filters ──────────────────────────────────────────── */
+    .filter-bar {
+        display: flex; align-items: flex-end; gap: .75rem;
+        margin-bottom: 1rem; flex-wrap: wrap;
+        background: #fff; border: 1px solid var(--border);
+        border-radius: 8px; padding: .875rem 1.25rem;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: .25rem; }
+    .filter-group label { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .filter-group select,
+    .filter-group input[type="date"] {
+        padding: .4rem .8rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: .85rem;
+        color: #111;
+        background: #fff;
+        min-width: 150px;
+    }
+    .btn-primary, .btn-secondary {
+        padding: .45rem 1rem;
+        border-radius: 6px;
+        font-size: .85rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        display: inline-flex; align-items: center; gap: .375rem;
+        transition: filter .15s;
+        align-self: flex-end;
+        margin-bottom: .025rem;
+    }
+    .btn-primary   { background: var(--blue); color: #fff; }
+    .btn-secondary { background: #fff; color: #374151; border: 1px solid var(--border); }
+    .btn-primary:hover, .btn-secondary:hover { filter: brightness(.95); }
+
+    /* ── Table ────────────────────────────────────────────── */
+    .table-wrap {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow-x: auto;
+        box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    thead tr { background: #f8fafc; border-bottom: 2px solid var(--border); }
+    th {
+        padding: .75rem 1rem; text-align: left;
+        font-size: .7rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .06em;
+        color: var(--muted); white-space: nowrap;
+        cursor: pointer; user-select: none;
+    }
+    th:hover { color: #111; }
+    th.sorted-asc::after  { content: ' ↑'; color: var(--blue); }
+    th.sorted-desc::after { content: ' ↓'; color: var(--blue); }
+    td { padding: .65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+
+    /* Monospace time cells */
+    .time-cell { font-family: var(--font-mono); font-size: .82rem; font-weight: 700; }
+    .time-cell.login   { color: var(--blue); }
+    .time-cell.avail   { color: var(--available); }
+    .time-cell.busy    { color: var(--busy); }
+    .time-cell.wrapup  { color: var(--wrapup); }
+    .time-cell.brk     { color: var(--break); }
+    .time-cell.offline { color: var(--muted); }
+
+    /* Mini bar */
+    .mini-bar {
+        display: flex; height: 8px;
+        border-radius: 4px; overflow: hidden;
+        width: 120px; gap: 1px;
+    }
+    .mb-avail  { background: var(--available); }
+    .mb-busy   { background: var(--busy); }
+    .mb-wrapup { background: var(--wrapup); }
+    .mb-break  { background: var(--break); }
+    .mb-rest   { background: #d1d5db; }
+
+    /* Login at badge */
+    .login-at { font-size: .75rem; font-family: var(--font-mono); color: var(--blue); }
+
+    /* Loading / empty */
+    .empty-row td { text-align: center; padding: 3rem; color: var(--muted); }
+    .spinner {
+        display: inline-block; width: 18px; height: 18px;
+        border: 2px solid #e5e7eb; border-top-color: var(--blue);
+        border-radius: 50%; animation: spin .7s linear infinite;
+        vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rpt-wrap">
+
+    <!-- Header -->
+    <div class="rpt-header">
+        <div>
+            <h1 class="rpt-title"><i class="fas fa-clock" style="color:var(--blue);margin-right:.4rem;"></i>Agent Time Report</h1>
+            <p style="color:var(--muted);font-size:.8rem;margin-top:.2rem;">Login hours, status breakdown, and activity per agent per day.</p>
+        </div>
+        <a href="{% url 'reports:realtime_dashboard' %}" style="text-decoration:none;">
+            <button class="btn-secondary"><i class="fas fa-satellite-dish"></i> Live Monitor</button>
+        </a>
+    </div>
+
+    <!-- Summary cards (filled by JS) -->
+    <div class="summary-row">
+        <div class="sum-card c-login" >
+            <div class="val" id="sum-login">—</div>
+            <div class="lbl">Avg Login / Agent / Day</div>
+        </div>
+        <div class="sum-card c-avail" >
+            <div class="val" id="sum-avail">—</div>
+            <div class="lbl">Avg Available</div>
+        </div>
+        <div class="sum-card c-busy"  >
+            <div class="val" id="sum-busy">—</div>
+            <div class="lbl">Avg On Call</div>
+        </div>
+        <div class="sum-card c-wrapup">
+            <div class="val" id="sum-wrapup">—</div>
+            <div class="lbl">Avg Wrap-up</div>
+        </div>
+        <div class="sum-card c-break" >
+            <div class="val" id="sum-break">—</div>
+            <div class="lbl">Avg Break / Away</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Agent</label>
+            <select id="flt-agent">
+                <option value="">All Agents</option>
+                {% for a in agents %}
+                <option value="{{ a.id }}">{{ a.get_full_name|default:a.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>From</label>
+            <input type="date" id="flt-from" value="{{ today }}">
+        </div>
+        <div class="filter-group">
+            <label>To</label>
+            <input type="date" id="flt-to" value="{{ today }}">
+        </div>
+        <button class="btn-primary" id="btn-load">
+            <i class="fas fa-search"></i> Load Report
+        </button>
+        <button class="btn-secondary" id="btn-today">Today</button>
+        <button class="btn-secondary" id="btn-week">This Week</button>
+        <button class="btn-secondary" id="btn-export">
+            <i class="fas fa-download"></i> Export CSV
+        </button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+        <table id="report-table">
+            <thead>
+                <tr>
+                    <th data-col="date">Date</th>
+                    <th data-col="agent_name">Agent</th>
+                    <th data-col="login_first_str" title="Time agent first became active today">Login At</th>
+                    <th data-col="login_time_secs" title="Total time logged in (excl. offline)">
+                        Total Login Time
+                    </th>
+                    <th data-col="available_secs">Available</th>
+                    <th data-col="busy_secs">On Call</th>
+                    <th data-col="wrapup_secs">Wrap-up</th>
+                    <th data-col="break_secs">Break / Away</th>
+                    <th>Breakdown</th>
+                </tr>
+            </thead>
+            <tbody id="report-tbody">
+                <tr class="empty-row"><td colspan="9">
+                    Click <strong>Load Report</strong> to view data.
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+'use strict';
+
+const URL_API = '{% url "reports:agent_time_api" %}';
+
+let rawData    = [];
+let sortCol    = 'date';
+let sortAsc    = true;
+
+// ── Helpers ────────────────────────────────────────────────────
+function fmtSecs(s) {
+    s = parseInt(s) || 0;
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function avgSecs(rows, field) {
+    if (!rows.length) return '—';
+    const total = rows.reduce((s, r) => s + (r[field] || 0), 0);
+    return fmtSecs(Math.round(total / rows.length));
+}
+
+// ── Fetch ──────────────────────────────────────────────────────
+function loadReport() {
+    const agentId  = document.getElementById('flt-agent').value;
+    const dateFrom = document.getElementById('flt-from').value;
+    const dateTo   = document.getElementById('flt-to').value;
+
+    const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+    if (agentId) params.set('agent_id', agentId);
+
+    document.getElementById('report-tbody').innerHTML =
+        '<tr class="empty-row"><td colspan="9"><span class="spinner"></span> Loading…</td></tr>';
+
+    fetch(`${URL_API}?${params}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) { alert(d.error || 'Failed'); return; }
+            rawData = d.data || [];
+            renderTable();
+            updateSummaryCards();
+        })
+        .catch(() => alert('Network error'));
+}
+
+// ── Render ─────────────────────────────────────────────────────
+function renderTable() {
+    const sorted = [...rawData].sort((a, b) => {
+        let va = a[sortCol], vb = b[sortCol];
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+        return sortAsc ? cmp : -cmp;
+    });
+
+    if (!sorted.length) {
+        document.getElementById('report-tbody').innerHTML =
+            '<tr class="empty-row"><td colspan="9">No data for the selected filters.</td></tr>';
+        return;
+    }
+
+    const html = sorted.map(r => {
+        const total = Math.max(r.login_time_secs || 1, 1);
+        const avPct = ((r.available_secs || 0) / total * 100).toFixed(1);
+        const bsPct = ((r.busy_secs      || 0) / total * 100).toFixed(1);
+        const wpPct = ((r.wrapup_secs    || 0) / total * 100).toFixed(1);
+        const brPct = ((r.break_secs     || 0) / total * 100).toFixed(1);
+        const restPct = Math.max(0, 100 - parseFloat(avPct) - parseFloat(bsPct) - parseFloat(wpPct) - parseFloat(brPct)).toFixed(1);
+
+        return `
+        <tr>
+            <td>${r.date}</td>
+            <td>
+                <strong>${r.agent_name}</strong>
+                <span style="font-size:.72rem;color:var(--muted);margin-left:.3rem;">@${r.agent}</span>
+            </td>
+            <td><span class="login-at">${r.login_first_str || '—'}</span></td>
+            <td><span class="time-cell login">${r.login_time || '00:00:00'}</span></td>
+            <td><span class="time-cell avail">${r.available  || '00:00:00'}</span></td>
+            <td><span class="time-cell busy" >${r.busy       || '00:00:00'}</span></td>
+            <td><span class="time-cell wrapup">${r.wrapup    || '00:00:00'}</span></td>
+            <td><span class="time-cell brk"  >${r.break      || '00:00:00'}</span></td>
+            <td>
+                <div class="mini-bar" title="Available ${avPct}% · On Call ${bsPct}% · Wrap-up ${wpPct}% · Break ${brPct}%">
+                    <div class="mb-avail"  style="flex:${r.available_secs||0}"></div>
+                    <div class="mb-busy"   style="flex:${r.busy_secs||0}"></div>
+                    <div class="mb-wrapup" style="flex:${r.wrapup_secs||0}"></div>
+                    <div class="mb-break"  style="flex:${r.break_secs||0}"></div>
+                    <div class="mb-rest"   style="flex:1"></div>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('report-tbody').innerHTML = html;
+
+    // Update sort indicators
+    document.querySelectorAll('th[data-col]').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.col === sortCol) {
+            th.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+        }
+    });
+}
+
+// ── Summary cards ───────────────────────────────────────────────
+function updateSummaryCards() {
+    document.getElementById('sum-login').textContent  = avgSecs(rawData, 'login_time_secs');
+    document.getElementById('sum-avail').textContent  = avgSecs(rawData, 'available_secs');
+    document.getElementById('sum-busy').textContent   = avgSecs(rawData, 'busy_secs');
+    document.getElementById('sum-wrapup').textContent = avgSecs(rawData, 'wrapup_secs');
+    document.getElementById('sum-break').textContent  = avgSecs(rawData, 'break_secs');
+}
+
+// ── Sort on header click ────────────────────────────────────────
+document.querySelectorAll('th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        if (sortCol === col) sortAsc = !sortAsc;
+        else { sortCol = col; sortAsc = true; }
+        renderTable();
+    });
+});
+
+// ── Buttons ─────────────────────────────────────────────────────
+document.getElementById('btn-load').addEventListener('click', loadReport);
+
+document.getElementById('btn-today').addEventListener('click', () => {
+    const t = new Date().toISOString().slice(0, 10);
+    document.getElementById('flt-from').value = t;
+    document.getElementById('flt-to').value   = t;
+    loadReport();
+});
+
+document.getElementById('btn-week').addEventListener('click', () => {
+    const now  = new Date();
+    const day  = now.getDay() || 7;
+    const mon  = new Date(now);
+    mon.setDate(now.getDate() - day + 1);
+    document.getElementById('flt-from').value = mon.toISOString().slice(0, 10);
+    document.getElementById('flt-to').value   = now.toISOString().slice(0, 10);
+    loadReport();
+});
+
+document.getElementById('btn-export').addEventListener('click', () => {
+    const agentId  = document.getElementById('flt-agent').value;
+    const dateFrom = document.getElementById('flt-from').value;
+    const dateTo   = document.getElementById('flt-to').value;
+    const params   = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, export: 'csv' });
+    if (agentId) params.set('agent_id', agentId);
+    window.location = `${URL_API}?${params}`;
+});
+
+// Auto-load today on open
+loadReport();
+
+})();
+</script>
+{% endblock %}

@@ -57,19 +57,12 @@ def _build_webrtc_config(phone, agent=None):
     host = server.server_ip if server else 'localhost'
     ws_port = getattr(server, 'websocket_port', 8089) if server else 8089
     domain = getattr(server, 'domain', host) if server else host
-    display_name = agent.first_name or agent.username
-    if agent.last_name:
-        display_name += f" {agent.last_name}"
-    
     return {
         'extension': phone.extension,
         'secret': getattr(phone, 'secret', '') or getattr(phone, 'password', ''),
-        'password': getattr(phone, 'secret', '') or getattr(phone, 'password', ''), # Frontend expects 'password' key
         'domain': domain,
         'host': host,
         'ws_server': f"wss://{host}:{ws_port}/ws",
-        'sip_uri': f"sip:{phone.extension}@{domain}", # Frontend expects 'sip_uri'
-        'display_name': display_name,                 # Frontend expects 'display_name'
         'stun_server': getattr(phone, 'ice_host', None) or 'stun:stun.l.google.com:19302',
         'codecs': phone.codec.split(',') if getattr(phone, 'codec', None) else ['ulaw', 'alaw', 'g722'],
         'transport': 'wss',
@@ -874,7 +867,7 @@ def agent_status_info(request):
         # ── Step 1: current open log = reliable "status started at" ────────
         current_log = (
             AgentTimeLog.objects
-            .filter(user=request.user, ended_at__isnull=True)
+            .filter(user=request.user, date=today, ended_at__isnull=True)
             .order_by('-started_at')
             .first()
         )
@@ -912,7 +905,7 @@ def agent_status_info(request):
             else:
                 login_secs += max(0, int((now - log.started_at).total_seconds()))
 
-        response_data = {
+        return JsonResponse({
             'success'              : True,
             'status'               : ag.status,
             'status_display'       : ag.get_status_display(),
@@ -924,13 +917,7 @@ def agent_status_info(request):
             # Clock sync: client skew = server_time_ms - Date.now()
             'server_time_ms'       : int(now.timestamp() * 1000),
             'needs_disposition'    : ag.needs_disposition() if hasattr(ag, 'needs_disposition') else False,
-        }
-        
-        # DEBUG: Log what we're returning
-        logger.info(f"agent_status_info for {request.user.username}: status={ag.status}, "
-                   f"status_changed_at_ms={changed_ms}, current_log={'found' if current_log else 'NONE'}")
-        
-        return JsonResponse(response_data)
+        })
     except AgentStatus.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'No status record'})
     except Exception as e:

@@ -60,6 +60,22 @@ EXT_CONF="/etc/asterisk/extensions_custom.conf"
 
 if [ -f "./generated_configs/pjsip_custom.conf" ]; then
     echo "Copying config files (sudo required)..."
+    sudo cp ./generated_configs/pjsip_transports.conf "/etc/asterisk/pjsip_transports.conf"
+    
+    # Ensure transports are included in main pjsip.conf
+    # Doing this safely with grep check
+    if ! grep -q "#include pjsip_transports.conf" /etc/asterisk/pjsip.conf; then
+        echo "#include pjsip_transports.conf" | sudo tee -a /etc/asterisk/pjsip.conf
+    fi
+
+    # Install HTTP and RTP configs
+    if [ -f "./generated_configs/http.conf" ]; then
+        sudo cp ./generated_configs/http.conf "/etc/asterisk/http.conf"
+    fi
+    if [ -f "./generated_configs/rtp.conf" ]; then
+        sudo cp ./generated_configs/rtp.conf "/etc/asterisk/rtp.conf"
+    fi
+
     sudo cp ./generated_configs/pjsip_custom.conf "$PJSIP_CONF"
     sudo cp ./generated_configs/extensions_custom.conf "$EXT_CONF"
     sudo asterisk -rx "core reload"

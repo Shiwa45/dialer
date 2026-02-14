@@ -191,42 +191,6 @@
 
         textarea, input { outline: none; }
         textarea:focus, input:focus { border-color: var(--primary); }
-
-        /* ═══════════════════════════════════════════════════════
-           STATUS & LOGIN TIMER WIDGET
-           Seeded from DB (AgentTimeLog.started_at) — never resets
-           on page refresh, identical to admin realtime monitor.
-           ═══════════════════════════════════════════════════════ */
-        .agent-timers {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 12px;
-            padding: 12px 10px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
-        .at-cell { text-align: center; }
-        .at-cell label {
-            display: block;
-            font-size: 0.62rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-        .at-val {
-            font-family: 'Courier New', monospace;
-            font-size: 1.3rem;
-            font-weight: 800;
-            letter-spacing: .04em;
-            line-height: 1;
-        }
-        .at-val.status-clr { color: var(--primary); }
-        .at-val.login-clr  { color: var(--info); }
-        .at-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -362,20 +326,6 @@
                         <i class="fas fa-users"></i> Meeting
                     </button>
                 </div>
-
-                <!-- ═══ Status & Login timers — same data as admin monitor ═══ -->
-                <div class="agent-timers">
-                    <div class="at-cell">
-                        <label><i class="fas fa-clock"></i> In Status</label>
-                        <div class="at-val status-clr" id="at-status-val">—</div>
-                        <div class="at-sub" id="at-status-lbl">Loading…</div>
-                    </div>
-                    <div class="at-cell">
-                        <label><i class="fas fa-sign-in-alt"></i> Login Today</label>
-                        <div class="at-val login-clr" id="at-login-val">—</div>
-                        <div class="at-sub" id="at-login-since">—</div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -479,18 +429,11 @@ const URL_LEAD_INFO  = '{% url "agents:get_lead_info" %}';
 const URL_HEARTBEAT  = '{% url "agents:heartbeat" %}';
 const URL_WRAPUP_STATE='{% url "agents:wrapup_state" %}';
 const URL_CAN_LOGOUT = '{% url "agents:can_logout" %}';
-const URL_STATUS_INFO= '{% url "agents:status_info" %}';  // ADDED
 const URL_MANUAL_DIAL= '/agents/api/manual-dial/';
 
 // ═══════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════
-// ── DB-seeded timer state (survives refresh — same source as admin monitor) ──
-let _atSkewMs   = 0;      // server_time_ms - Date.now() for clock accuracy
-let _atStatusMs = null;   // Unix ms when current status started
-let _atLoginMs  = null;   // Unix ms of first login today
-let _atTick     = null;   // setInterval handle for both timers
-
 let state = {
     agentStatus   : '{{ agent_status.status }}',
     callId        : null,
@@ -513,7 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
     checkWrapupOnLoad();   // ← CRITICAL: restore call state after refresh
     updateStatusUI(state.agentStatus);
     interceptLogout();
-    initStatusTimers();    // ← seed timers from DB
     setInterval(refreshStats, 60000);
 });
 
@@ -586,13 +528,6 @@ function handleWsMessage(msg) {
     else if (t === 'status_changed') {
         state.agentStatus = d.status;
         updateStatusUI(d.status);
-        // Re-fetch timer from DB to get accurate AgentTimeLog.started_at
-        initStatusTimers();
-    }
-    else if (t === 'force_logout') {
-        // Supervisor forced logout — show warning then redirect
-        toast('⚠️ ' + (d.reason || 'You have been logged out by a supervisor'), 'warning', 4000);
-        setTimeout(() => { window.location.href = '/logout/'; }, 2500);
     }
 }
 
@@ -606,72 +541,6 @@ function startHeartbeat() {
 function sendHeartbeat() {
     post(URL_HEARTBEAT, {}).catch(() => {});
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-//  STATUS & LOGIN TIMERS — seeded from DB, identical to admin monitor
-//  Pattern: store Unix-ms anchor → tick = (Date.now() + skew) - anchor
-//  This NEVER resets on page refresh because the anchor comes from DB.
-// ═══════════════════════════════════════════════════════════════════════
-function _atFmt(s) {
-    s = Math.max(0, Math.floor(s));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-}
-function _atElapsed(ms) {
-    return ms ? Math.max(0, Math.floor((Date.now() + _atSkewMs - ms) / 1000)) : 0;
-}
-function _atTickFn() {
-    const sv = document.getElementById('at-status-val');
-    const lv = document.getElementById('at-login-val');
-    if (sv && _atStatusMs) sv.textContent = _atFmt(_atElapsed(_atStatusMs));
-    if (lv && _atLoginMs)  lv.textContent = _atFmt(_atElapsed(_atLoginMs));
-}
-
-function initStatusTimers() {
-    // Fetch reliable timestamps from DB.
-    // Uses AgentTimeLog.started_at — same field the admin monitor uses.
-    fetch(URL_STATUS_INFO, {
-        headers: { 'X-CSRFToken': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (!d.success) return;
-
-        // Clock-skew correction (compensates for client/server time drift)
-        if (d.server_time_ms) _atSkewMs = d.server_time_ms - Date.now();
-
-        _atStatusMs = d.status_changed_at_ms || null;
-        _atLoginMs  = d.login_at_ms          || null;
-
-        // Update labels
-        const sl = document.getElementById('at-status-lbl');
-        if (sl) sl.textContent = d.status_display || d.status || '';
-
-        const ls = document.getElementById('at-login-since');
-        if (ls && _atLoginMs) {
-            ls.textContent = 'since ' + new Date(_atLoginMs)
-                .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        // Start single shared interval for both timers
-        if (_atTick) clearInterval(_atTick);
-        _atTick = setInterval(_atTickFn, 1000);
-        _atTickFn();  // immediate first render
-    })
-    .catch(() => {});
-}
-
-function refreshStatusTimer(newStatusDisplay) {
-    // Called right after a successful setStatus API call.
-    // Re-fetch from DB to get accurate AgentTimeLog.started_at timestamp.
-    // This ensures the timer shows the EXACT time from the database, not client-side guess.
-    initStatusTimers();
-}
-
-
 
 // ═══════════════════════════════════════════════════════════
 //  CHECK WRAPUP ON PAGE LOAD — call state persists after refresh
@@ -953,8 +822,6 @@ function setStatus(status) {
         if (data.success) {
             state.agentStatus = data.status;
             updateStatusUI(data.status);
-            // Re-fetch timer from DB to get accurate start time
-            initStatusTimers();
         } else if (data.blocked) {
             toast(data.error || 'Cannot change status right now', 'warning');
             if (data.call_id) openDispositionOverlay();

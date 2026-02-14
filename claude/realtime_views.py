@@ -39,43 +39,77 @@ def _to_ms(dt):
     return int(dt.timestamp() * 1000)
 
 
+def _batch_status_start(agent_ids, today):
+    """
+    Return {user_id: started_at_datetime} for the most recent OPEN
+    AgentTimeLog per agent today.
+
+    KEY: started_at is written ONCE when status changes and is NEVER modified,
+    unlike status_changed_at (auto_now=True) which resets on every .save()
+    including heartbeats, call-ID updates, etc.
+
+    This is the only reliable source of truth for "when did status start".
+    """
+    from users.models import AgentTimeLog
+    if not agent_ids:
+        return {}
+    rows = (
+        AgentTimeLog.objects
+        .filter(user_id__in=agent_ids, date=today, ended_at__isnull=True)
+        .order_by('user_id', '-started_at')
+        .values('user_id', 'started_at')
+    )
+    result = {}
+    for row in rows:
+        uid = row['user_id']
+        if uid not in result:          # first = latest (ordered -started_at)
+            result[uid] = row['started_at']
+    return result
+
+
 def _login_info_for_agents(agent_ids, today):
     """
-    For each agent_id, return (login_at, total_logged_in_secs) based on
-    AgentTimeLog entries for today.
-
-    'login_at' = earliest non-offline started_at for today
-    'total_logged_in_secs' = sum of all non-offline duration_seconds today,
-                              plus time since the open log started (if any)
+    BATCHED: Return {user_id: {login_at_ms, total_logged_in_secs}} for all
+    agents using 2 queries total (closed + open logs), not N per-agent queries.
     """
     from users.models import AgentTimeLog
 
     now = timezone.now()
-    result = {}
+    if not agent_ids:
+        return {}
 
-    for aid in agent_ids:
-        logs = AgentTimeLog.objects.filter(
-            user_id=aid,
-            date=today,
-        ).exclude(status='offline').order_by('started_at')
+    result = {uid: {'login_at_ms': None, 'total_logged_in_secs': 0}
+              for uid in agent_ids}
 
-        login_at = None
-        total_secs = 0
+    # Closed logs
+    closed = (
+        AgentTimeLog.objects
+        .filter(user_id__in=agent_ids, date=today, ended_at__isnull=False)
+        .exclude(status='offline')
+        .order_by('user_id', 'started_at')
+        .values('user_id', 'started_at', 'duration_seconds')
+    )
+    for row in closed:
+        uid = row['user_id']
+        if result[uid]['login_at_ms'] is None:
+            result[uid]['login_at_ms'] = _to_ms(row['started_at'])
+        result[uid]['total_logged_in_secs'] += int(row['duration_seconds'] or 0)
 
-        for log in logs:
-            if login_at is None:
-                login_at = log.started_at
-            if log.ended_at:
-                total_secs += log.duration_seconds or 0
-            else:
-                # Open log — count up to now
-                total_secs += int((now - log.started_at).total_seconds())
-
-        result[aid] = {
-            'login_at'              : login_at,
-            'login_at_ms'           : _to_ms(login_at),
-            'total_logged_in_secs'  : total_secs,
-        }
+    # Open log — count elapsed time up to now
+    open_logs = (
+        AgentTimeLog.objects
+        .filter(user_id__in=agent_ids, date=today, ended_at__isnull=True)
+        .exclude(status='offline')
+        .order_by('user_id', 'started_at')
+        .values('user_id', 'started_at')
+    )
+    for row in open_logs:
+        uid = row['user_id']
+        if result[uid]['login_at_ms'] is None:
+            result[uid]['login_at_ms'] = _to_ms(row['started_at'])
+        result[uid]['total_logged_in_secs'] += max(
+            0, int((now - row['started_at']).total_seconds())
+        )
 
     return result
 
@@ -137,14 +171,11 @@ def realtime_agents_api(request):
         agents_list = list(agents_query)
         agent_ids   = [a.user_id for a in agents_list]
 
-        # Batch-fetch login info for all agents
-        login_info = _login_info_for_agents(agent_ids, today)
+        # Batch DB lookups — no per-agent loops
+        status_start_map = _batch_status_start(agent_ids, today)  # RELIABLE timing
+        login_info       = _login_info_for_agents(agent_ids, today)
 
-        # Batch-fetch reliable status start times (using AgentTimeLog)
-        from reports.monitoring import _batch_status_start
-        status_start_map = _batch_status_start(agent_ids, today)
-
-        # Batch-fetch today's time breakdown per agent
+        # Batch breakdown (closed logs only — open added per-agent below)
         from users.models import AgentTimeLog
         breakdown_qs = (
             AgentTimeLog.objects
@@ -152,7 +183,6 @@ def realtime_agents_api(request):
             .values('user_id', 'status')
             .annotate(total=Sum('duration_seconds'))
         )
-        # Build {user_id: {status: secs}}
         breakdown_map = {}
         for row in breakdown_qs:
             uid = row['user_id']
@@ -164,20 +194,21 @@ def realtime_agents_api(request):
         for agent in agents_list:
             uid = agent.user_id
 
-            # ── Core timing ────────────────────────────────────────────────
-            # Use reliable AgentTimeLog.started_at if available
+            # ── RELIABLE timing: AgentTimeLog.started_at (open log) ────────
+            # status_changed_at has auto_now=True — resets on EVERY .save()
+            # (heartbeats, call-ID writes, etc.) → wrong timer value.
+            # AgentTimeLog.started_at is written once, never changed.
             open_started = status_start_map.get(uid)
-            
-            status_changed_at_ms = None
-            status_time_secs = 0
-
             if open_started:
                 status_changed_at_ms = _to_ms(open_started)
                 status_time_secs     = max(0, int((now - open_started).total_seconds()))
             elif agent.status_changed_at:
-                # Fallback
+                # Fallback only if no open log exists
                 status_changed_at_ms = _to_ms(agent.status_changed_at)
                 status_time_secs     = max(0, int((now - agent.status_changed_at).total_seconds()))
+            else:
+                status_changed_at_ms = None
+                status_time_secs     = 0
 
             li = login_info.get(uid, {})
 

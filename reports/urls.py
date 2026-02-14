@@ -52,3 +52,11 @@ urlpatterns += [
     path('analytics/export/', views.export_report_v2, name='export_report_v2'),
     # path('api/leaderboard/', views.leaderboard_api, name='leaderboard_api'), # If I implemented it
 ]
+
+# ── NEW: Agent Time Monitoring ────────────────────────────────────────
+from . import agent_time_views
+urlpatterns += [
+    path('agent-time/', agent_time_views.agent_time_report_page, name='agent_time_report'),
+    path('api/agent-time/', agent_time_views.agent_time_report_api, name='agent_time_api'),
+    path('api/agent-realtime/', agent_time_views.agent_realtime_status, name='agent_realtime_status'),
+]

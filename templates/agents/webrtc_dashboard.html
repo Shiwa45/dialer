@@ -5,106 +5,328 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Dashboard - WebRTC</title>
+    <title>Agent Dashboard — WebRTC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        /* ── Design tokens ──────────────────────────────────────────────── */
         :root {
-            --bg: #f5f5f5;
-            --bg-secondary: #eaeaea;
-            --card: #fff;
-            --card-light: #fafafa;
-            --text: #111;
-            --text-secondary: #555;
-            --text-muted: #888;
-            --border: #e0e0e0;
-            --border-light: #ccc;
+            --bg: #f4f4f5;
+            --bg-sec: #e8e8ea;
+            --card: #ffffff;
+            --card-light: #f9f9fa;
+            --text: #111827;
+            --text-sec: #4b5563;
+            --text-muted: #9ca3af;
+            --border: #e5e7eb;
+            --border-light: #d1d5db;
             --accent: #dc2626;
             --accent-light: rgba(220, 38, 38, .08);
             --success: #16a34a;
             --danger: #dc2626;
             --warning: #f59e0b;
-            --shadow: rgba(0, 0, 0, .06)
+            --wrapup: #7c3aed;
+            --shadow: rgba(0, 0, 0, .06);
         }
 
         [data-theme="dark"] {
-            --bg: #0a0a0a;
-            --bg-secondary: #141414;
-            --card: #1a1a1a;
-            --card-light: #222;
+            --bg: #0a0a0b;
+            --bg-sec: #131315;
+            --card: #1c1c1e;
+            --card-light: #242427;
             --text: #f0f0f0;
-            --text-secondary: #bbb;
-            --text-muted: #777;
-            --border: #2a2a2a;
-            --border-light: #3a3a3a;
+            --text-sec: #a1a1aa;
+            --text-muted: #71717a;
+            --border: #27272a;
+            --border-light: #3f3f46;
             --accent: #ef4444;
             --accent-light: rgba(239, 68, 68, .1);
             --success: #22c55e;
             --danger: #ef4444;
             --warning: #f59e0b;
-            --shadow: rgba(0, 0, 0, .3)
+            --shadow: rgba(0, 0, 0, .4);
         }
 
+        /* ── Reset ──────────────────────────────────────────────────────── */
         *,
         *::before,
         *::after {
             box-sizing: border-box;
             margin: 0;
-            padding: 0
+            padding: 0;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg);
             color: var(--text);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            min-height: 100vh
         }
 
-        .agent-subtitle {
-            color: var(--text-muted);
+        /* ── Wrapup bar (fixed top) ─────────────────────────────────────── */
+        #wrapup-bar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 6000;
+            background: var(--wrapup);
+            color: #fff;
+            padding: 10px 24px;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
             font-size: .875rem;
-            margin-top: .25rem
+            font-weight: 700;
+            box-shadow: 0 2px 16px rgba(124, 58, 237, .4);
         }
 
+        #wrapup-bar.visible {
+            display: flex;
+        }
+
+        #wrapup-bar .wrapup-dispose-btn {
+            background: #fff;
+            color: var(--wrapup);
+            border: none;
+            border-radius: 6px;
+            padding: 6px 16px;
+            font-size: .8rem;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        #wrapup-bar .wrapup-dispose-btn:hover {
+            background: #ede9fe;
+        }
+
+        /* ── Logout blocked banner (fixed bottom) ───────────────────────── */
+        #logout-banner {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 6000;
+            background: var(--danger);
+            color: #fff;
+            padding: 8px 24px;
+            text-align: center;
+            font-size: .8rem;
+            font-weight: 700;
+        }
+
+        #logout-banner.visible {
+            display: block;
+        }
+
+        /* ── Disposition overlay (full-screen, non-dismissible) ─────────── */
+        #disposition-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 7000;
+            background: rgba(15, 23, 42, .82);
+            backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #disposition-overlay.visible {
+            display: flex;
+        }
+
+        .disp-modal {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 28px 30px 24px;
+            width: min(520px, 95vw);
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, .45);
+        }
+
+        .disp-modal h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            border-bottom: 2px solid var(--wrapup);
+            padding-bottom: .5rem;
+            margin-bottom: .375rem;
+        }
+
+        .disp-modal .disp-subtitle {
+            color: var(--text-muted);
+            font-size: .8rem;
+            margin-bottom: 18px;
+        }
+
+        .disp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .disp-btn {
+            padding: 10px 8px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--card-light);
+            color: var(--text);
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            text-align: center;
+        }
+
+        .disp-btn:hover {
+            border-color: var(--wrapup);
+            background: rgba(124, 58, 237, .08);
+        }
+
+        .disp-btn.selected {
+            border-color: var(--wrapup);
+            background: var(--wrapup);
+            color: #fff;
+        }
+
+        .disp-notes {
+            width: 100%;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            color: var(--text);
+            resize: vertical;
+            min-height: 72px;
+            margin-bottom: 14px;
+            font-family: inherit;
+            font-size: .85rem;
+        }
+
+        .disp-notes:focus {
+            outline: 2px solid var(--wrapup);
+            border-color: transparent;
+        }
+
+        .disp-save-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: var(--wrapup);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .15s;
+        }
+
+        .disp-save-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        .disp-save-btn:not(:disabled):hover {
+            filter: brightness(1.1);
+        }
+
+        .disp-warning {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: .72rem;
+            margin-top: 10px;
+        }
+
+        /* ── Toast ──────────────────────────────────────────────────────── */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: .75rem 1.5rem;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: .875rem;
+            z-index: 8000;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all .3s;
+            pointer-events: none;
+        }
+
+        #toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #toast.success {
+            background: var(--success);
+        }
+
+        #toast.error {
+            background: var(--danger);
+        }
+
+        #toast.info {
+            background: #3b82f6;
+        }
+
+        #toast.warning {
+            background: var(--warning);
+            color: #1c1917;
+        }
+
+        /* ── Header ─────────────────────────────────────────────────────── */
         .agent-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border);
             background: var(--card);
-            box-shadow: 0 1px 4px var(--shadow)
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 4px var(--shadow);
         }
 
         .agent-header h1 {
-            font-size: 1.25rem;
-            font-weight: 700
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .agent-subtitle {
+            color: var(--text-muted);
+            font-size: .8rem;
+            margin-top: .2rem;
         }
 
         .header-right {
             display: flex;
             align-items: center;
-            gap: 1rem
+            gap: 1rem;
         }
 
+        /* Theme toggle */
         .theme-toggle {
-            width: 56px;
-            height: 28px;
-            border-radius: 14px;
+            width: 52px;
+            height: 26px;
+            border-radius: 13px;
             border: 2px solid var(--border);
             background: var(--card-light);
             cursor: pointer;
             position: relative;
-            transition: all .3s
         }
 
-        .theme-toggle-slider {
+        .theme-slider {
             position: absolute;
             top: 2px;
             left: 2px;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: var(--accent);
             transition: transform .3s;
@@ -112,36 +334,35 @@
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: .75rem
+            font-size: .65rem;
         }
 
-        [data-theme="dark"] .theme-toggle-slider {
-            transform: translateX(26px)
+        [data-theme="dark"] .theme-slider {
+            transform: translateX(24px);
         }
 
-        .agent-status-pill {
-            padding: .625rem 1.5rem;
+        /* Status pill */
+        .status-pill {
+            padding: .5rem 1.25rem;
             border-radius: 6px;
             background: var(--accent);
-            border: none;
-            font-weight: 600;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
             display: inline-flex;
             align-items: center;
-            gap: .625rem;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, .3);
-            text-transform: uppercase;
-            font-size: .75rem;
-            letter-spacing: .05em;
-            color: #fff
+            gap: .5rem;
         }
 
-        .agent-status-pill::before {
+        .status-pill::before {
             content: '';
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            background: #fff;
-            animation: pulse 2s infinite
+            background: rgba(255, 255, 255, .7);
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
@@ -152,19 +373,20 @@
             }
 
             50% {
-                opacity: .5
+                opacity: .3
             }
         }
 
+        /* ── Layout ─────────────────────────────────────────────────────── */
         .agent-layout {
             flex: 1;
             display: grid;
-            grid-template-columns: 1fr 1fr 380px;
-            gap: 1.5rem;
-            padding: 1.5rem 2rem 2rem;
-            max-width: 1920px;
+            grid-template-columns: 1fr 1fr 370px;
+            gap: 1.25rem;
+            padding: 1.25rem 2rem 2rem;
+            max-width: 1900px;
             width: 100%;
-            margin: 0 auto
+            margin: 0 auto;
         }
 
         .panel {
@@ -172,164 +394,201 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 1.5rem;
-            box-shadow: 0 4px 16px var(--shadow);
-            transition: all .3s
+            box-shadow: 0 2px 12px var(--shadow);
         }
 
-        .panel h2 {
-            margin: 0 0 1rem;
-            font-size: 1.125rem;
+        .panel>h2 {
+            font-size: 1rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .05em;
             border-bottom: 2px solid var(--accent);
-            padding-bottom: .5rem
+            padding-bottom: .5rem;
+            margin-bottom: 1rem;
         }
 
+        /* ── Status chips ───────────────────────────────────────────────── */
         .status-actions {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: .75rem;
-            margin-top: 1.25rem
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: .625rem;
+            margin-top: 1rem;
         }
 
         .status-chip {
             border: 1px solid var(--border-light);
             border-radius: 6px;
-            padding: .75rem 1rem;
+            padding: .7rem 1rem;
             background: var(--card-light);
             color: var(--text);
-            font-size: .875rem;
+            font-size: .82rem;
             font-weight: 600;
             cursor: pointer;
             transition: all .2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: .5rem
+            gap: .4rem;
         }
 
-        .status-chip i {
-            font-size: 1rem
+        .status-chip:hover:not(.is-active):not(:disabled) {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            transform: translateY(-1px);
         }
 
         .status-chip.is-active {
             background: var(--accent);
             border-color: var(--accent);
             color: #fff;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, .4)
+            box-shadow: 0 3px 10px rgba(220, 38, 38, .3);
         }
 
-        .status-chip:hover:not(.is-active) {
-            border-color: var(--accent);
-            background: var(--accent-light);
-            transform: translateY(-2px)
+        .status-chip:disabled {
+            opacity: .45;
+            cursor: not-allowed;
         }
 
+        /* ── Info grid ──────────────────────────────────────────────────── */
         .grid-two {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: .875rem;
+            margin-top: 1.25rem;
         }
 
         .info-card {
             background: var(--card-light);
             border: 1px solid var(--border);
             border-radius: 6px;
-            padding: 1.25rem;
-            transition: all .2s
-        }
-
-        .info-card:hover {
-            border-color: var(--border-light)
+            padding: 1.1rem;
         }
 
         .info-card label {
             display: block;
             color: var(--text-muted);
-            font-size: .75rem;
-            margin-bottom: .5rem;
+            font-size: .7rem;
             text-transform: uppercase;
-            letter-spacing: .05em;
-            font-weight: 600
+            letter-spacing: .06em;
+            font-weight: 600;
+            margin-bottom: .375rem;
         }
 
         .info-card strong {
-            font-size: 1.125rem;
-            font-weight: 700
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
+        /* ── Tabs ───────────────────────────────────────────────────────── */
         .tab-container {
-            margin-top: 1.5rem
+            margin-top: 1.25rem;
         }
 
         .tab-buttons {
             display: flex;
-            gap: .5rem;
+            gap: .375rem;
             border-bottom: 2px solid var(--border);
-            margin-bottom: 1rem
+            margin-bottom: 1rem;
         }
 
-        .tab-button {
-            padding: .75rem 1.5rem;
+        .tab-btn {
+            padding: .65rem 1.25rem;
             background: transparent;
             border: none;
             border-bottom: 3px solid transparent;
-            color: var(--text-secondary);
+            color: var(--text-sec);
+            font-size: .8rem;
             font-weight: 600;
-            font-size: .875rem;
             cursor: pointer;
-            transition: all .2s;
             text-transform: uppercase;
-            letter-spacing: .05em;
+            letter-spacing: .04em;
             position: relative;
-            top: 2px
+            top: 2px;
+            transition: color .2s;
         }
 
-        .tab-button:hover {
+        .tab-btn:hover {
             color: var(--text);
-            background: var(--card-light)
         }
 
-        .tab-button.active {
+        .tab-btn.active {
             color: var(--accent);
-            border-bottom-color: var(--accent)
+            border-bottom-color: var(--accent);
         }
 
-        .tab-content {
-            display: none
+        .tab-pane {
+            display: none;
         }
 
-        .tab-content.active {
+        .tab-pane.active {
             display: block;
-            animation: fadeIn .3s ease
+            animation: fadeUp .25s ease;
         }
 
-        @keyframes fadeIn {
+        @keyframes fadeUp {
             from {
                 opacity: 0;
-                transform: translateY(10px)
+                transform: translateY(6px)
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0)
+                transform: none
             }
         }
 
+        /* ── Call panel ─────────────────────────────────────────────────── */
         .call-panel {
-            background: var(--bg-secondary);
+            background: var(--bg-sec);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 1.5rem
+            padding: 1.25rem;
         }
 
         .call-panel h3 {
-            margin: 0 0 .5rem;
+            font-size: .9rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .05em;
-            font-size: 1rem
+            margin-bottom: .75rem;
+        }
+
+        .call-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .call-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .4rem .9rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: .78rem;
+            text-transform: uppercase;
+        }
+
+        .call-badge.idle {
+            background: var(--card-light);
+            color: var(--text-muted);
+        }
+
+        .call-badge.ringing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .call-badge.connected {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .call-badge.wrapup {
+            background: #ede9fe;
+            color: #5b21b6;
         }
 
         .call-placeholder {
@@ -338,65 +597,44 @@
             padding: 2rem;
             text-align: center;
             color: var(--text-muted);
-            background: var(--card)
+        }
+
+        .call-placeholder i {
+            display: block;
+            font-size: 2rem;
+            margin-bottom: .75rem;
         }
 
         .call-meta {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: .875rem;
             background: var(--card);
             padding: 1rem;
             border-radius: 6px;
-            border: 1px solid var(--border)
+            border: 1px solid var(--border);
         }
 
         .call-meta label {
             display: block;
-            font-size: .75rem;
+            font-size: .7rem;
             color: var(--text-muted);
-            margin-bottom: .375rem;
             text-transform: uppercase;
-            font-weight: 600
+            font-weight: 600;
+            margin-bottom: .3rem;
         }
 
         .call-meta strong {
-            font-size: 1.125rem;
-            font-weight: 700
+            font-size: 1.05rem;
+            font-weight: 700;
         }
 
-        .call-status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: .875rem;
-            text-transform: uppercase
-        }
-
-        .call-status-badge.idle {
-            background: var(--card-light);
-            color: var(--text-muted)
-        }
-
-        .call-status-badge.ringing {
-            background: #fef3c7;
-            color: #92400e
-        }
-
-        .call-status-badge.connected {
-            background: #dcfce7;
-            color: #166534
-        }
-
+        /* Lead card */
         .lead-card {
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 1rem;
             background: var(--card);
-            margin-top: 1rem
         }
 
         .lead-card__header {
@@ -405,359 +643,20 @@
             align-items: center;
             margin-bottom: .75rem;
             padding-bottom: .75rem;
-            border-bottom: 1px solid var(--border)
+            border-bottom: 1px solid var(--border);
         }
 
-        .lead-status-pill {
-            padding: .25rem .75rem;
+        .lead-pill {
+            padding: .2rem .65rem;
             border-radius: 4px;
-            font-size: .75rem;
+            font-size: .72rem;
             font-weight: 600;
             background: var(--card-light);
-            color: var(--text-muted)
-        }
-
-        /* RETRO PHONE */
-        .retro-phone {
-            text-align: center
-        }
-
-        .phone-header {
-            margin-bottom: .75rem
-        }
-
-        .phone-brand {
-            font-weight: 800;
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: .15em;
-            color: var(--accent)
-        }
-
-        .phone-screen {
-            background: #1a1a2e;
-            border-radius: 8px;
-            padding: 1.25rem;
-            margin-bottom: 1rem;
-            border: 2px solid #333
-        }
-
-        .phone-input-display {
-            font-family: 'Courier New', monospace;
-            font-size: 1.5rem;
-            color: #00ff88;
-            min-height: 2rem;
-            letter-spacing: .1em;
-            word-break: break-all;
-            margin-bottom: .25rem
-        }
-
-        .phone-display {
-            font-family: 'Courier New', monospace;
-            font-size: .85rem;
-            color: #66ffaa;
-            margin-bottom: .25rem
-        }
-
-        .phone-timer {
-            font-family: 'Courier New', monospace;
-            font-size: 1.25rem;
-            color: #ffaa00;
-            margin-top: .25rem
-        }
-
-        .phone-status-line {
-            font-size: .7rem;
-            color: #668899;
-            margin-top: .5rem;
-            text-transform: uppercase;
-            letter-spacing: .05em
-        }
-
-        .phone-keypad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: .5rem;
-            margin-bottom: 1rem
-        }
-
-        .phone-key {
-            aspect-ratio: 1.4;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--card-light);
-            color: var(--text);
-            font-size: 1.25rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all .15s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center
-        }
-
-        .phone-key:hover {
-            background: var(--accent-light);
-            border-color: var(--accent)
-        }
-
-        .phone-key:active {
-            transform: scale(.95)
-        }
-
-        .phone-key-sub {
-            font-size: .55rem;
             color: var(--text-muted);
-            margin-top: .1rem;
-            letter-spacing: .1em
         }
 
-        .phone-controls {
-            display: flex;
-            gap: .5rem;
-            margin-bottom: .75rem
-        }
-
-        .phone-control-btn {
-            flex: 1;
-            padding: .75rem;
-            border: none;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: .85rem;
-            cursor: pointer;
-            transition: all .2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .5rem;
-            text-transform: uppercase;
-            letter-spacing: .05em
-        }
-
-        .phone-control-btn.call {
-            background: var(--success);
-            color: #fff
-        }
-
-        .phone-control-btn.call:hover {
-            filter: brightness(1.1)
-        }
-
-        .phone-control-btn.call:disabled {
-            opacity: .5;
-            cursor: not-allowed
-        }
-
-        .phone-control-btn.hangup {
-            background: var(--danger);
-            color: #fff
-        }
-
-        .phone-control-btn.hangup:hover {
-            filter: brightness(1.1)
-        }
-
-        .phone-extras {
-            display: flex;
-            gap: .5rem;
-            flex-wrap: wrap
-        }
-
-        .phone-extra-btn {
-            flex: 1;
-            min-width: 70px;
-            padding: .6rem .5rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--card-light);
-            color: var(--text);
-            font-size: .7rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all .2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .375rem;
-            text-transform: uppercase
-        }
-
-        .phone-extra-btn:hover {
-            border-color: var(--accent);
-            background: var(--accent-light)
-        }
-
-        .phone-extra-btn.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent)
-        }
-
-        .phone-extra-btn:disabled {
-            opacity: .4;
-            cursor: not-allowed
-        }
-
-        .webrtc-status {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .5rem .75rem;
-            border-radius: 6px;
-            background: var(--card-light);
-            border: 1px solid var(--border);
-            font-size: .8rem;
-            font-weight: 600;
-            margin-bottom: .75rem
-        }
-
-        .webrtc-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #888;
-            transition: all .3s
-        }
-
-        .webrtc-dot.connecting {
-            background: var(--warning);
-            animation: pulse 1s infinite
-        }
-
-        .webrtc-dot.registered {
-            background: var(--success);
-            box-shadow: 0 0 8px rgba(22, 163, 74, .5)
-        }
-
-        .webrtc-dot.failed {
-            background: var(--danger)
-        }
-
-        .auto-answer-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: .6rem .75rem;
-            border-radius: 6px;
-            background: var(--card-light);
-            border: 1px solid var(--border);
-            margin-bottom: .75rem;
-            font-size: .8rem;
-            font-weight: 600
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 44px;
-            height: 24px;
-            cursor: pointer
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0
-        }
-
-        .toggle-slider {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #ccc;
-            border-radius: 12px;
-            transition: .3s
-        }
-
-        .toggle-slider::before {
-            content: '';
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            left: 3px;
-            bottom: 3px;
-            background: #fff;
-            border-radius: 50%;
-            transition: .3s
-        }
-
-        .toggle-switch input:checked+.toggle-slider {
-            background: var(--success)
-        }
-
-        .toggle-switch input:checked+.toggle-slider::before {
-            transform: translateX(20px)
-        }
-
-        /* Disposition modal */
-        .disposition-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, .6);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center
-        }
-
-        .disposition-modal {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, .3)
-        }
-
-        .disposition-modal h3 {
-            margin: 0 0 1rem;
-            font-size: 1.125rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: .5rem
-        }
-
-        .disposition-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: .5rem;
-            margin-bottom: 1rem
-        }
-
-        .disposition-btn {
-            padding: .75rem;
-            border: 2px solid var(--border);
-            border-radius: 6px;
-            background: var(--card-light);
-            color: var(--text);
-            font-weight: 600;
-            font-size: .85rem;
-            cursor: pointer;
-            transition: all .2s;
-            text-align: center
-        }
-
-        .disposition-btn:hover {
-            border-color: var(--accent);
-            background: var(--accent-light)
-        }
-
-        .disposition-btn.selected {
-            border-color: var(--accent);
-            background: var(--accent);
-            color: #fff
-        }
-
-        .agent-note-input {
+        /* Notes textarea */
+        .note-input {
             width: 100%;
             background: var(--card-light);
             border: 1px solid var(--border);
@@ -766,144 +665,420 @@
             color: var(--text);
             resize: vertical;
             min-height: 80px;
-            margin-top: .75rem;
-            font-family: inherit
+            font-family: inherit;
+            font-size: .875rem;
         }
 
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: .75rem;
-            margin-top: 1.25rem
+        .note-input:focus {
+            outline: 2px solid var(--accent);
+            border-color: transparent;
         }
 
-        .btn-muted {
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: 6px;
-            padding: .75rem 1.5rem;
-            cursor: pointer;
-            font-weight: 600;
+        /* ── WebRTC phone ───────────────────────────────────────────────── */
+        .retro-phone {
+            text-align: center;
+        }
+
+        .phone-brand {
+            font-weight: 800;
+            font-size: 1rem;
             text-transform: uppercase;
-            font-size: .875rem
+            letter-spacing: .15em;
+            color: var(--accent);
+            margin-bottom: .625rem;
         }
 
-        .btn-primary-solid {
+        .webrtc-status {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .45rem .75rem;
+            border-radius: 6px;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            font-size: .76rem;
+            font-weight: 600;
+            margin-bottom: .625rem;
+        }
+
+        .webrtc-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #888;
+            flex-shrink: 0;
+            transition: all .3s;
+        }
+
+        .webrtc-dot.connecting {
+            background: var(--warning);
+            animation: pulse 1s infinite;
+        }
+
+        .webrtc-dot.registered {
+            background: var(--success);
+            box-shadow: 0 0 6px rgba(22, 163, 74, .5);
+        }
+
+        .webrtc-dot.failed {
+            background: var(--danger);
+        }
+
+        /* Auto-answer toggle */
+        .auto-answer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .5rem .75rem;
+            border-radius: 6px;
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            margin-bottom: .625rem;
+            font-size: .78rem;
+            font-weight: 600;
+        }
+
+        .toggle-sw {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        .toggle-sw input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: #ccc;
+            border-radius: 11px;
+            transition: .3s;
+        }
+
+        .toggle-track::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        .toggle-sw input:checked+.toggle-track {
+            background: var(--success);
+        }
+
+        .toggle-sw input:checked+.toggle-track::before {
+            transform: translateX(18px);
+        }
+
+        /* Phone screen */
+        .phone-screen {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: .875rem;
+            border: 2px solid #2a2a2a;
+        }
+
+        .phone-num-disp {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            color: #00ff88;
+            min-height: 2rem;
+            letter-spacing: .08em;
+            word-break: break-all;
+        }
+
+        .phone-status-disp {
+            font-family: 'Courier New', monospace;
+            font-size: .82rem;
+            color: #66ffaa;
+            margin-top: .25rem;
+        }
+
+        .phone-timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: #ffaa00;
+            margin-top: .3rem;
+        }
+
+        .phone-ext-line {
+            font-size: .65rem;
+            color: #557788;
+            margin-top: .375rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        /* Keypad */
+        .phone-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: .4rem;
+            margin-bottom: .75rem;
+        }
+
+        .phone-key {
+            aspect-ratio: 1.3;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card-light);
+            color: var(--text);
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+        }
+
+        .phone-key:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .phone-key:active {
+            transform: scale(.94);
+        }
+
+        .phone-key-sub {
+            font-size: .5rem;
+            color: var(--text-muted);
+            margin-top: .1rem;
+            letter-spacing: .1em;
+        }
+
+        /* Call / hangup buttons */
+        .phone-controls {
+            display: flex;
+            gap: .4rem;
+            margin-bottom: .625rem;
+        }
+
+        .ctrl-btn {
+            flex: 1;
+            padding: .7rem;
             border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: .8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .4rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            transition: filter .2s;
+        }
+
+        .ctrl-btn.call {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .ctrl-btn.hangup {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .ctrl-btn:hover:not(:disabled) {
+            filter: brightness(1.1);
+        }
+
+        .ctrl-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        /* Extra buttons */
+        .phone-extras {
+            display: flex;
+            gap: .375rem;
+            flex-wrap: wrap;
+        }
+
+        .extra-btn {
+            flex: 1;
+            min-width: 66px;
+            padding: .55rem .4rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card-light);
+            color: var(--text);
+            font-size: .68rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .3rem;
+            text-transform: uppercase;
+            transition: all .2s;
+        }
+
+        .extra-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .extra-btn.active {
             background: var(--accent);
             color: #fff;
-            border-radius: 6px;
-            padding: .75rem 1.5rem;
-            cursor: pointer;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: .875rem
+            border-color: var(--accent);
         }
 
-        .btn-primary-solid:disabled {
-            opacity: .5;
-            cursor: not-allowed
+        .extra-btn:disabled {
+            opacity: .35;
+            cursor: not-allowed;
         }
 
-        .toast-notification {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            padding: .75rem 1.5rem;
+        /* ── Status / Login timer widget (same data as realtime monitor) ── */
+        .status-timer-widget {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .625rem;
+            margin-top: 1rem;
+            padding: .875rem 1rem;
+            background: var(--card-light);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            color: #fff;
-            font-weight: 600;
-            font-size: .875rem;
-            z-index: 2000;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all .3s
         }
 
-        .toast-notification.show {
-            transform: translateY(0);
-            opacity: 1
+        .stw-cell {
+            text-align: center;
         }
 
-        .toast-notification.success {
-            background: var(--success)
+        .stw-cell label {
+            display: block;
+            font-size: .65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text-muted);
+            margin-bottom: .3rem;
         }
 
-        .toast-notification.error {
-            background: var(--danger)
+        .stw-timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: .04em;
+            line-height: 1;
         }
 
-        .toast-notification.info {
-            background: #3b82f6
+        .stw-timer.t-status {
+            color: var(--accent);
         }
 
-        @media(max-width:1400px) {
+        .stw-timer.t-login {
+            color: #3b82f6;
+        }
+
+        .stw-sub {
+            font-size: .65rem;
+            color: var(--text-muted);
+            margin-top: .2rem;
+        }
+
+        /* ── Responsive ─────────────────────────────────────────────────── */
+        @media (max-width: 1400px) {
             .agent-layout {
-                grid-template-columns: 1fr 1fr
+                grid-template-columns: 1fr 1fr;
             }
 
             .panel:last-child {
                 grid-column: span 2;
                 max-width: 420px;
-                margin: 0 auto
+                margin: 0 auto;
             }
         }
 
-        @media(max-width:1100px) {
+        @media (max-width: 1100px) {
             .agent-layout {
-                grid-template-columns: 1fr
+                grid-template-columns: 1fr;
             }
 
             .panel:last-child {
-                grid-column: span 1
+                grid-column: span 1;
             }
         }
 
-        @media(max-width:720px) {
+        @media (max-width: 720px) {
             .agent-header {
                 flex-direction: column;
-                align-items: flex-start
+                align-items: flex-start;
+                gap: .75rem;
             }
 
             .agent-layout {
-                padding: 1rem
+                padding: 1rem;
             }
 
             .status-actions {
-                grid-template-columns: 1fr
+                grid-template-columns: 1fr 1fr;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="agent-app" id="agent-app" data-agent-id="{{ agent.id }}" data-status="{{ agent_status.status }}">
+
+    <!-- ── Wrapup bar (fixed top, visible during wrapup) ─────────────────── -->
+    <div id="wrapup-bar">
+        <i class="fas fa-clipboard-check"></i>
+        <span>⚠️ Wrap-up Required — Please dispose the call before continuing.</span>
+        <button class="wrapup-dispose-btn" onclick="openDisposition()">
+            <i class="fas fa-tag"></i> Dispose Call Now
+        </button>
+    </div>
+
+    <!-- ── Logout blocked banner (fixed bottom) ─────────────────────────── -->
+    <div id="logout-banner">
+        ⛔ You cannot log out until you dispose the current call.
+    </div>
+
+    <!-- ── Main app ─────────────────────────────────────────────────────── -->
+    <div id="agent-app" data-agent-id="{{ agent.id }}" data-status="{{ agent_status.status }}">
+
         <header class="agent-header">
             <div>
                 <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
-                <p class="agent-subtitle">WebRTC Agent — {{ assigned_campaigns|length }} campaign{{
-                    assigned_campaigns|length|pluralize }} assigned</p>
-                <div style="margin-top:10px;">
-                    <a href="{% url 'agents:call_history_page' %}"
-                        style="text-decoration:none;color:var(--accent);border:1px solid var(--border);padding:5px 10px;border-radius:4px;font-size:.8rem;font-weight:600;">
-                        <i class="fas fa-history"></i> Call History
-                    </a>
-                </div>
+                <p class="agent-subtitle">
+                    WebRTC Agent — {{ assigned_campaigns|length }} campaign{{ assigned_campaigns|length|pluralize }}
+                    assigned
+                </p>
+                <a href="{% url 'agents:call_history_page' %}"
+                    style="display:inline-block;margin-top:8px;font-size:.78rem;font-weight:600;color:var(--accent);border:1px solid var(--border);padding:4px 10px;border-radius:4px;text-decoration:none;">
+                    <i class="fas fa-history"></i> Call History
+                </a>
             </div>
             <div class="header-right">
-                <div class="theme-toggle" id="theme-toggle" title="Toggle theme">
-                    <div class="theme-toggle-slider"><i class="fas fa-sun" id="theme-icon"></i></div>
+                <div class="theme-toggle" id="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+                    <div class="theme-slider"><i class="fas fa-sun" id="theme-icon"></i></div>
                 </div>
-                <div class="agent-status-pill" id="status-pill">{{ agent_status.get_status_display }}</div>
+                <div class="status-pill" id="status-pill">{{ agent_status.get_status_display }}</div>
             </div>
         </header>
+
         <main class="agent-layout">
-            <!-- LEFT PANEL -->
+
+            <!-- ── LEFT: Availability + Call Info ─────────────────────── -->
             <section class="panel">
                 <h2>Availability</h2>
                 <p class="agent-subtitle">Update your state so the dialer knows when to connect calls.</p>
-                <div class="status-actions">
+                <div class="status-actions" id="status-actions">
                     <button class="status-chip" data-set-status="available"><i class="fa-solid fa-headset"></i>
                         Available</button>
                     <button class="status-chip" data-set-status="break"><i class="fa-solid fa-mug-hot"></i>
@@ -917,34 +1092,60 @@
                     <button class="status-chip" data-set-status="offline"><i class="fa-solid fa-power-off"></i>
                         Offline</button>
                 </div>
-                <div class="grid-two" style="margin-top:1.5rem;">
-                    <div class="info-card"><label>Extension</label><strong>{{ phone_info.extension|default:"N/A" }}</strong>
-                        <p class="agent-subtitle" id="reg-text" style="color:var(--success)">WebRTC connecting...</p>
+
+                <!-- ── Status & Login timer — mirrors realtime monitor exactly ── -->
+                <div class="status-timer-widget">
+                    <div class="stw-cell">
+                        <label><i class="fas fa-clock"></i> Status Time</label>
+                        <div class="stw-timer t-status" id="stw-status-timer">—</div>
+                        <div class="stw-sub" id="stw-status-label">Loading…</div>
                     </div>
-                    <div class="info-card"><label>Campaign</label><strong>{{ current_campaign.name|default:"None" }}</strong></div>
-                    <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls }}</strong></div>
-                    <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls }}</strong></div>
+                    <div class="stw-cell">
+                        <label><i class="fas fa-sign-in-alt"></i> Login Time Today</label>
+                        <div class="stw-timer t-login" id="stw-login-timer">—</div>
+                        <div class="stw-sub" id="stw-login-since">—</div>
+                    </div>
                 </div>
+
+                <div class="grid-two">
+                    <div class="info-card">
+                        <label>Extension</label>
+                        <strong>{{ phone_info.extension|default:"N/A" }}</strong>
+                        <p id="reg-text" style="color:var(--success);font-size:.75rem;margin-top:.25rem;">Connecting…
+                        </p>
+                    </div>
+                    <div class="info-card">
+                        <label>Campaign</label>
+                        <strong>{{ current_campaign.name|default:"None" }}</strong>
+                    </div>
+                    <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls
+                            }}</strong></div>
+                    <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls
+                            }}</strong></div>
+                </div>
+
                 <div class="tab-container">
                     <div class="tab-buttons">
-                        <button class="tab-button active" data-tab="call-info">Call Info</button>
-                        <button class="tab-button" data-tab="lead">Lead</button>
-                        <button class="tab-button" data-tab="scripts">Scripts</button>
-                        <button class="tab-button" data-tab="notes">Notes</button>
+                        <button class="tab-btn active" data-tab="call-info">Call Info</button>
+                        <button class="tab-btn" data-tab="lead">Lead</button>
+                        <button class="tab-btn" data-tab="scripts">Scripts</button>
+                        <button class="tab-btn" data-tab="notes">Notes</button>
                     </div>
-                    <div class="tab-content active" id="tab-call-info">
+
+                    <div class="tab-pane active" id="tab-call-info">
                         <div class="call-panel">
-                            <div
-                                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <div class="call-header">
                                 <h3>Current Call</h3>
-                                <span class="call-status-badge idle" id="call-badge"><i
-                                        class="fa-solid fa-phone-slash"></i> No Active Call</span>
+                                <span class="call-badge idle" id="call-badge">
+                                    <i class="fa-solid fa-phone-slash"></i> No Active Call
+                                </span>
                             </div>
                             <div id="call-placeholder" class="call-placeholder">
-                                <i class="fa-solid fa-headset"
-                                    style="font-size:2rem;margin-bottom:.75rem;display:block;"></i>
-                                <p>Waiting for a call...</p>
-                                <p class="agent-subtitle">Set status to <strong>Available</strong> to receive calls.</p>
+                                <i class="fa-solid fa-headset"></i>
+                                <p>Waiting for a call…</p>
+                                <p class="agent-subtitle" style="margin-top:.375rem;">Set status to
+                                    <strong>Available</strong> to receive calls.
+                                </p>
                             </div>
                             <div id="call-details" style="display:none;">
                                 <div class="call-meta">
@@ -956,11 +1157,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-content" id="tab-lead">
+
+                    <div class="tab-pane" id="tab-lead">
                         <div class="lead-card">
-                            <div class="lead-card__header"><strong id="lead-name">No lead loaded</strong><span
-                                    class="lead-status-pill" id="lead-status">—</span></div>
-                            <div class="grid-two">
+                            <div class="lead-card__header">
+                                <strong id="lead-name">No lead loaded</strong>
+                                <span class="lead-pill" id="lead-status">—</span>
+                            </div>
+                            <div class="grid-two" style="margin-top:0;">
                                 <div><label>Phone</label><strong id="lead-phone">—</strong></div>
                                 <div><label>Email</label><strong id="lead-email">—</strong></div>
                                 <div><label>Company</label><strong id="lead-company">—</strong></div>
@@ -968,65 +1172,80 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-content" id="tab-scripts">
+
+                    <div class="tab-pane" id="tab-scripts">
                         <div class="call-panel">
                             <h3>Call Script</h3>
                             <pre
-                                style="white-space:pre-wrap;font-size:.9rem;line-height:1.6;">{{ script_content|default:"No script available." }}</pre>
+                                style="white-space:pre-wrap;font-size:.875rem;line-height:1.6;">{{ script_content|default:"No script available." }}</pre>
                         </div>
                     </div>
-                    <div class="tab-content" id="tab-notes">
+
+                    <div class="tab-pane" id="tab-notes">
                         <div class="call-panel">
-                            <h3>Quick Notes</h3><textarea id="agent-notes" class="agent-note-input"
-                                placeholder="e.g. Customer asked for pricing..." style="min-height:300px;"></textarea>
+                            <h3>Quick Notes</h3>
+                            <textarea class="note-input" id="agent-notes" placeholder="e.g. Customer asked for pricing…"
+                                style="min-height:280px;margin-top:.75rem;"></textarea>
                         </div>
                     </div>
                 </div>
             </section>
-            <!-- CENTER PANEL -->
+
+            <!-- ── CENTER: Callbacks + Performance ────────────────────── -->
             <section class="panel">
-                <h2>Callbacks & History</h2>
+                <h2>Callbacks</h2>
                 {% if pending_callbacks %}
                 {% for cb in pending_callbacks %}
-                <div class="info-card" style="margin-bottom:.5rem;"><label>{{ cb.scheduled_time|date:"M d, H:i" }}</label><strong>{{ cb.lead.first_name }} {{ cb.lead.last_name }} — {{ cb.lead.phone_number }}</strong></div>
+                <div class="info-card" style="margin-bottom:.5rem;">
+                    <label>{{ cb.scheduled_time|date:"M d, H:i" }}</label>
+                    <strong>{{ cb.lead.first_name }} {{ cb.lead.last_name }} — {{ cb.lead.phone_number }}</strong>
+                </div>
                 {% endfor %}
                 {% else %}
                 <p class="agent-subtitle" style="margin-bottom:1rem;">No pending callbacks.</p>
                 {% endif %}
+
                 <h2 style="margin-top:1.5rem;">Today's Performance</h2>
-                <div class="grid-two">
-                    <div class="info-card"><label>Total Calls</label><strong id="perf-total">{{ today_stats.total_calls }}</strong></div>
-                    <div class="info-card"><label>Answered</label><strong id="perf-ans">{{ today_stats.answered_calls }}</strong></div>
-                    <div class="info-card"><label>Talk Time</label><strong id="perf-talk">{{ today_stats.talk_time }}s</strong></div>
+                <div class="grid-two" style="margin-top:.75rem;">
+                    <div class="info-card"><label>Total Calls</label><strong>{{ today_stats.total_calls }}</strong>
+                    </div>
+                    <div class="info-card"><label>Answered</label><strong>{{ today_stats.answered_calls }}</strong>
+                    </div>
+                    <div class="info-card"><label>Talk Time</label><strong>{{ today_stats.talk_time }}s</strong></div>
                     <div class="info-card">
                         <label>Contact Rate</label>
-                        <strong id="perf-rate">
-                            {% if today_stats.total_calls > 0 %}
-                            {{ today_stats.answered_calls }}%
-                            {% else %}
-                            0%
-                            {% endif %}
+                        <strong>
+                            {% if today_stats.total_calls > 0 %}{{ today_stats.answered_calls }}%{% else %}0%{% endif %}
                         </strong>
                     </div>
                 </div>
             </section>
-            <!-- RIGHT PANEL: WEBRTC PHONE -->
+
+            <!-- ── RIGHT: WebRTC Phone ────────────────────────────────── -->
             <section class="panel">
                 <div class="retro-phone">
-                    <div class="phone-header">
-                        <div class="phone-brand">EASYIAN PHONE</div>
+                    <div class="phone-brand">EASYIAN PHONE</div>
+
+                    <div class="webrtc-status">
+                        <span class="webrtc-dot" id="webrtc-dot"></span>
+                        <span id="webrtc-status-text">Initializing…</span>
                     </div>
-                    <div class="webrtc-status"><span class="webrtc-dot" id="webrtc-dot"></span><span
-                            id="webrtc-status-text">Initializing...</span></div>
-                    <div class="auto-answer-toggle"><span><i class="fa-solid fa-bolt"></i> Auto Answer</span><label
-                            class="toggle-switch"><input type="checkbox" id="auto-answer-toggle"><span
-                                class="toggle-slider"></span></label></div>
+
+                    <div class="auto-answer-row">
+                        <span><i class="fa-solid fa-bolt"></i> Auto Answer</span>
+                        <label class="toggle-sw">
+                            <input type="checkbox" id="auto-answer-toggle">
+                            <span class="toggle-track"></span>
+                        </label>
+                    </div>
+
                     <div class="phone-screen">
-                        <div class="phone-input-display" id="phone-number-display"></div>
-                        <div class="phone-display" id="phone-status-display">CONNECTING...</div>
+                        <div class="phone-num-disp" id="phone-num-disp"></div>
+                        <div class="phone-status-disp" id="phone-status-disp">CONNECTING…</div>
                         <div class="phone-timer" id="phone-timer" style="display:none;">00:00</div>
-                        <div class="phone-status-line">Extension: {{ phone_info.extension|default:"N/A" }}</div>
+                        <div class="phone-ext-line">Extension: {{ phone_info.extension|default:"N/A" }}</div>
                     </div>
+
                     <div class="phone-keypad">
                         <button class="phone-key" data-digit="1">1<span class="phone-key-sub"></span></button>
                         <button class="phone-key" data-digit="2">2<span class="phone-key-sub">ABC</span></button>
@@ -1037,95 +1256,91 @@
                         <button class="phone-key" data-digit="7">7<span class="phone-key-sub">PQRS</span></button>
                         <button class="phone-key" data-digit="8">8<span class="phone-key-sub">TUV</span></button>
                         <button class="phone-key" data-digit="9">9<span class="phone-key-sub">WXYZ</span></button>
-                        <button class="phone-key" data-digit="*">*<span class="phone-key-sub"></span></button>
+                        <button class="phone-key" data-digit="*">*</button>
                         <button class="phone-key" data-digit="0">0<span class="phone-key-sub">+</span></button>
-                        <button class="phone-key" data-digit="#">#<span class="phone-key-sub"></span></button>
+                        <button class="phone-key" data-digit="#">#</button>
                     </div>
+
                     <div class="phone-controls">
-                        <button class="phone-control-btn call" id="btn-call" disabled><i class="fa-solid fa-phone"></i>
+                        <button class="ctrl-btn call" id="btn-call" disabled><i class="fa-solid fa-phone"></i>
                             CALL</button>
-                        <button class="phone-control-btn hangup" id="btn-hangup" style="display:none;"><i
+                        <button class="ctrl-btn hangup" id="btn-hangup" style="display:none;"><i
                                 class="fa-solid fa-phone-slash"></i> HANG UP</button>
                     </div>
+
                     <div class="phone-extras">
-                        <button class="phone-extra-btn" id="btn-mute" disabled><i class="fa-solid fa-microphone"></i>
+                        <button class="extra-btn" id="btn-mute" disabled><i class="fa-solid fa-microphone"></i>
                             Mute</button>
-                        <button class="phone-extra-btn" id="btn-hold" disabled><i class="fa-solid fa-pause"></i>
-                            Hold</button>
-                        <button class="phone-extra-btn" id="btn-transfer" disabled><i
-                                class="fa-solid fa-right-left"></i> Xfer</button>
-                        <button class="phone-extra-btn" id="btn-clear"><i class="fa-solid fa-delete-left"></i>
-                            Clear</button>
+                        <button class="extra-btn" id="btn-hold" disabled><i class="fa-solid fa-pause"></i> Hold</button>
+                        <button class="extra-btn" id="btn-transfer" disabled><i class="fa-solid fa-right-left"></i>
+                            Xfer</button>
+                        <button class="extra-btn" id="btn-clear"><i class="fa-solid fa-delete-left"></i> Clear</button>
                     </div>
                 </div>
             </section>
         </main>
-        <!-- Disposition modal -->
-        <div id="disposition-overlay" class="disposition-overlay" style="display:none;">
-            <div class="disposition-modal">
-                <h3>Set Disposition</h3>
-                <div class="disposition-grid" id="disposition-grid">
-                    {% for d in available_dispositions %}
-                    <button class="disposition-btn" data-disp-id="{{ d.id }}">{{ d.name }}</button>
-                    {% empty %}
-                    <button class="disposition-btn" data-disp-id="sale">Sale</button>
-                    <button class="disposition-btn" data-disp-id="callback">Callback</button>
-                    <button class="disposition-btn" data-disp-id="no_answer">No Answer</button>
-                    <button class="disposition-btn" data-disp-id="busy">Busy</button>
-                    <button class="disposition-btn" data-disp-id="voicemail">Voicemail</button>
-                    <button class="disposition-btn" data-disp-id="dnc">Do Not Call</button>
-                    <button class="disposition-btn" data-disp-id="not_interested">Not Interested</button>
-                    <button class="disposition-btn" data-disp-id="wrong_number">Wrong Number</button>
-                    {% endfor %}
-                </div>
-                <label style="margin-top:.75rem;">Notes</label>
-                <textarea id="disposition-notes" class="agent-note-input" placeholder="Add remarks..."></textarea>
-                <div class="modal-actions">
-                    <button class="btn-muted" id="btn-cancel-disp">Cancel</button>
-                    <button class="btn-primary-solid" id="btn-save-disp" disabled>Save Disposition</button>
-                </div>
+    </div><!-- /#agent-app -->
+
+    <!-- ── Disposition overlay (cannot dismiss during wrapup) ────────────── -->
+    <div id="disposition-overlay">
+        <div class="disp-modal">
+            <h3><i class="fas fa-clipboard-check" style="color:var(--wrapup)"></i> Select Disposition</h3>
+            <p class="disp-subtitle" id="disp-subtitle">Select a disposition to complete this call.</p>
+            <div class="disp-grid" id="disp-grid">
+                {% for d in available_dispositions %}
+                <button class="disp-btn" data-disp-id="{{ d.id }}" data-disp-name="{{ d.name|escapejs }}">
+                    {{ d.name }}
+                </button>
+                {% empty %}
+                <button class="disp-btn" data-disp-id="sale" data-disp-name="Sale">Sale</button>
+                <button class="disp-btn" data-disp-id="callback" data-disp-name="Callback">Callback</button>
+                <button class="disp-btn" data-disp-id="no_answer" data-disp-name="No Answer">No Answer</button>
+                <button class="disp-btn" data-disp-id="busy" data-disp-name="Busy">Busy</button>
+                <button class="disp-btn" data-disp-id="voicemail" data-disp-name="Voicemail">Voicemail</button>
+                <button class="disp-btn" data-disp-id="dnc" data-disp-name="Do Not Call">Do Not Call</button>
+                <button class="disp-btn" data-disp-id="not_interested" data-disp-name="Not Interested">Not
+                    Interested</button>
+                <button class="disp-btn" data-disp-id="wrong_number" data-disp-name="Wrong Number">Wrong Number</button>
+                {% endfor %}
             </div>
+            <textarea class="disp-notes" id="disp-notes" placeholder="Add call notes (optional)…"></textarea>
+            <button class="disp-save-btn" id="btn-save-disp" disabled>
+                <i class="fas fa-save"></i> Save Disposition
+            </button>
+            <p class="disp-warning">⚠️ This dialog cannot be dismissed — a disposition must be selected.</p>
         </div>
-        <div class="toast-notification" id="toast"></div>
-        <audio id="remote-audio" autoplay playsinline></audio>
     </div>
 
-    <!-- JsSIP Local (CDN blocked by firewall) -->
-    <!-- ICE servers as safe JSON (no escapejs mangling) -->
-    {{ webrtc_config.ice_servers|json_script:"webrtc-ice-servers" }}
+    <div id="toast"></div>
+    <audio id="remote-audio" autoplay playsinline></audio>
 
-    <!-- JsSIP -->
+    <!-- ICE servers injected safely via json_script ──────────────────────── -->
+    {{ webrtc_config.ice_servers|json_script:"webrtc-ice-servers" }}
     <script src="{% static 'js/jssip.min.js' %}"></script>
+
     <script>
-        /* ==================================================================
-           WEBRTC AGENT DASHBOARD v3 — Fixed ICE + Auto-Answer + Full Controls
-           ================================================================== */
+        /* ====================================================================
+           WEBRTC AGENT DASHBOARD — Clean integrated version
+           Fixes: disposition FK, wrapup persistence, logout block,
+                  heartbeat/zombie prevention, call state on refresh
+           ==================================================================== */
         (function () {
             'use strict';
 
-            // ── Read ICE servers from json_script (SAFE — no template escaping) ─
-            let ICE_SERVERS;
-            try {
-                const el = document.getElementById('webrtc-ice-servers');
-                ICE_SERVERS = el ? JSON.parse(el.textContent) : null;
-            } catch (e) {
-                console.warn('[WebRTC] Failed to parse ICE servers from json_script:', e);
-                ICE_SERVERS = null;
-            }
-            // Validate & fallback
-            if (!Array.isArray(ICE_SERVERS) || ICE_SERVERS.length === 0) {
-                ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
-            }
-            // Ensure every entry has "urls" as a string (not array of objects)
-            ICE_SERVERS = ICE_SERVERS.map(function (s) {
-                if (typeof s === 'string') return { urls: s };
-                if (s && s.urls) return s;
-                return null;
-            }).filter(Boolean);
+            // ── Endpoint URLs ──────────────────────────────────────────────────────
+            const URL_STATUS = '{% url "agents:update_status" %}';
+            const URL_DISP = '{% url "agents:set_disposition" %}';
+            const URL_HANGUP = '{% url "agents:hangup" %}';
+            const URL_LEAD = '{% url "agents:get_lead_info" %}';
+            const URL_CALL_STATUS = '{% url "agents:call_status" %}';
+            const URL_HEARTBEAT = '{% url "agents:heartbeat" %}';
+            const URL_WRAPUP_STATE = '{% url "agents:wrapup_state" %}';
+            const URL_CAN_LOGOUT = '{% url "agents:can_logout" %}';
+            const URL_STATUS_INFO = '{% url "agents:status_info" %}';
+            const CSRF = '{{ csrf_token }}';
+            const AGENT_ID = '{{ agent.id }}';
 
-            console.log('[WebRTC] ICE Servers:', JSON.stringify(ICE_SERVERS));
-
-            // ── Config from Django data attributes / template vars ──────────
+            // ── JsSIP config ───────────────────────────────────────────────────────
             const CFG = {
                 ws: '{{ webrtc_config.ws_server|default:"" }}',
                 uri: '{{ webrtc_config.sip_uri|default:"" }}',
@@ -1134,22 +1349,47 @@
                 domain: '{{ webrtc_config.domain|default:"" }}',
                 name: '{{ webrtc_config.display_name|default:agent.username }}',
             };
-            const AGENT_ID = '{{ agent.id }}';
-            const CSRF = '{{ csrf_token }}';
-            const URL_STATUS = '{% url "agents:update_status" %}';
-            const URL_DISP = '{% url "agents:set_disposition" %}';
-            const URL_HANGUP = '{% url "agents:hangup" %}';
-            const URL_LEAD = '{% url "agents:get_lead_info" %}';
-            const URL_CALL_STATUS = '{% url "agents:call_status" %}';
 
-            // ── State ───────────────────────────────────────────────────────
-            let ua = null, session = null, dialNum = '', callTimer = null, callSec = 0;
-            let muted = false, held = false, autoAns = false, callId = null, selDisp = null;
+            // ── ICE servers (from json_script — avoids Django escapejs mangling) ──
+            let ICE_SERVERS;
+            try {
+                const el = document.getElementById('webrtc-ice-servers');
+                ICE_SERVERS = el ? JSON.parse(el.textContent) : null;
+            } catch (e) {
+                console.warn('[WebRTC] ICE parse error:', e);
+                ICE_SERVERS = null;
+            }
+            if (!Array.isArray(ICE_SERVERS) || !ICE_SERVERS.length) {
+                ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+            }
+            ICE_SERVERS = ICE_SERVERS.map(s => {
+                if (typeof s === 'string') return { urls: s };
+                if (s && s.urls) return s;
+                return null;
+            }).filter(Boolean);
+            console.log('[WebRTC] ICE:', JSON.stringify(ICE_SERVERS));
 
-            // ── DOM ─────────────────────────────────────────────────────────
-            const $ = function (id) { return document.getElementById(id); };
-            const numDisp = $('phone-number-display');
-            const stDisp = $('phone-status-display');
+            // ── State ──────────────────────────────────────────────────────────────
+            let ua = null, session = null;
+            let dialNum = '', callSec = 0, callTimer = null;
+            let muted = false, held = false, autoAns = false;
+            let callId = null;           // current call DB id
+            let selDispId = null;      // selected disposition id
+            let selDispName = null;      // selected disposition name
+            let inWrapup = false;     // true → must dispose before anything
+
+            // ── Status / login timer state ─────────────────────────────────────────
+            // Both timers tick from an absolute Unix-ms anchor, exactly like the
+            // realtime monitor — so they always agree, even after page refresh.
+            let _stwSkewMs = 0;       // server time − client time (ms)
+            let _stwStatusMs = null;    // Unix ms when current status started
+            let _stwLoginMs = null;    // Unix ms of first login today
+            let _stwTick = null;    // setInterval handle
+
+            // ── DOM shortcuts ──────────────────────────────────────────────────────
+            const $ = id => document.getElementById(id);
+            const numDisp = $('phone-num-disp');
+            const stDisp = $('phone-status-disp');
             const tmDisp = $('phone-timer');
             const btnCall = $('btn-call');
             const btnHang = $('btn-hangup');
@@ -1161,51 +1401,51 @@
             const wText = $('webrtc-status-text');
             const regText = $('reg-text');
             const remAudio = $('remote-audio');
-            const badge = $('call-badge');
-            const placeH = $('call-placeholder');
-            const detailsDiv = $('call-details');
-            const pill = $('status-pill');
-            const dispOver = $('disposition-overlay');
+            const callBadge = $('call-badge');
+            const callPlaceholder = $('call-placeholder');
+            const callDetails = $('call-details');
+            const statusPill = $('status-pill');
+            const dispOverlay = $('disposition-overlay');
+            const wrapupBar = $('wrapup-bar');
+            const logoutBanner = $('logout-banner');
 
-            // ── Helpers ─────────────────────────────────────────────────────
-            function toast(m, t) {
-                var e = $('toast');
-                e.textContent = m;
-                e.className = 'toast-notification show ' + (t || 'info');
-                console.log('[TOAST] ' + m);
-                setTimeout(function () { e.classList.remove('show'); }, 3500);
+            // ── Helpers ────────────────────────────────────────────────────────────
+            function toast(msg, type = 'info') {
+                const el = $('toast');
+                el.textContent = msg;
+                el.className = `show ${type}`;
+                setTimeout(() => el.classList.remove('show'), 3500);
             }
 
-            function post(url, data) {
-                var b = new URLSearchParams();
-                if (data) Object.keys(data).forEach(function (k) { b.append(k, data[k]); });
+            function post(url, data = {}) {
+                const body = new URLSearchParams({ ...data, csrfmiddlewaretoken: CSRF });
                 return fetch(url, {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRFToken': CSRF,
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: b.toString()
-                }).then(function (r) { return r.json(); });
+                    body,
+                }).then(r => r.json());
             }
 
-            function setStatus(t) { stDisp.textContent = t; }
-            function updNum() { numDisp.textContent = dialNum; }
+            function setPhoneStatus(t) { stDisp.textContent = t; }
+            function updNumDisp() { numDisp.textContent = dialNum; }
 
-            function startTm() {
-                stopTm(); callSec = 0;
+            function startTimer() {
+                stopTimer(); callSec = 0;
                 tmDisp.style.display = 'block'; tmDisp.textContent = '00:00';
-                callTimer = setInterval(function () {
+                callTimer = setInterval(() => {
                     callSec++;
-                    var m = String(Math.floor(callSec / 60)).padStart(2, '0');
-                    var s = String(callSec % 60).padStart(2, '0');
+                    const m = String(Math.floor(callSec / 60)).padStart(2, '0');
+                    const s = String(callSec % 60).padStart(2, '0');
                     tmDisp.textContent = m + ':' + s;
                     $('call-duration').textContent = m + ':' + s;
                 }, 1000);
             }
 
-            function stopTm() {
+            function stopTimer() {
                 if (callTimer) { clearInterval(callTimer); callTimer = null; }
                 tmDisp.style.display = 'none';
             }
@@ -1216,28 +1456,229 @@
                 btnMute.disabled = !on;
                 btnHold.disabled = !on;
                 btnXfer.disabled = !on;
-                if (on) { placeH.style.display = 'none'; detailsDiv.style.display = 'block'; }
+                callPlaceholder.style.display = on ? 'none' : 'block';
+                callDetails.style.display = on ? 'block' : 'none';
             }
 
             function resetCallUI() {
                 setCallUI(false);
-                placeH.style.display = 'block'; detailsDiv.style.display = 'none';
-                badge.className = 'call-status-badge idle';
-                badge.innerHTML = '<i class="fa-solid fa-phone-slash"></i> No Active Call';
+                callBadge.className = 'call-badge idle';
+                callBadge.innerHTML = '<i class="fa-solid fa-phone-slash"></i> No Active Call';
                 $('call-number').textContent = '—';
                 $('call-duration').textContent = '00:00';
                 $('call-status-text').textContent = '—';
                 $('call-lead-name').textContent = '—';
-                stopTm(); muted = false; held = false;
+                stopTimer();
+                muted = false; held = false;
                 btnMute.classList.remove('active');
                 btnMute.innerHTML = '<i class="fa-solid fa-microphone"></i> Mute';
                 btnHold.classList.remove('active');
                 btnHold.innerHTML = '<i class="fa-solid fa-pause"></i> Hold';
                 btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> CALL';
-                setStatus(ua && ua.isRegistered() ? 'READY' : 'OFFLINE');
+                setPhoneStatus(ua && ua.isRegistered() ? 'READY' : 'OFFLINE');
             }
 
-            // ── JsSIP Init ──────────────────────────────────────────────────
+            // ── Status / Login timer (mirrors realtime monitor) ────────────────────
+            function _stwFmt(secs) {
+                secs = Math.max(0, Math.floor(secs));
+                const h = Math.floor(secs / 3600);
+                const m = Math.floor((secs % 3600) / 60);
+                const s = secs % 60;
+                if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            function _stwElapsed(startMs) {
+                if (!startMs) return 0;
+                return Math.max(0, Math.floor((Date.now() + _stwSkewMs - startMs) / 1000));
+            }
+
+            function _stwTick_fn() {
+                const statusEl = document.getElementById('stw-status-timer');
+                const loginEl = document.getElementById('stw-login-timer');
+                if (statusEl && _stwStatusMs) {
+                    statusEl.textContent = _stwFmt(_stwElapsed(_stwStatusMs));
+                }
+                if (loginEl && _stwLoginMs) {
+                    loginEl.textContent = _stwFmt(_stwElapsed(_stwLoginMs));
+                }
+            }
+
+            function initStatusTimers() {
+                // Fetch accurate timestamps from server DB — same source as realtime monitor
+                fetch(URL_STATUS_INFO, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': CSRF }
+                })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (!d.success) return;
+
+                        // Compute clock skew so our tick stays in sync with server
+                        if (d.server_time_ms) _stwSkewMs = d.server_time_ms - Date.now();
+
+                        _stwStatusMs = d.status_changed_at_ms || null;
+                        _stwLoginMs = d.login_at_ms || null;
+
+                        // Labels
+                        const statusLabelEl = document.getElementById('stw-status-label');
+                        if (statusLabelEl) statusLabelEl.textContent = d.status_display || d.status || '';
+
+                        const loginSinceEl = document.getElementById('stw-login-since');
+                        if (loginSinceEl && _stwLoginMs) {
+                            loginSinceEl.textContent = 'since ' + new Date(_stwLoginMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+
+                        // Start ticking (one shared interval for both timers)
+                        if (_stwTick) clearInterval(_stwTick);
+                        _stwTick = setInterval(_stwTick_fn, 1000);
+                        _stwTick_fn(); // immediate first tick
+                    })
+                    .catch(() => { });
+            }
+
+            function refreshStatusTimer(newStatus, newStatusDisplay) {
+                // Called immediately after a successful status change API call
+                // Re-fetch from DB to get accurate AgentTimeLog.started_at timestamp.
+                initStatusTimers();
+            }
+
+
+
+            // ── Wrapup state ───────────────────────────────────────────────────────
+            function enterWrapup(cid) {
+                inWrapup = true;
+                if (cid) callId = cid;
+                wrapupBar.classList.add('visible');
+                logoutBanner.classList.add('visible');
+                document.body.style.paddingTop = '52px';
+                // Block status chips during wrapup
+                document.querySelectorAll('.status-chip').forEach(b => b.disabled = true);
+                // Update call badge
+                callBadge.className = 'call-badge wrapup';
+                callBadge.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Wrap-up';
+                // Sync the status timer to wrapup start
+                refreshStatusTimer('wrapup', 'Wrap-up');
+                openDisposition();
+            }
+
+            function exitWrapup() {
+                inWrapup = false;
+                callId = null;
+                wrapupBar.classList.remove('visible');
+                logoutBanner.classList.remove('visible');
+                document.body.style.paddingTop = '';
+                document.querySelectorAll('.status-chip').forEach(b => b.disabled = false);
+                // Refresh timers from server to get accurate post-disposition state
+                setTimeout(initStatusTimers, 400);
+                resetCallUI();
+            }
+
+            // ── Disposition overlay ────────────────────────────────────────────────
+            function openDisposition() {
+                selDispId = null; selDispName = null;
+                document.querySelectorAll('.disp-btn').forEach(b => b.classList.remove('selected'));
+                $('btn-save-disp').disabled = true;
+                $('disp-notes').value = '';
+                if (callId) {
+                    $('disp-subtitle').textContent = `Call #${callId} — select a disposition to complete.`;
+                } else {
+                    $('disp-subtitle').textContent = 'Select a disposition to complete this call.';
+                }
+                dispOverlay.classList.add('visible');
+            }
+
+            function saveDisposition() {
+                if (!selDispId) { toast('Please select a disposition', 'warning'); return; }
+
+                const saveBtn = $('btn-save-disp');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+                const notes = $('disp-notes').value;
+
+                post(URL_DISP, {
+                    call_id: callId || '',
+                    disposition_id: selDispId,
+                    notes,
+                }).then(r => {
+                    if (r.success) {
+                        dispOverlay.classList.remove('visible');
+                        toast(`Disposition "${selDispName}" saved ✓`, 'success');
+                        exitWrapup();
+                    } else {
+                        toast(r.error || 'Save failed', 'error');
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Disposition';
+                    }
+                }).catch(() => {
+                    toast('Network error — please try again', 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Disposition';
+                });
+            }
+
+            // ── Heartbeat — zombie prevention ─────────────────────────────────────
+            function startHeartbeat() {
+                const beat = () => post(URL_HEARTBEAT).catch(() => { });
+                beat();
+                setInterval(beat, 30000);
+            }
+
+            // ── Restore wrapup state on page load ─────────────────────────────────
+            function checkWrapupOnLoad() {
+                fetch(URL_WRAPUP_STATE, { headers: { 'X-CSRFToken': CSRF } })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.needs_disposition) {
+                            callId = d.call_id;
+                            enterWrapup(d.call_id);
+                            toast('⚠️ Please dispose your pending call', 'warning');
+                        }
+                        if (d.status) {
+                            // Sync the status chip
+                            document.querySelectorAll('.status-chip').forEach(b => {
+                                b.classList.toggle('is-active', b.dataset.setStatus === d.status);
+                            });
+                        }
+                    })
+                    .catch(() => { });
+            }
+
+            // ── Intercept logout ──────────────────────────────────────────────────
+            function interceptLogout() {
+                document.querySelectorAll('a[href*="logout"], button[data-logout]').forEach(el => {
+                    el.addEventListener('click', e => {
+                        if (inWrapup) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toast('⚠️ Dispose the call before logging out!', 'warning');
+                            openDisposition();
+                            return false;
+                        }
+                        // Server-side double-check
+                        fetch(URL_CAN_LOGOUT, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(r => r.json())
+                            .then(d => {
+                                if (!d.can_logout) {
+                                    e.preventDefault();
+                                    toast(d.reason || 'Cannot log out right now', 'warning');
+                                    if (d.call_id) { callId = d.call_id; enterWrapup(d.call_id); }
+                                }
+                            })
+                            .catch(() => { });
+                    });
+                });
+
+                window.addEventListener('beforeunload', e => {
+                    if (inWrapup) {
+                        e.preventDefault();
+                        e.returnValue = 'You have a pending call disposition. Leave anyway?';
+                        return e.returnValue;
+                    }
+                });
+            }
+
+            // ── JsSIP ─────────────────────────────────────────────────────────────
             function initJsSIP() {
                 if (!CFG.ws || !CFG.uri) {
                     wDot.className = 'webrtc-dot failed';
@@ -1246,16 +1687,12 @@
                     regText.style.color = 'var(--danger)';
                     return;
                 }
-
-                console.log('[WebRTC] Connecting to:', CFG.ws, 'URI:', CFG.uri);
-                console.log('[WebRTC] ICE config:', JSON.stringify(ICE_SERVERS));
-
                 wDot.className = 'webrtc-dot connecting';
-                wText.textContent = 'Connecting...';
-                setStatus('CONNECTING...');
+                wText.textContent = 'Connecting…';
+                setPhoneStatus('CONNECTING…');
 
                 try {
-                    var sock = new JsSIP.WebSocketInterface(CFG.ws);
+                    const sock = new JsSIP.WebSocketInterface(CFG.ws);
                     ua = new JsSIP.UA({
                         sockets: [sock],
                         uri: CFG.uri,
@@ -1263,117 +1700,105 @@
                         display_name: CFG.name,
                         register: true,
                         session_timers: false,
-                        user_agent: 'EasyianWebRTC/1.0'
+                        user_agent: 'EasyianWebRTC/3.0',
                     });
 
-                    ua.on('registered', function () {
-                        console.log('[WebRTC] Registered!');
+                    ua.on('registered', () => {
                         wDot.className = 'webrtc-dot registered';
-                        wText.textContent = 'Registered (' + CFG.ext + ')';
+                        wText.textContent = `Registered (${CFG.ext})`;
                         regText.textContent = 'WebRTC registered ✓';
                         regText.style.color = 'var(--success)';
-                        setStatus('READY');
+                        setPhoneStatus('READY');
                         btnCall.disabled = false;
                         toast('Phone registered', 'success');
                     });
 
-                    ua.on('unregistered', function () {
+                    ua.on('unregistered', () => {
                         wDot.className = 'webrtc-dot';
                         wText.textContent = 'Unregistered';
                         regText.textContent = 'Unregistered';
                         regText.style.color = 'var(--warning)';
-                        setStatus('OFFLINE');
+                        setPhoneStatus('OFFLINE');
                         btnCall.disabled = true;
                     });
 
-                    ua.on('registrationFailed', function (e) {
-                        console.error('[WebRTC] Registration failed:', e.cause);
+                    ua.on('registrationFailed', e => {
                         wDot.className = 'webrtc-dot failed';
                         wText.textContent = 'Failed: ' + (e.cause || '');
                         regText.textContent = 'Registration failed';
                         regText.style.color = 'var(--danger)';
-                        setStatus('REG FAILED');
+                        setPhoneStatus('REG FAILED');
                         btnCall.disabled = true;
                         toast('Registration failed: ' + (e.cause || ''), 'error');
                     });
 
-                    ua.on('newRTCSession', function (e) { handleSession(e); });
+                    ua.on('newRTCSession', e => handleSession(e));
                     ua.start();
 
                 } catch (err) {
                     console.error('[WebRTC] Init error:', err);
                     wDot.className = 'webrtc-dot failed';
                     wText.textContent = 'Error';
-                    setStatus('ERROR');
+                    setPhoneStatus('ERROR');
                     toast('Init failed: ' + err.message, 'error');
                 }
             }
 
-            // ── Session handling ────────────────────────────────────────────
+            // ── Session handling ──────────────────────────────────────────────────
             function handleSession(e) {
-                var s = e.session;
-                var dir = s.direction;
+                const s = e.session;
+                const dir = s.direction;
 
-                console.log('[WebRTC] New session:', dir);
-
+                // Reject new incoming if already in a call
                 if (session) {
-                    // Already in a call — reject new incoming
                     if (dir === 'incoming') s.terminate({ status_code: 486 });
                     return;
                 }
-
                 session = s;
 
-                // Remote audio stream
-                s.on('peerconnection', function (pc) {
-                    pc.peerconnection.addEventListener('track', function (ev) {
-                        if (ev.streams && ev.streams[0]) {
-                            remAudio.srcObject = ev.streams[0];
-                        }
+                // Attach remote audio stream
+                s.on('peerconnection', pc => {
+                    pc.peerconnection.addEventListener('track', ev => {
+                        if (ev.streams?.[0]) remAudio.srcObject = ev.streams[0];
                     });
                 });
 
-                s.on('progress', function () {
-                    setStatus(dir === 'incoming' ? 'RINGING...' : 'CALLING...');
-                    badge.className = 'call-status-badge ringing';
-                    badge.innerHTML = '<i class="fa-solid fa-phone-volume"></i> ' +
-                        (dir === 'incoming' ? 'Incoming' : 'Ringing');
+                s.on('progress', () => {
+                    setPhoneStatus(dir === 'incoming' ? 'RINGING…' : 'CALLING…');
+                    callBadge.className = 'call-badge ringing';
+                    callBadge.innerHTML = `<i class="fa-solid fa-phone-volume"></i> ${dir === 'incoming' ? 'Incoming' : 'Ringing'}`;
                     $('call-status-text').textContent = dir === 'incoming' ? 'Incoming' : 'Ringing';
                 });
 
-                s.on('accepted', function () {
-                    setStatus('CONNECTED');
-                    badge.className = 'call-status-badge connected';
-                    badge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
+                s.on('accepted', () => {
+                    setPhoneStatus('CONNECTED');
+                    callBadge.className = 'call-badge connected';
+                    callBadge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
                     $('call-status-text').textContent = 'Connected';
                     setCallUI(true);
-                    startTm();
+                    startTimer();
                 });
 
-                s.on('confirmed', function () {
-                    setStatus('CONNECTED');
+                s.on('confirmed', () => {
+                    setPhoneStatus('CONNECTED');
                     setCallUI(true);
-                    if (!callTimer) startTm();
+                    if (!callTimer) startTimer();
                 });
 
-                s.on('ended', function () { endSession('Call ended'); });
-                s.on('failed', function (ev) { endSession('Failed: ' + (ev.cause || '')); });
+                s.on('ended', () => endSession('Call ended'));
+                s.on('failed', ev => endSession('Failed: ' + (ev.cause || '')));
 
                 // Show caller info
-                var rNum = (s.remote_identity && s.remote_identity.uri)
-                    ? s.remote_identity.uri.user : (dialNum || 'Unknown');
+                const rNum = s.remote_identity?.uri?.user || dialNum || 'Unknown';
                 $('call-number').textContent = rNum;
                 numDisp.textContent = rNum;
                 setCallUI(true);
-                placeH.style.display = 'none';
-                detailsDiv.style.display = 'block';
 
-                // Handle incoming
                 if (dir === 'incoming') {
-                    setStatus('INCOMING: ' + rNum);
+                    setPhoneStatus('INCOMING: ' + rNum);
                     if (autoAns) {
-                        toast('Auto-answering...', 'info');
-                        setTimeout(function () { answerCall(); }, 500);
+                        toast('Auto-answering…', 'info');
+                        setTimeout(answerCall, 500);
                     } else {
                         btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> ANSWER';
                         btnCall.style.display = 'flex';
@@ -1385,62 +1810,50 @@
 
             function endSession(reason) {
                 console.log('[WebRTC] Session ended:', reason);
+                const endedCallId = callId;
                 session = null;
-                resetCallUI();
-                dialNum = ''; updNum();
-                setStatus('READY');
-                if (callId) { openDisposition(); }
+                stopTimer();
+                dialNum = ''; updNumDisp();
                 toast(reason, 'info');
+
+                // Enter wrapup so agent must dispose before continuing
+                if (endedCallId) {
+                    enterWrapup(endedCallId);
+                } else {
+                    resetCallUI();
+                    setPhoneStatus('READY');
+                }
             }
 
-            // ── Call Actions ────────────────────────────────────────────────
+            // ── Call actions ──────────────────────────────────────────────────────
             function makeCall() {
+                if (inWrapup) { toast('Dispose the current call first', 'warning'); openDisposition(); return; }
                 if (!ua || !ua.isRegistered()) { toast('Not registered', 'error'); return; }
                 if (!dialNum) { toast('Enter a number', 'error'); return; }
-
-                var target = 'sip:' + dialNum + '@' + CFG.domain;
-                console.log('[WebRTC] Calling:', target);
-
                 try {
-                    ua.call(target, {
+                    ua.call(`sip:${dialNum}@${CFG.domain}`, {
                         mediaConstraints: { audio: true, video: false },
                         pcConfig: { iceServers: ICE_SERVERS },
-                        rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: false }
+                        rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: false },
                     });
                     setCallUI(true);
-                    setStatus('CALLING...');
+                    setPhoneStatus('CALLING…');
                 } catch (err) {
                     toast('Call failed: ' + err.message, 'error');
                 }
             }
 
             function answerCall() {
-                if (!session) {
-                    console.warn('[WebRTC] No session to answer');
-                    return;
-                }
-
+                if (!session) return;
+                if (session.isEstablished?.()) { setCallUI(true); return; }
                 btnCall.disabled = true;
-                console.log('[WebRTC] Answering call. Session status:', session.status);
-
-                // Skip if already answered
-                if (session.isEstablished && session.isEstablished()) {
-                    console.log('[WebRTC] Already connected');
-                    setCallUI(true);
-                    return;
-                }
-
                 try {
                     session.answer({
                         mediaConstraints: { audio: true, video: false },
-                        pcConfig: { iceServers: ICE_SERVERS }
+                        pcConfig: { iceServers: ICE_SERVERS },
                     });
-                    console.log('[WebRTC] Answer sent successfully');
                 } catch (e) {
-                    console.error('[WebRTC] Answer error:', e);
-                    if (e.message && e.message.indexOf('Invalid status') !== -1) {
-                        console.warn('[WebRTC] Race condition — session may already be answered');
-                    } else {
+                    if (!e.message?.includes('Invalid status')) {
                         toast('Answer failed: ' + e.message, 'error');
                         btnCall.disabled = false;
                     }
@@ -1452,226 +1865,200 @@
                     try { session.terminate(); } catch (e) { console.warn(e); }
                 }
                 if (callId) {
-                    post(URL_HANGUP, { call_id: callId })['catch'](function () { });
+                    post(URL_HANGUP, { call_id: callId }).catch(() => { });
                 }
-                resetCallUI();
-                dialNum = ''; updNum();
             }
 
             function toggleMute() {
                 if (!session) return;
                 muted = !muted;
-                if (muted) {
-                    session.mute({ audio: true });
-                    btnMute.classList.add('active');
-                    btnMute.innerHTML = '<i class="fa-solid fa-microphone-slash"></i> Unmute';
-                } else {
-                    session.unmute({ audio: true });
-                    btnMute.classList.remove('active');
-                    btnMute.innerHTML = '<i class="fa-solid fa-microphone"></i> Mute';
-                }
+                muted ? session.mute({ audio: true }) : session.unmute({ audio: true });
+                btnMute.classList.toggle('active', muted);
+                btnMute.innerHTML = muted
+                    ? '<i class="fa-solid fa-microphone-slash"></i> Unmute'
+                    : '<i class="fa-solid fa-microphone"></i> Mute';
             }
 
             function toggleHold() {
                 if (!session) return;
                 held = !held;
-                if (held) {
-                    session.hold();
-                    btnHold.classList.add('active');
-                    btnHold.innerHTML = '<i class="fa-solid fa-play"></i> Resume';
-                    setStatus('ON HOLD');
-                } else {
-                    session.unhold();
-                    btnHold.classList.remove('active');
-                    btnHold.innerHTML = '<i class="fa-solid fa-pause"></i> Hold';
-                    setStatus('CONNECTED');
-                }
+                held ? session.hold() : session.unhold();
+                btnHold.classList.toggle('active', held);
+                btnHold.innerHTML = held
+                    ? '<i class="fa-solid fa-play"></i> Resume'
+                    : '<i class="fa-solid fa-pause"></i> Hold';
+                setPhoneStatus(held ? 'ON HOLD' : 'CONNECTED');
             }
 
             function sendDTMF(digit) {
-                if (session) {
-                    try { session.sendDTMF(digit); } catch (e) { }
-                }
+                if (session) try { session.sendDTMF(digit); } catch (_) { }
             }
 
-            // ── Disposition ─────────────────────────────────────────────────
-            function openDisposition() {
-                dispOver.style.display = 'flex';
-                selDisp = null;
-                $('btn-save-disp').disabled = true;
-                document.querySelectorAll('.disposition-btn').forEach(function (b) {
-                    b.classList.remove('selected');
-                });
-            }
-
-            function closeDisposition() {
-                dispOver.style.display = 'none';
-                callId = null; selDisp = null;
-            }
-
-            function saveDisposition() {
-                if (!selDisp) return;
-                var notes = $('disposition-notes').value;
-                if (callId) {
-                    post(URL_DISP, { call_id: callId, disposition_id: selDisp, notes: notes })
-                        .then(function (r) {
-                            if (r.success) toast('Disposition saved', 'success');
-                            else toast(r.error || 'Save failed', 'error');
-                        })['catch'](function () { toast('Network error', 'error'); });
-                }
-                closeDisposition();
-                $('disposition-notes').value = '';
-            }
-
-            // ── WebSocket ───────────────────────────────────────────────────
-            var wsConn = null, wsRetry = 0;
+            // ── WebSocket ─────────────────────────────────────────────────────────
+            let wsConn = null, wsRetry = 0;
 
             function connectWS() {
-                var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                var url = proto + '//' + location.host + '/ws/agent/' + AGENT_ID + '/';
-                try { wsConn = new WebSocket(url); } catch (e) { return; }
-                wsConn.onopen = function () { wsRetry = 0; };
-                wsConn.onmessage = function (ev) {
-                    try { handleWSMsg(JSON.parse(ev.data)); } catch (e) { }
+                const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const url = `${proto}//${location.host}/ws/agent/${AGENT_ID}/`;
+                try { wsConn = new WebSocket(url); } catch (_) { return; }
+
+                wsConn.onopen = () => { wsRetry = 0; };
+                wsConn.onmessage = ev => {
+                    try { handleWSMsg(JSON.parse(ev.data)); } catch (_) { }
                 };
-                wsConn.onclose = function () {
+                wsConn.onclose = () => {
                     if (wsRetry < 10) {
                         wsRetry++;
-                        setTimeout(connectWS, Math.min(1000 * Math.pow(2, wsRetry), 30000));
+                        setTimeout(connectWS, Math.min(1000 * 2 ** wsRetry, 30000));
                     }
                 };
             }
 
             function handleWSMsg(d) {
-                var t = d.type || '';
+                const t = d.type || '';
+
                 if (t === 'call_incoming' || t === 'call_started' || t === 'call_connecting') {
-                    callId = d.call_id || (d.call && d.call.id) || null;
-                    var num = d.phone_number || (d.call && d.call.number) || d.called_number || '';
+                    callId = d.call_id || d.call?.id || null;
+                    const num = d.phone_number || d.call?.number || d.called_number || '';
                     if (num) { $('call-number').textContent = num; numDisp.textContent = num; }
-                    if (d.lead_id || (d.call && d.call.lead_id)) {
-                        fetchLead(d.lead_id || d.call.lead_id);
-                    }
-                    placeH.style.display = 'none';
-                    detailsDiv.style.display = 'block';
-                    badge.className = 'call-status-badge ringing';
-                    badge.innerHTML = '<i class="fa-solid fa-phone-volume"></i> Incoming';
+                    if (d.lead_id || d.call?.lead_id) fetchLead(d.lead_id || d.call.lead_id);
+                    callPlaceholder.style.display = 'none';
+                    callDetails.style.display = 'block';
+                    callBadge.className = 'call-badge ringing';
+                    callBadge.innerHTML = '<i class="fa-solid fa-phone-volume"></i> Incoming';
                 }
+
                 if (t === 'call_connected' || t === 'call_update') {
-                    callId = d.call_id || (d.call && d.call.id) || callId;
-                    badge.className = 'call-status-badge connected';
-                    badge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
+                    callId = d.call_id || d.call?.id || callId;
+                    callBadge.className = 'call-badge connected';
+                    callBadge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
                     $('call-status-text').textContent = 'Connected';
                 }
-                if (t === 'call_ended' || t === 'call_cleared') {
-                    var cid = d.call_id || callId;
-                    if (cid && !session) { callId = cid; openDisposition(); }
-                    resetCallUI();
+
+                if (t === 'call_ended') {
+                    const cid = d.call_id || callId;
+                    if (cid && !session) { callId = cid; enterWrapup(cid); }
                 }
-                if (t === 'status_update') {
-                    pill.textContent = d.display || d.status || '';
+
+                if (t === 'call_cleared') {
+                    // Server confirmed disposition saved — exit wrapup
+                    exitWrapup();
+                    dispOverlay.classList.remove('visible');
+                }
+
+                if (t === 'status_update' || t === 'status_changed') {
+                    const st = d.status || d.display || '';
+                    statusPill.textContent = d.display || st;
+                    document.querySelectorAll('.status-chip').forEach(b => {
+                        b.classList.toggle('is-active', b.dataset.setStatus === st);
+                    });
+                    // Re-fetch timer from DB to get accurate AgentTimeLog.started_at
+                    initStatusTimers();
+                }
+
+                if (t === 'force_logout') {
+                    // Supervisor forced logout — show message then redirect to logout URL
+                    toast('⚠️ ' + (d.reason || 'You have been logged out by a supervisor'), 'warning');
+                    setTimeout(() => {
+                        window.location.href = '/logout/';
+                    }, 2500);
                 }
             }
 
+            // ── Lead info ─────────────────────────────────────────────────────────
             function fetchLead(lid) {
-                fetch(URL_LEAD + '?lead_id=' + lid, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                }).then(function (r) { return r.json(); }).then(function (d) {
+                fetch(`${URL_LEAD}?lead_id=${lid}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                }).then(r => r.json()).then(d => {
                     if (!d.success) return;
-                    var l = d.lead;
-                    $('call-lead-name').textContent = ((l.first_name || '') + ' ' + (l.last_name || '')).trim() || '—';
-                    $('lead-name').textContent = ((l.first_name || '') + ' ' + (l.last_name || '')).trim() || 'Unknown';
+                    const l = d.lead;
+                    const name = [l.first_name, l.last_name].filter(Boolean).join(' ') || '—';
+                    $('call-lead-name').textContent = name;
+                    $('lead-name').textContent = name;
                     $('lead-phone').textContent = l.phone_number || '—';
                     $('lead-email').textContent = l.email || '—';
                     $('lead-company').textContent = l.company || '—';
                     $('lead-city').textContent = [l.city, l.state].filter(Boolean).join(', ') || '—';
                     $('lead-status').textContent = l.status || '—';
-                })['catch'](function () { });
+                }).catch(() => { });
             }
 
-            // ── Init ────────────────────────────────────────────────────────
+            // ── Init ──────────────────────────────────────────────────────────────
             function init() {
+
                 // Theme toggle
-                var html = document.documentElement;
-                var theme = localStorage.getItem('theme') || 'light';
-                html.setAttribute('data-theme', theme);
-                $('theme-icon').className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
-                $('theme-toggle').onclick = function () {
-                    var c = html.getAttribute('data-theme');
-                    var n = c === 'dark' ? 'light' : 'dark';
-                    html.setAttribute('data-theme', n);
-                    localStorage.setItem('theme', n);
-                    $('theme-icon').className = n === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+                const html = document.documentElement;
+                const applyTheme = t => {
+                    html.setAttribute('data-theme', t);
+                    localStorage.setItem('theme', t);
+                    $('theme-icon').className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+                };
+                applyTheme(localStorage.getItem('theme') || 'light');
+                $('theme-toggle').onclick = () => {
+                    applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
                 };
 
                 // Tabs
-                document.querySelectorAll('.tab-button').forEach(function (b) {
+                document.querySelectorAll('.tab-btn').forEach(b => {
                     b.onclick = function () {
-                        document.querySelectorAll('.tab-button').forEach(function (x) { x.classList.remove('active'); });
-                        document.querySelectorAll('.tab-content').forEach(function (x) { x.classList.remove('active'); });
+                        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+                        document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
                         this.classList.add('active');
-                        document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+                        $('tab-' + this.dataset.tab).classList.add('active');
                     };
                 });
 
                 // Status chips
-                document.querySelectorAll('[data-set-status]').forEach(function (b) {
+                const curStatus = '{{ agent_status.status }}';
+                document.querySelectorAll('[data-set-status]').forEach(b => {
+                    if (b.dataset.setStatus === curStatus) b.classList.add('is-active');
                     b.onclick = function () {
-                        var st = this.dataset.setStatus;
-                        var chip = this;
-                        post(URL_STATUS, { status: st }).then(function (r) {
+                        if (inWrapup) {
+                            toast('Dispose the current call before changing status', 'warning');
+                            openDisposition();
+                            return;
+                        }
+                        const st = this.dataset.setStatus;
+                        post(URL_STATUS, { status: st }).then(r => {
                             if (r.success) {
-                                document.querySelectorAll('.status-chip').forEach(function (x) { x.classList.remove('is-active'); });
-                                chip.classList.add('is-active');
-                                pill.textContent = r.display || st;
-                                toast('Status: ' + st, 'success');
+                                document.querySelectorAll('.status-chip').forEach(x => x.classList.remove('is-active'));
+                                this.classList.add('is-active');
+                                statusPill.textContent = r.display || st;
+                                toast('Status: ' + (r.display || st), 'success');
+                                // ── Reset status timer from this exact moment ──────
+                                initStatusTimers();
+                            } else {
+                                toast(r.error || 'Status update failed', 'error');
                             }
                         });
                     };
                 });
 
-                // Set initial active chip
-                var curSt = '{{ agent_status.status }}';
-                document.querySelectorAll('[data-set-status]').forEach(function (b) {
-                    if (b.dataset.setStatus === curSt) b.classList.add('is-active');
-                });
-
                 // Keypad
-                document.querySelectorAll('.phone-key').forEach(function (k) {
+                document.querySelectorAll('.phone-key').forEach(k => {
                     k.onclick = function () {
-                        var d = this.dataset.digit;
-                        dialNum += d; updNum();
+                        const d = this.dataset.digit;
+                        dialNum += d; updNumDisp();
                         if (session) sendDTMF(d);
-                        btnCall.disabled = !dialNum && !(ua && ua.isRegistered());
+                        btnCall.disabled = !dialNum || !(ua?.isRegistered());
                     };
                 });
 
-                // Call / Answer / Hangup
-                btnCall.onclick = function () {
-                    console.log('[WebRTC] btnCall clicked. Session:', session, 'Direction:', session ? session.direction : 'N/A');
-                    if (session && session.direction === 'incoming') {
-                        answerCall();
-                    } else {
-                        makeCall();
-                    }
+                // Call controls
+                btnCall.onclick = () => {
+                    if (session?.direction === 'incoming') answerCall();
+                    else makeCall();
                 };
                 btnHang.onclick = hangupCall;
                 btnMute.onclick = toggleMute;
                 btnHold.onclick = toggleHold;
-                btnClear.onclick = function () { dialNum = ''; updNum(); btnCall.disabled = true; };
-
-                // Auto-answer
-                $('auto-answer-toggle').onchange = function () {
-                    autoAns = this.checked;
-                    toast('Auto-answer ' + (autoAns ? 'ON' : 'OFF'), 'info');
-                };
-
-                // Transfer
-                btnXfer.onclick = function () {
+                btnClear.onclick = () => { dialNum = ''; updNumDisp(); btnCall.disabled = true; };
+                btnXfer.onclick = () => {
                     if (!session) return;
-                    var target = prompt('Enter transfer extension/number:');
+                    const target = prompt('Enter transfer extension/number:');
                     if (target) {
                         try {
-                            session.refer('sip:' + target + '@' + CFG.domain);
+                            session.refer(`sip:${target}@${CFG.domain}`);
                             toast('Transferring to ' + target, 'info');
                         } catch (e) {
                             toast('Transfer failed: ' + e.message, 'error');
@@ -1679,45 +2066,62 @@
                     }
                 };
 
+                // Auto-answer
+                $('auto-answer-toggle').onchange = function () {
+                    autoAns = this.checked;
+                    toast('Auto-answer ' + (autoAns ? 'ON' : 'OFF'), 'info');
+                };
+
                 // Disposition buttons
-                document.querySelectorAll('.disposition-btn').forEach(function (b) {
+                document.querySelectorAll('.disp-btn').forEach(b => {
                     b.onclick = function () {
-                        document.querySelectorAll('.disposition-btn').forEach(function (x) { x.classList.remove('selected'); });
+                        document.querySelectorAll('.disp-btn').forEach(x => x.classList.remove('selected'));
                         this.classList.add('selected');
-                        selDisp = this.dataset.dispId;
+                        selDispId = this.dataset.dispId;
+                        selDispName = this.dataset.dispName;
                         $('btn-save-disp').disabled = false;
                     };
                 });
                 $('btn-save-disp').onclick = saveDisposition;
-                $('btn-cancel-disp').onclick = closeDisposition;
 
                 // Keyboard shortcuts
-                document.addEventListener('keydown', function (e) {
+                document.addEventListener('keydown', e => {
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                    if ('0123456789*#'.indexOf(e.key) !== -1) { dialNum += e.key; updNum(); if (session) sendDTMF(e.key); }
-                    if (e.key === 'Backspace') { e.preventDefault(); dialNum = dialNum.slice(0, -1); updNum(); }
-                    if (e.key === 'Enter' && dialNum && !session) { makeCall(); }
-                    if (e.key === 'Escape' && session) { hangupCall(); }
+                    if ('0123456789*#'.includes(e.key)) {
+                        dialNum += e.key; updNumDisp();
+                        if (session) sendDTMF(e.key);
+                    }
+                    if (e.key === 'Backspace') { e.preventDefault(); dialNum = dialNum.slice(0, -1); updNumDisp(); }
+                    if (e.key === 'Enter' && dialNum && !session) makeCall();
+                    if (e.key === 'Escape' && session) hangupCall();
                 });
 
-                // Start JsSIP + WebSocket
-                initJsSIP();
-                connectWS();
-
-                // Poll call status every 10s
-                setInterval(function () {
+                // Call status poll every 10s
+                setInterval(() => {
                     fetch(URL_CALL_STATUS, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                        .then(function (r) { return r.json(); })
-                        .then(function (d) {
+                        .then(r => r.json())
+                        .then(d => {
                             if (d.success && d.current_call) {
                                 callId = d.current_call.id;
                                 $('call-number').textContent = d.current_call.number || '—';
                                 if (d.current_call.lead_id) fetchLead(d.current_call.lead_id);
-                                placeH.style.display = 'none';
-                                detailsDiv.style.display = 'block';
+                                callPlaceholder.style.display = 'none';
+                                callDetails.style.display = 'block';
                             }
-                        })['catch'](function () { });
+                            if (d.needs_disposition && !inWrapup) {
+                                enterWrapup(d.wrapup_call_id || callId);
+                            }
+                        })
+                        .catch(() => { });
                 }, 10000);
+
+                // Start subsystems
+                initJsSIP();
+                connectWS();
+                startHeartbeat();
+                checkWrapupOnLoad();
+                interceptLogout();
+                initStatusTimers();  // seed status/login timers from DB, same as realtime monitor
             }
 
             if (document.readyState === 'loading') {

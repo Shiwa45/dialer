@@ -227,6 +227,16 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'campaigns.tasks.sync_call_log_to_lead_status',
         'schedule': 600.0,  # Every 10 minutes
     },
+    # ── Agent zombie cleanup every 3 minutes ─────────────────────────────
+    'cleanup-zombie-agents': {
+        'task': 'users.cleanup_zombie_agents',
+        'schedule': 180,   # 3 minutes
+    },
+    # ── Close stale time logs every 10 minutes ────────────────────────────
+    'close-stale-timelogs': {
+        'task': 'users.close_open_timelogs',
+        'schedule': 600,   # 10 minutes
+    },
 }
 
 # Password validation

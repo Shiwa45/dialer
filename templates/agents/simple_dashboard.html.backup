@@ -586,8 +586,9 @@ function handleWsMessage(msg) {
     else if (t === 'status_changed') {
         state.agentStatus = d.status;
         updateStatusUI(d.status);
-        // Re-fetch timer from DB to get accurate AgentTimeLog.started_at
-        initStatusTimers();
+        // Keep timer label synced with pushed status (no extra fetch)
+        const sl = document.getElementById('at-status-lbl');
+        if (sl) sl.textContent = d.display || d.status || '';
     }
     else if (t === 'force_logout') {
         // Supervisor forced logout — show warning then redirect
@@ -666,9 +667,11 @@ function initStatusTimers() {
 
 function refreshStatusTimer(newStatusDisplay) {
     // Called right after a successful setStatus API call.
-    // Re-fetch from DB to get accurate AgentTimeLog.started_at timestamp.
-    // This ensures the timer shows the EXACT time from the database, not client-side guess.
-    initStatusTimers();
+    // Resets the status timer to 0:00 from THIS moment — no re-fetch needed.
+    _atStatusMs = Date.now() + _atSkewMs;
+    const sl = document.getElementById('at-status-lbl');
+    if (sl && newStatusDisplay) sl.textContent = newStatusDisplay;
+    _atTickFn();
 }
 
 
@@ -953,8 +956,7 @@ function setStatus(status) {
         if (data.success) {
             state.agentStatus = data.status;
             updateStatusUI(data.status);
-            // Re-fetch timer from DB to get accurate start time
-            initStatusTimers();
+            refreshStatusTimer(data.display || data.status);
         } else if (data.blocked) {
             toast(data.error || 'Cannot change status right now', 'warning');
             if (data.call_id) openDispositionOverlay();

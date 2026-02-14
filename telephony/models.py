@@ -283,6 +283,16 @@ class PsEndpoint(models.Model):
     rewrite_contact = models.CharField(max_length=3, default='yes', blank=True)
     mailboxes = models.CharField(max_length=80, blank=True, default='')
     
+    # WebRTC Fields
+    media_encryption = models.CharField(max_length=20, default='dtls', blank=True)
+    use_avpf = models.CharField(max_length=3, default='yes', blank=True)
+    ice_support = models.CharField(max_length=3, default='yes', blank=True)
+    media_use_received_transport = models.CharField(max_length=3, default='yes', blank=True)
+    rtcp_mux = models.CharField(max_length=3, default='yes', blank=True)
+    dtls_verify = models.CharField(max_length=20, default='fingerprint', blank=True)
+    dtls_setup = models.CharField(max_length=20, default='actpass', blank=True)
+    webrtc = models.CharField(max_length=3, default='yes', blank=True)
+    
     class Meta:
         db_table = 'ps_endpoints'
         managed = True  # Allow Django to manage this table
@@ -438,6 +448,15 @@ class Phone(TimeStampedModel):
                     'rewrite_contact': 'yes',
                     'dtls_auto_generate_cert': 'yes',
                     'webrtc': webrtc_val,
+                    
+                    # Explicit WebRTC settings (Required if wizard not used)
+                    'media_encryption': 'dtls' if self.webrtc_enabled else 'no',
+                    'use_avpf': webrtc_val,
+                    'ice_support': webrtc_val,
+                    'media_use_received_transport': webrtc_val,
+                    'rtcp_mux': webrtc_val,
+                    'dtls_verify': 'fingerprint' if self.webrtc_enabled else 'no',
+                    'dtls_setup': 'actpass' if self.webrtc_enabled else '',
                 }
             )
             

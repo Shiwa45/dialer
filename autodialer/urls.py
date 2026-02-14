@@ -7,6 +7,7 @@ from django.views.generic import RedirectView
 urlpatterns = [
     re_path(r'^admin/(?P<app_label>[\w-]+)/$', admin.site.app_index, name='app_list'),
     path('admin/', admin.site.urls),
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
     path('users/', include('users.urls')),
     path('campaigns/', include('campaigns.urls')),

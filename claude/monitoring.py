@@ -52,7 +52,7 @@ def _batch_status_start(agent_ids, today):
 
     rows = (
         AgentTimeLog.objects
-        .filter(user_id__in=agent_ids, ended_at__isnull=True)
+        .filter(user_id__in=agent_ids, date=today, ended_at__isnull=True)
         .order_by('user_id', '-started_at')        # latest open log first
         .values('user_id', 'started_at')
     )

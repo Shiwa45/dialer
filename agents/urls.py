@@ -1,10 +1,5 @@
-"""
-Agent URLs - Updated with Phase 1 and Phase 2 endpoints
-
-Includes new endpoints for:
-- Call history (Phase 2.2)
-- Improved disposition handling (Phase 1.2)
-"""
+# agents/urls.py
+# UPDATED: adds heartbeat, wrapup-state, can-logout endpoints
 
 from django.urls import path
 from . import views_simple
@@ -12,34 +7,46 @@ from . import views_simple
 app_name = 'agents'
 
 urlpatterns = [
-    # Dashboard
+    # ── Dashboard ──────────────────────────────────────────────────────────
     path('', views_simple.simple_dashboard, name='dashboard'),
     path('dashboard/', views_simple.simple_dashboard, name='simple_dashboard'),
-    
-    # Status Management
+
+    # ── Status Management ──────────────────────────────────────────────────
     path('api/update-status/', views_simple.update_status, name='update_status'),
     path('api/status/', views_simple.get_call_status, name='get_status'),
-    
-    # Call Management
+
+    # ── Call Management ────────────────────────────────────────────────────
     path('api/call-status/', views_simple.get_call_status, name='call_status'),
     path('api/set-disposition/', views_simple.set_disposition, name='set_disposition'),
     path('api/hangup/', views_simple.hangup_call, name='hangup'),
-    
-    # Lead Information
+
+    # ── Lead Information ───────────────────────────────────────────────────
     path('api/lead-info/', views_simple.get_lead_info, name='get_lead_info'),
-    
-    # Statistics
+
+    # ── Statistics ─────────────────────────────────────────────────────────
     path('api/statistics/', views_simple.agent_statistics, name='statistics'),
-    
-    # Call History (Phase 2.2)
-    # path('api/call-history/', views_simple.agent_call_history, name='call_history'),
-    
-    # WebRTC Configuration
+
+    # ── WebRTC Configuration ───────────────────────────────────────────────
     path('api/webrtc-config/', views_simple.get_webrtc_config, name='get_webrtc_config'),
+
+    # ── NEW: Heartbeat (zombie prevention) ────────────────────────────────
+    path('api/heartbeat/', views_simple.agent_heartbeat, name='heartbeat'),
+
+    # ── NEW: Wrapup state (call persistence across refresh) ───────────────
+    path('api/wrapup-state/', views_simple.get_wrapup_state, name='wrapup_state'),
+
+    # ── Pre-logout check (blocks logout during wrapup) ───────────────────
+    path('api/can-logout/',   views_simple.can_logout,         name='can_logout'),
+
+    # ── Agent own status-info (seeds panel timer accurately) ─────────────
+    path('api/status-info/',  views_simple.agent_status_info,  name='status_info'),
+
+    # ── Force logout — supervisor/admin only ─────────────────────────────
+    path('api/force-logout/', views_simple.force_logout_agent, name='force_logout'),
 ]
 
-# Phase 2.2: Full Call History Module
-from . import views_call_history
+# ── Call History Module (Phase 2.2) ───────────────────────────────────────
+from . import views_call_history  # noqa: E402
 
 urlpatterns += [
     path('call-history/', views_call_history.call_history_page, name='call_history_page'),

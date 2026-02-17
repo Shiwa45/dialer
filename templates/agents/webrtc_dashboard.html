@@ -1118,10 +1118,8 @@
                         <label>Campaign</label>
                         <strong>{{ current_campaign.name|default:"None" }}</strong>
                     </div>
-                    <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls
-                            }}</strong></div>
-                    <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls
-                            }}</strong></div>
+                    <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls }}</strong></div>
+                    <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls }}</strong></div>
                 </div>
 
                 <div class="tab-container">
@@ -1744,7 +1742,7 @@
                 }
             }
 
-            // ── Session handling ──────────────────────────────────────────────────
+// ── Session handling ──────────────────────────────────────────────────
             function handleSession(e) {
                 const s = e.session;
                 const dir = s.direction;
@@ -1763,6 +1761,7 @@
                     });
                 });
 
+                // Ringing / Progress
                 s.on('progress', () => {
                     setPhoneStatus(dir === 'incoming' ? 'RINGING…' : 'CALLING…');
                     callBadge.className = 'call-badge ringing';
@@ -1770,6 +1769,7 @@
                     $('call-status-text').textContent = dir === 'incoming' ? 'Incoming' : 'Ringing';
                 });
 
+                // Accepted
                 s.on('accepted', () => {
                     setPhoneStatus('CONNECTED');
                     callBadge.className = 'call-badge connected';
@@ -1779,12 +1779,14 @@
                     startTimer();
                 });
 
+                // Confirmed (media flowing)
                 s.on('confirmed', () => {
                     setPhoneStatus('CONNECTED');
                     setCallUI(true);
                     if (!callTimer) startTimer();
                 });
 
+                // End / Fail
                 s.on('ended', () => endSession('Call ended'));
                 s.on('failed', ev => endSession('Failed: ' + (ev.cause || '')));
 
@@ -1794,12 +1796,52 @@
                 numDisp.textContent = rNum;
                 setCallUI(true);
 
+                // ── INCOMING CALL LOGIC ───────────────────────────────────────────
                 if (dir === 'incoming') {
                     setPhoneStatus('INCOMING: ' + rNum);
+
+                    // ⭐ PRODUCTION SAFE AUTO-ANSWER
                     if (autoAns) {
                         toast('Auto-answering…', 'info');
-                        setTimeout(answerCall, 500);
-                    } else {
+
+                        let attempts = 0;
+                        const maxAttempts = 10;
+
+                        const tryAnswer = () => {
+                            if (!session) return;
+
+                            // Only answer when call still incoming
+                            if (session.direction !== 'incoming') return;
+
+                            try {
+                                session.answer({
+                                    mediaConstraints: { audio: true, video: false },
+                                    pcConfig: { iceServers: ICE_SERVERS }
+                                });
+                            } catch (err) {
+                                attempts++;
+                                if (attempts < maxAttempts) {
+                                    // retry after short delay
+                                    setTimeout(tryAnswer, 250);
+                                } else {
+                                    console.warn('Auto-answer failed after retries:', err);
+                                    toast('Auto-answer failed, manual answer required', 'warning');
+
+                                    // fallback to manual answer UI
+                                    btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> ANSWER';
+                                    btnCall.style.display = 'flex';
+                                    btnCall.disabled = false;
+                                    btnHang.style.display = 'flex';
+                                }
+                            }
+                        };
+
+                        // small delay so SDP + ICE ready
+                        setTimeout(tryAnswer, 350);
+                    }
+
+                    // Manual answer UI
+                    else {
                         btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> ANSWER';
                         btnCall.style.display = 'flex';
                         btnCall.disabled = false;

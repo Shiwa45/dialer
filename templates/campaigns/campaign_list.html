@@ -6,10 +6,10 @@
 {% block title %}Campaign Management - AutoDialer Pro{% endblock %}
 
 {% block breadcrumb %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
-        <li class="breadcrumb-item active">Campaigns</li>
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb shadow-sm bg-white p-3 rounded-3 border-0">
+        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Campaigns</li>
     </ol>
 </nav>
 {% endblock %}
@@ -17,72 +17,205 @@
 {% block content %}
 <!-- Enhanced Campaign List CSS -->
 <style>
+    :root {
+        --theme-primary: #10b981; /* Emerald 500 */
+        --theme-primary-dark: #059669; /* Emerald 600 */
+        --theme-secondary: #64748b; /* Slate 500 */
+        --theme-accent: #6366f1; /* Indigo 500 */
+        --theme-warning: #f59e0b; /* Amber 500 */
+        --theme-danger: #f43f5e; /* Rose 500 */
+        --theme-bg: #f8fafc; /* Slate 50 */
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+        background-color: var(--theme-bg);
+        color: #334155;
+    }
+
+    /* --- Custom Buttons (No Blue) --- */
+    .btn-emerald {
+        background-color: var(--theme-primary);
+        border-color: var(--theme-primary);
+        color: white;
+    }
+    .btn-emerald:hover {
+        background-color: var(--theme-primary-dark);
+        border-color: var(--theme-primary-dark);
+        color: white;
+    }
+    
+    .btn-outline-emerald {
+        color: var(--theme-primary);
+        border-color: var(--theme-primary);
+    }
+    .btn-outline-emerald:hover {
+        background-color: var(--theme-primary);
+        border-color: var(--theme-primary);
+        color: white;
+    }
+
+    /* --- Campaign Card Redesign --- */
     .campaign-card {
-        transition: all 0.3s ease;
         border: 1px solid #e2e8f0;
-        border-radius: 15px;
+        border-radius: 16px;
         overflow: hidden;
+        background: #ffffff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--card-shadow);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     
     .campaign-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        transform: translateY(-5px);
+        box-shadow: var(--card-shadow-hover);
+        border-color: var(--theme-primary);
+    }
+
+    .card-top-section {
+        padding: 1.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        background: linear-gradient(to bottom, #ffffff, #f8fafc);
+    }
+
+    .card-body-section {
+        padding: 1.5rem;
+        flex-grow: 1;
+    }
+
+    .card-footer-section {
+        padding: 1rem 1.5rem;
+        background-color: #f8fafc;
+        border-top: 1px solid #e2e8f0;
     }
     
-    .campaign-status-badge {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        z-index: 10;
+    /* Status Badges */
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
-    
+    .status-active { background-color: #d1fae5; color: #065f46; }
+    .status-paused { background-color: #fef3c7; color: #92400e; }
+    .status-completed { background-color: #e0f2fe; color: #075985; }
+    .status-inactive { background-color: #f1f5f9; color: #475569; }
+
+    /* Progress Ring */
+    .progress-ring-wrapper {
+        position: relative;
+        width: 70px;
+        height: 70px;
+    }
     .progress-ring {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .progress-circle {
-        fill: none;
-        stroke-width: 4;
-        stroke-linecap: round;
         transform: rotate(-90deg);
+    }
+    .progress-ring__circle {
+        transition: stroke-dashoffset 0.35s;
         transform-origin: 50% 50%;
     }
-    
-    .campaign-stats {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #334155;
     }
-    
+
+    /* Stats Grid inside Card */
+    .stat-box {
+        background: #f1f5f9;
+        border-radius: 10px;
+        padding: 0.75rem;
+        text-align: center;
+        transition: background 0.2s;
+    }
+    .stat-box:hover {
+        background: #e2e8f0;
+    }
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .text-emerald { color: var(--theme-primary); }
+    .text-indigo { color: var(--theme-accent); }
+    .text-amber { color: var(--theme-warning); }
+    .text-slate { color: var(--theme-secondary); }
+
+    /* Header Stats Cards */
+    .stat-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        color: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        height: 100%;
+    }
+    .bg-gradient-emerald { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+    .bg-gradient-sky { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+    .bg-gradient-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .bg-gradient-slate { background: linear-gradient(135deg, #64748b 0%, #334155 100%); }
+
+    /* Filter Card */
     .filter-card {
         background: white;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid #e2e8f0;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--theme-primary);
+        box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.15);
+    }
+
+    /* Page Header */
+    .page-title-icon {
+        color: var(--theme-primary);
     }
 </style>
 
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h2 mb-2">
-            <i class="fas fa-bullhorn text-primary me-3"></i>
+        <h1 class="h2 mb-1 fw-bold text-slate-800">
+            <i class="fas fa-bullhorn page-title-icon me-3"></i>
             Campaign Management
         </h1>
-        <p class="text-muted mb-0">Create, manage, and monitor your calling campaigns</p>
+        <p class="text-secondary mb-0">Orchestrate and monitor your outreach strategies</p>
     </div>
     <div class="d-flex gap-2">
         {% if user.is_staff or user.profile.is_manager %}
         <div class="dropdown">
-            <button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
-                <i class="fas fa-download me-2"></i>Actions
+            <button class="btn btn-white border bg-white text-secondary shadow-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-ellipsis-v me-2"></i>Actions
             </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i>Export Campaigns</a></li>
-                <li><a class="dropdown-item" href="#"><i class="fas fa-upload me-2"></i>Import Campaigns</a></li>
+            <ul class="dropdown-menu shadow border-0">
+                <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2 text-secondary"></i>Export Campaigns</a></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-upload me-2 text-secondary"></i>Import Campaigns</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#"><i class="fas fa-copy me-2"></i>Bulk Clone</a></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-copy me-2 text-secondary"></i>Bulk Clone</a></li>
             </ul>
         </div>
-        <a href="{% url 'campaigns:create' %}" class="btn btn-primary">
+        <a href="{% url 'campaigns:create' %}" class="btn btn-emerald shadow-sm">
             <i class="fas fa-plus me-2"></i>Create Campaign
         </a>
         {% endif %}
@@ -92,31 +225,15 @@
 <!-- Campaign Statistics -->
 <div class="row g-4 mb-5">
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            <div class="card-body text-white position-relative">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <div class="display-6 fw-bold">{{ total_campaigns }}</div>
-                        <div>Total Campaigns</div>
+        <div class="card stat-card bg-gradient-emerald">
+            <div class="card-body p-4 position-relative">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="display-6 fw-bold mb-1">{{ total_campaigns }}</div>
+                        <div class="small opacity-75 text-uppercase fw-semibold">Total Campaigns</div>
                     </div>
-                    <div class="opacity-50">
-                        <i class="fas fa-bullhorn fa-3x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6">
-        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-            <div class="card-body text-white position-relative">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <div class="display-6 fw-bold">{{ active_campaigns }}</div>
-                        <div>Active Campaigns</div>
-                    </div>
-                    <div class="opacity-50">
-                        <i class="fas fa-play fa-3x"></i>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-bullhorn fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -124,15 +241,15 @@
     </div>
     
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-            <div class="card-body text-dark position-relative">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <div class="display-6 fw-bold">{{ paused_campaigns }}</div>
-                        <div>Paused Campaigns</div>
+        <div class="card stat-card bg-gradient-sky">
+            <div class="card-body p-4 position-relative">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="display-6 fw-bold mb-1">{{ active_campaigns }}</div>
+                        <div class="small opacity-75 text-uppercase fw-semibold">Active Now</div>
                     </div>
-                    <div class="opacity-50">
-                        <i class="fas fa-pause fa-3x"></i>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-play fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -140,15 +257,31 @@
     </div>
     
     <div class="col-lg-3 col-md-6">
-        <div class="card border-0 h-100" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-            <div class="card-body text-dark position-relative">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <div class="display-6 fw-bold">{{ completed_campaigns }}</div>
-                        <div>Completed</div>
+        <div class="card stat-card bg-gradient-amber">
+            <div class="card-body p-4 position-relative">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="display-6 fw-bold mb-1">{{ paused_campaigns }}</div>
+                        <div class="small opacity-75 text-uppercase fw-semibold">Paused</div>
                     </div>
-                    <div class="opacity-50">
-                        <i class="fas fa-check-circle fa-3x"></i>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-pause fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card stat-card bg-gradient-slate">
+            <div class="card-body p-4 position-relative">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="display-6 fw-bold mb-1">{{ completed_campaigns }}</div>
+                        <div class="small opacity-75 text-uppercase fw-semibold">Completed</div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-check-circle fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -158,28 +291,28 @@
 
 <!-- Search and Filters -->
 <div class="filter-card mb-4">
-    <div class="card-body">
+    <div class="card-body p-4">
         <form method="get" class="row g-3 align-items-end" id="campaignSearchForm">
             <div class="col-lg-4 col-md-6">
-                <label for="search" class="form-label fw-semibold">
-                    <i class="fas fa-search me-1"></i>Search Campaigns
+                <label for="search" class="form-label fw-bold text-slate-700 small">
+                    <i class="fas fa-search me-1 text-secondary"></i>Search
                 </label>
-                <div class="position-relative">
+                <div class="input-group">
                     <input type="text" 
-                           class="form-control" 
+                           class="form-control border-end-0" 
                            id="search" 
                            name="search" 
-                           placeholder="Search by name, ID, or description..."
+                           placeholder="Name, ID, or description..."
                            value="{{ request.GET.search }}">
-                    <div class="position-absolute top-50 end-0 translate-middle-y pe-3">
+                    <span class="input-group-text bg-white border-start-0">
                         <i class="fas fa-search text-muted"></i>
-                    </div>
+                    </span>
                 </div>
             </div>
             
             <div class="col-lg-2 col-md-6">
-                <label for="status" class="form-label fw-semibold">
-                    <i class="fas fa-flag me-1"></i>Status
+                <label for="status" class="form-label fw-bold text-slate-700 small">
+                    <i class="fas fa-flag me-1 text-secondary"></i>Status
                 </label>
                 <select class="form-select" id="status" name="status">
                     <option value="">All Status</option>
@@ -192,8 +325,8 @@
             </div>
             
             <div class="col-lg-2 col-md-6">
-                <label for="campaign_type" class="form-label fw-semibold">
-                    <i class="fas fa-tags me-1"></i>Type
+                <label for="campaign_type" class="form-label fw-bold text-slate-700 small">
+                    <i class="fas fa-tags me-1 text-secondary"></i>Type
                 </label>
                 <select class="form-select" id="campaign_type" name="campaign_type">
                     <option value="">All Types</option>
@@ -204,8 +337,8 @@
             </div>
             
             <div class="col-lg-2 col-md-6">
-                <label for="created_by" class="form-label fw-semibold">
-                    <i class="fas fa-user me-1"></i>Creator
+                <label for="created_by" class="form-label fw-bold text-slate-700 small">
+                    <i class="fas fa-user me-1 text-secondary"></i>Creator
                 </label>
                 <select class="form-select" id="created_by" name="created_by">
                     <option value="">All Creators</option>
@@ -219,7 +352,7 @@
             
             <div class="col-lg-2 col-md-12">
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary flex-fill">
+                    <button type="submit" class="btn btn-dark flex-fill">
                         <i class="fas fa-filter me-1"></i>Filter
                     </button>
                     <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary">
@@ -236,194 +369,184 @@
 <div class="row g-4">
     {% for campaign in campaigns %}
     <div class="col-lg-6 col-xl-4">
-        <div class="card campaign-card h-100">
-            <!-- Status Badge -->
-            <div class="campaign-status-badge">
-                <span class="badge {% if campaign.status == 'active' %}bg-success{% elif campaign.status == 'paused' %}bg-warning{% elif campaign.status == 'completed' %}bg-info{% else %}bg-secondary{% endif %}">
-                    {% if campaign.status == 'active' %}
-                        <i class="fas fa-play me-1"></i>Active
-                    {% elif campaign.status == 'paused' %}
-                        <i class="fas fa-pause me-1"></i>Paused
-                    {% elif campaign.status == 'completed' %}
-                        <i class="fas fa-check me-1"></i>Completed
-                    {% else %}
-                        <i class="fas fa-stop me-1"></i>Inactive
-                    {% endif %}
-                </span>
-            </div>
+        <div class="card campaign-card">
             
-            <div class="card-header campaign-stats py-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <h5 class="card-title mb-1">
-                            <a href="{% url 'campaigns:detail' campaign.pk %}" class="text-decoration-none">
-                                {{ campaign.name }}
-                            </a>
-                        </h5>
-                        <small class="text-muted">
-                            <i class="fas fa-hashtag me-1"></i>{{ campaign.campaign_id }}
-                        </small>
-                    </div>
-                    
-                    <!-- Progress Ring -->
-                    <div class="progress-ring">
-                        <svg class="progress-ring" width="60" height="60">
-                            <circle class="progress-circle bg-secondary" 
-                                    stroke="#e2e8f0" 
-                                    cx="30" 
-                                    cy="30" 
-                                    r="26">
-                            </circle>
-                            <circle class="progress-circle" 
-                                    stroke="{% if campaign.status == 'active' %}#10b981{% elif campaign.status == 'paused' %}#f59e0b{% else %}#6b7280{% endif %}" 
-                                    cx="30" 
-                                    cy="30" 
-                                    r="26"
-                                    stroke-dasharray="{% if campaign.total_leads > 0 %}{{ 163|mul:campaign.leads_called|div:campaign.total_leads }}{% else %}0{% endif %} 163">
-                            </circle>
-                        </svg>
-                        <div class="position-absolute top-50 start-50 translate-middle text-center">
-                            <div class="small fw-bold">
-                                {% if campaign.total_leads > 0 %}
-                                    {{ campaign.leads_called|mul:100|div:campaign.total_leads|floatformat:0 }}%
-                                {% else %}
-                                    0%
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card-body">
-                <!-- Campaign Info -->
-                <div class="mb-3">
-                    <div class="d-flex align-items-center mb-2">
-                        <span class="badge bg-primary bg-opacity-10 text-primary me-2">
-                            {{ campaign.get_campaign_type_display }}
-                        </span>
-                        <span class="badge bg-info bg-opacity-10 text-info">
-                            {{ campaign.get_dial_method_display }}
+            <!-- Top Section: Title, Status, Progress -->
+            <div class="card-top-section d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1 me-3">
+                    <div class="mb-2">
+                        <span class="status-badge {% if campaign.status == 'active' %}status-active{% elif campaign.status == 'paused' %}status-paused{% elif campaign.status == 'completed' %}status-completed{% else %}status-inactive{% endif %}">
+                            {% if campaign.status == 'active' %}
+                                <i class="fas fa-circle fa-xs"></i> Active
+                            {% elif campaign.status == 'paused' %}
+                                <i class="fas fa-circle fa-xs"></i> Paused
+                            {% elif campaign.status == 'completed' %}
+                                <i class="fas fa-check"></i> Completed
+                            {% else %}
+                                <i class="fas fa-stop"></i> Inactive
+                            {% endif %}
                         </span>
                     </div>
-                    
-                    {% if campaign.description %}
-                    <p class="text-muted small mb-2">{{ campaign.description|truncatechars:80 }}</p>
-                    {% endif %}
+                    <h5 class="card-title fw-bold text-slate-800 mb-1 text-truncate">
+                        <a href="{% url 'campaigns:detail' campaign.pk %}" class="text-decoration-none text-slate-800">
+                            {{ campaign.name }}
+                        </a>
+                    </h5>
+                    <small class="text-muted font-monospace" style="font-size: 0.75rem;">
+                        <i class="fas fa-hashtag me-1"></i>{{ campaign.campaign_id }}
+                    </small>
                 </div>
                 
-                <!-- Stats -->
+                <!-- Progress Ring -->
+                <div class="progress-ring-wrapper flex-shrink-0">
+                    <svg class="progress-ring" width="70" height="70">
+                        <circle class="progress-ring__circle bg-secondary" 
+                                stroke="#e2e8f0" 
+                                stroke-width="6" 
+                                fill="transparent" 
+                                r="28" 
+                                cx="35" 
+                                cy="35"/>
+                        <circle class="progress-ring__circle" 
+                                stroke="{% if campaign.status == 'active' %}#10b981{% elif campaign.status == 'paused' %}#f59e0b{% else %}#64748b{% endif %}" 
+                                stroke-width="6" 
+                                stroke-linecap="round" 
+                                fill="transparent" 
+                                r="28" 
+                                cx="35" 
+                                cy="35"
+                                stroke-dasharray="{% if campaign.total_leads > 0 %}{{ 175|mul:campaign.leads_called|div:campaign.total_leads }}{% else %}0{% endif %} 175"/>
+                    </svg>
+                    <div class="progress-text">
+                        {% if campaign.total_leads > 0 %}
+                            {{ campaign.leads_called|mul:100|div:campaign.total_leads|floatformat:0 }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Body Section: Tags, Stats, Info -->
+            <div class="card-body-section">
+                <!-- Tags -->
+                <div class="mb-3 d-flex gap-2 flex-wrap">
+                    <span class="badge bg-opacity-10 text-emerald border border-emerald" style="background-color: #d1fae5; color: #065f46; border-color: #d1fae5;">
+                        {{ campaign.get_campaign_type_display }}
+                    </span>
+                    <span class="badge bg-opacity-10 text-indigo border border-indigo" style="background-color: #e0e7ff; color: #3730a3; border-color: #e0e7ff;">
+                        {{ campaign.get_dial_method_display }}
+                    </span>
+                </div>
+                
+                {% if campaign.description %}
+                <p class="text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                    {{ campaign.description|truncatechars:100 }}
+                </p>
+                {% endif %}
+                
+                <!-- Stats Grid -->
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <div class="text-center p-2 bg-light rounded">
-                            <div class="fw-bold text-primary">{{ campaign.total_leads|default:0 }}</div>
-                            <div class="small text-muted">Total Leads</div>
+                        <div class="stat-box">
+                            <span class="stat-value text-slate">{{ campaign.total_leads|default:0 }}</span>
+                            <span class="stat-label">Total Leads</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="text-center p-2 bg-light rounded">
-                            <div class="fw-bold text-success">{{ campaign.assigned_agents_count|default:0 }}</div>
-                            <div class="small text-muted">Agents</div>
+                        <div class="stat-box">
+                            <span class="stat-value text-emerald">{{ campaign.assigned_agents_count|default:0 }}</span>
+                            <span class="stat-label">Agents</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-box">
+                            <span class="stat-value text-indigo">{{ campaign.calls_today|default:0 }}</span>
+                            <span class="stat-label">Calls Today</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-box">
+                            <span class="stat-value text-amber">{{ campaign.total_calls_made|default:0 }}</span>
+                            <span class="stat-label">Total Calls</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <div class="text-center p-2 bg-light rounded">
-                            <div class="fw-bold text-info">{{ campaign.calls_today|default:0 }}</div>
-                            <div class="small text-muted">Calls Today</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-center p-2 bg-light rounded">
-                            <div class="fw-bold text-warning">{{ campaign.total_calls_made|default:0 }}</div>
-                            <div class="small text-muted">Total Calls</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Campaign Details -->
-                <div class="small text-muted mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span><i class="fas fa-user me-1"></i>Created by:</span>
-                        <span>{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</span>
+                <!-- Meta Info -->
+                <div class="small text-muted bg-light p-2 rounded" style="background-color: #f8fafc; font-size: 0.75rem;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-user me-2"></i>Created by:</span>
+                        <span class="text-truncate ms-2 fw-medium text-slate-700">{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</span>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <span><i class="fas fa-calendar me-1"></i>Created:</span>
+                        <span><i class="fas fa-calendar me-2"></i>Created:</span>
                         <span>{{ campaign.created_at|date:"M d, Y" }}</span>
                     </div>
-                    {% if campaign.start_date %}
-                    <div class="d-flex justify-content-between">
-                        <span><i class="fas fa-play me-1"></i>Start Date:</span>
-                        <span>{{ campaign.start_date|date:"M d, Y H:i" }}</span>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
             
-            <div class="card-footer bg-transparent">
-                <div class="d-flex gap-2">
-                    <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-primary btn-sm flex-fill">
-                        <i class="fas fa-eye me-1"></i>View
-                    </a>
-                    
-                    {% if user.is_staff or campaign.created_by == user or user.profile.is_manager %}
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                            <i class="fas fa-cog"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}">
-                                    <i class="fas fa-edit me-2"></i>Edit Campaign
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}">
-                                    <i class="fas fa-users me-2"></i>Manage Agents
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            {% if campaign.status == 'inactive' %}
-                            <li>
-                                <a class="dropdown-item text-success" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
-                                    <i class="fas fa-play me-2"></i>Start Campaign
-                                </a>
-                            </li>
-                            {% elif campaign.status == 'active' %}
-                            <li>
-                                <a class="dropdown-item text-warning" href="#" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
-                                    <i class="fas fa-pause me-2"></i>Pause Campaign
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
-                                    <i class="fas fa-stop me-2"></i>Stop Campaign
-                                </a>
-                            </li>
-                            {% elif campaign.status == 'paused' %}
-                            <li>
-                                <a class="dropdown-item text-success" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
-                                    <i class="fas fa-play me-2"></i>Resume Campaign
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
-                                    <i class="fas fa-stop me-2"></i>Stop Campaign
-                                </a>
-                            </li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
-                                    <i class="fas fa-copy me-2"></i>Clone Campaign
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    {% endif %}
+            <!-- Footer Section: Actions -->
+            <div class="card-footer-section d-flex gap-2">
+                <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-secondary btn-sm flex-fill fw-medium">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+                
+                {% if user.is_staff or campaign.created_by == user or user.profile.is_manager %}
+                <div class="dropdown">
+                    <button class="btn btn-emerald btn-sm dropdown-toggle" data-bs-toggle="dropdown" style="padding: 0.25rem 0.5rem;">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <ul class="dropdown-menu shadow border-0">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}">
+                                <i class="fas fa-edit me-2 text-secondary"></i>Edit Campaign
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}">
+                                <i class="fas fa-users me-2 text-secondary"></i>Manage Agents
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% if campaign.status == 'inactive' %}
+                        <li>
+                            <a class="dropdown-item text-success fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
+                                <i class="fas fa-play me-2"></i>Start Campaign
+                            </a>
+                        </li>
+                        {% elif campaign.status == 'active' %}
+                        <li>
+                            <a class="dropdown-item text-warning fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
+                                <i class="fas fa-pause me-2"></i>Pause Campaign
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-danger fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
+                                <i class="fas fa-stop me-2"></i>Stop Campaign
+                            </a>
+                        </li>
+                        {% elif campaign.status == 'paused' %}
+                        <li>
+                            <a class="dropdown-item text-success fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
+                                <i class="fas fa-play me-2"></i>Resume Campaign
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-danger fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
+                                <i class="fas fa-stop me-2"></i>Stop Campaign
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
+                                <i class="fas fa-copy me-2 text-secondary"></i>Clone Campaign
+                            </a>
+                        </li>
+                    </ul>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -436,12 +559,12 @@
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+                <a class="page-link border-0 bg-white text-secondary shadow-sm me-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
                     <i class="fas fa-angle-double-left"></i>
                 </a>
             </li>
             <li class="page-item">
-                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                <a class="page-link border-0 bg-white text-secondary shadow-sm me-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
                     <i class="fas fa-angle-left"></i>
                 </a>
             </li>
@@ -450,30 +573,30 @@
         {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
                 <li class="page-item active">
-                    <span class="page-link">{{ num }}</span>
+                    <span class="page-link border-0 text-white shadow-sm mx-1 rounded" style="background-color: var(--theme-primary);">{{ num }}</span>
                 </li>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                    <a class="page-link border-0 bg-white text-secondary shadow-sm mx-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
                 </li>
             {% endif %}
         {% endfor %}
         
         {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                <a class="page-link border-0 bg-white text-secondary shadow-sm ms-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
                     <i class="fas fa-angle-right"></i>
                 </a>
             </li>
             <li class="page-item">
-                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                <a class="page-link border-0 bg-white text-secondary shadow-sm ms-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
                     <i class="fas fa-angle-double-right"></i>
                 </a>
             </li>
         {% endif %}
     </ul>
     
-    <div class="text-center text-muted">
+    <div class="text-center text-muted small mt-2">
         Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} campaigns
     </div>
 </nav>
@@ -481,14 +604,14 @@
 
 {% else %}
 <!-- Empty State -->
-<div class="text-center py-5">
-    <div class="mb-4">
-        <i class="fas fa-bullhorn fa-5x text-muted"></i>
+<div class="text-center py-5 bg-white rounded-4 shadow-sm border mt-4">
+    <div class="mb-4 text-secondary">
+        <i class="fas fa-bullhorn fa-5x opacity-25"></i>
     </div>
-    <h3 class="text-muted mb-3">No Campaigns Found</h3>
+    <h3 class="fw-bold text-slate-700 mb-3">No Campaigns Found</h3>
     {% if request.GET.search or request.GET.status or request.GET.campaign_type or request.GET.created_by %}
         <p class="text-muted mb-4">No campaigns match your current search criteria.</p>
-        <a href="{% url 'campaigns:list' %}" class="btn btn-outline-primary me-3">
+        <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary me-3 px-4">
             <i class="fas fa-times me-2"></i>Clear Filters
         </a>
     {% else %}
@@ -496,7 +619,7 @@
     {% endif %}
     
     {% if user.is_staff or user.profile.is_manager %}
-    <a href="{% url 'campaigns:create' %}" class="btn btn-primary">
+    <a href="{% url 'campaigns:create' %}" class="btn btn-emerald px-4 shadow-sm">
         <i class="fas fa-plus me-2"></i>Create First Campaign
     </a>
     {% endif %}
@@ -531,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Campaign card hover effects
     document.querySelectorAll('.campaign-card').forEach(card => {
         card.addEventListener('mouseenter', function() {
-            this.style.borderColor = '#667eea';
+            this.style.borderColor = '#10b981'; // Emerald
         });
         
         card.addEventListener('mouseleave', function() {
@@ -601,11 +724,24 @@ function cloneCampaign(campaignId) {
 // Utility function for notifications
 function showNotification(message, type = 'info') {
     const alertDiv = document.createElement('div');
+    let bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-secondary');
+    
+    // Override bootstrap colors with theme colors if needed, but keeping standard classes for simplicity in JS
     alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px;';
+    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);';
+    
+    // Custom color mapping for notifications
+    if(type === 'success') alertDiv.style.backgroundColor = '#10b981';
+    if(type === 'error') alertDiv.style.backgroundColor = '#f43f5e';
+    if(type === 'info') alertDiv.style.backgroundColor = '#64748b';
+    alertDiv.style.color = 'white';
+    alertDiv.style.border = 'none';
+
     alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="d-flex align-items-center">
+            <div class="flex-grow-1">${message}</div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+        </div>
     `;
     document.body.appendChild(alertDiv);
     

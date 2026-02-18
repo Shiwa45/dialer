@@ -1,0 +1,164 @@
+{#
+  templates/agents/_live_stats.html  –  Phase 5: Live Stats Cards
+  ─────────────────────────────────────────────────────────────────
+  Drop this into the agent dashboard:
+
+      {% include 'agents/_live_stats.html' %}
+
+  It opens a WebSocket to /ws/agent/stats/ and updates the counters
+  in real-time without any page reload.
+#}
+
+<!-- ── Live Stats Cards ─────────────────────────────────────── -->
+<div id="live-stats-container" class="grid-two" style="margin-top:.75rem;">
+
+    <div class="info-card" id="stat-card-calls">
+        <label>Total Calls <span class="live-dot" title="Live"></span></label>
+        <strong id="live-total-calls">{{ today_stats.total_calls }}</strong>
+    </div>
+
+    <div class="info-card" id="stat-card-answered">
+        <label>Answered</label>
+        <strong id="live-answered-calls">{{ today_stats.answered_calls }}</strong>
+    </div>
+
+    <div class="info-card" id="stat-card-talktime">
+        <label>Talk Time</label>
+        <strong id="live-talk-time">{{ today_stats.talk_time }}s</strong>
+    </div>
+
+    <div class="info-card" id="stat-card-contact">
+        <label>Contact Rate</label>
+        <strong id="live-contact-rate">
+            {% if today_stats.total_calls > 0 %}
+                {{ today_stats.answered_calls }}%
+            {% else %}0%{% endif %}
+        </strong>
+    </div>
+
+</div>
+
+<!-- ── Connection status badge ─────────────────────────────────────── -->
+<div id="ws-stats-badge" style="margin-top:.4rem; font-size:.7rem; color:#888;">
+    <span id="ws-stats-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ccc;margin-right:4px;vertical-align:middle;"></span>
+    <span id="ws-stats-label">Connecting…</span>
+</div>
+
+<style>
+.live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: live-pulse 2s infinite;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+@keyframes live-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .3; }
+}
+.stat-flash {
+    animation: stat-highlight .6s ease;
+}
+@keyframes stat-highlight {
+    0%   { background: #fef9c3; }
+    100% { background: transparent; }
+}
+</style>
+
+<script>
+(function () {
+    const RETRY_DELAY_MS = 4000;
+    const PING_INTERVAL_MS = 30000;
+
+    let ws, pingTimer;
+
+    function $id(id) { return document.getElementById(id); }
+
+    function setDot(color, label) {
+        const dot = $id('ws-stats-dot');
+        if (dot) dot.style.background = color;
+        const lbl = $id('ws-stats-label');
+        if (lbl) lbl.textContent = label;
+    }
+
+    function flash(id) {
+        const el = $id(id);
+        if (!el) return;
+        el.classList.remove('stat-flash');
+        void el.offsetWidth;   // reflow
+        el.classList.add('stat-flash');
+    }
+
+    function applyStats(today) {
+        const total   = today.total_calls ?? 0;
+        const answers = today.answered_calls ?? 0;
+        const talkSec = today.talk_time_sec ?? 0;
+        const rate    = today.contact_rate ?? 0;
+
+        function setIfChanged(id, newVal) {
+            const el = $id(id);
+            if (!el) return;
+            if (el.textContent.trim() !== String(newVal)) {
+                el.textContent = newVal;
+                flash(id);
+            }
+        }
+
+        setIfChanged('live-total-calls',   total);
+        setIfChanged('live-answered-calls', answers);
+        setIfChanged('live-talk-time',      today.talk_time_fmt || talkSec + 's');
+        setIfChanged('live-contact-rate',   rate + '%');
+    }
+
+    function connect() {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${location.host}/ws/agent/stats/`);
+
+        ws.onopen = () => {
+            setDot('#22c55e', 'Live');
+            pingTimer = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, PING_INTERVAL_MS);
+        };
+
+        ws.onmessage = (ev) => {
+            try {
+                const msg = JSON.parse(ev.data);
+
+                if (msg.type === 'stats_update' || msg.type === 'call_completed') {
+                    const today = msg.today || (msg.stats && msg.stats.today);
+                    if (today) applyStats(today);
+                }
+
+                if (msg.type === 'status_changed' && msg.status) {
+                    // Update visible status badge if it exists
+                    const badge = document.getElementById('agent-status-badge');
+                    if (badge) badge.textContent = msg.status;
+                }
+
+            } catch (e) { /* ignore parse errors */ }
+        };
+
+        ws.onclose = () => {
+            setDot('#ef4444', 'Reconnecting…');
+            clearInterval(pingTimer);
+            setTimeout(connect, RETRY_DELAY_MS);
+        };
+
+        ws.onerror = () => {
+            setDot('#f59e0b', 'Connection error');
+        };
+    }
+
+    // Kick off when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', connect);
+    } else {
+        connect();
+    }
+})();
+</script>

@@ -17,7 +17,8 @@ urlpatterns = [
     path('agents/', include('agents.urls')),
 #    path('calls/', include('calls.urls')),
     path('reports/', include('reports.urls')),
-#    path('settings/', include('settings.urls')),
+    path('settings/', include('settings.urls')),
+    path('sarvam/', include('sarvam.urls')),
     path('dashboard/', include('core.urls', namespace='dashboard')),
 ]
 

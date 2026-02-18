@@ -20,18 +20,20 @@
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
 
     <style>
-        
         :root {
 
             /* ===== NEW MODERN CRM PALETTE ===== */
 
-            --primary: #2563eb;          /* Enterprise Blue */
+            --primary: #2563eb;
+            /* Enterprise Blue */
             --primary-hover: #1e40af;
             --primary-soft: #eff6ff;
 
-            --accent: #7c3aed;           /* Purple accent for highlights */
+            --accent: #7c3aed;
+            /* Purple accent for highlights */
 
-            --sidebar-bg: #0f172a;       /* Deep Navy Sidebar */
+            --sidebar-bg: #0f172a;
+            /* Deep Navy Sidebar */
             --sidebar-border: #1e293b;
             --bg-body: #f1f5f9;
 
@@ -50,9 +52,9 @@
             --navbar-height: 65px;
             --sidebar-width: 260px;
             --radius: 10px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-            --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
-            }
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.08);
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -454,8 +456,8 @@
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All
-                                    Notifications</small></a></li>
+                        <!-- <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All
+                                    Notifications</small></a></li> -->
                     </ul>
                 </div>
 
@@ -501,8 +503,8 @@
                 <li>
                     <hr class="dropdown-divider">
                 </li>
-                <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All
-                            Notifications</small></a></li>
+                <!-- <li><a class="dropdown-item text-center text-primary fw-bold" href="#"><small>View All
+                            Notifications</small></a></li> -->
                 </ul>
             </div>
 
@@ -530,8 +532,8 @@
                                 class="far fa-user me-2"></i> Profile</a></li>
                     <li><a class="dropdown-item rounded-2 py-2" href="{% url 'users:change_password' %}"><i
                                 class="fas fa-key me-2"></i> Change Password</a></li>
-                    <li><a class="dropdown-item rounded-2 py-2" href="#"><i class="fas fa-cog me-2"></i>
-                            Settings</a></li>
+                    <!-- <li><a class="dropdown-item rounded-2 py-2" href="#"><i class="fas fa-cog me-2"></i>
+                            Settings</a></li> -->
                     <li>
                         <hr class="dropdown-divider">
                     </li>
@@ -590,6 +592,14 @@
                 class="sidebar-nav-link {% if request.resolver_match.namespace == 'users' %}active{% endif %}">
                 <i class="fas fa-user-gear"></i><span>Users</span>
             </a>
+            <a href="{% url 'agents:agent_history_index' %}"
+                class="sidebar-nav-link {% if request.resolver_match.url_name == 'agent_history_index' %}active{% endif %}">
+                <i class="fas fa-history"></i><span>Agent History</span>
+            </a>
+            <a href="{% url 'sarvam:generate_tts' %}"
+                class="sidebar-nav-link {% if 'sarvam' in request.resolver_match.namespace %}active{% endif %}">
+                <i class="fas fa-microphone-alt"></i><span>Text to Speech</span>
+            </a>
 
             <div class="nav-section-title">Analytics</div>
             <a href="{% url 'reports:index' %}" class="sidebar-nav-link"><i
@@ -615,10 +625,10 @@
             <a href="#" class="sidebar-nav-link" onclick="toggleSubmenu(event, 'sysSub')"><i
                     class="fas fa-sliders"></i><span>Settings</span><i
                     class="fas fa-chevron-down ms-auto small"></i></a>
-            <div class="submenu" id="sysSub">
-                <a href="#" class="submenu-link">General Settings</a>
+            <a href="{% url 'settings:system_timezone' %}" class="submenu-link">Timezone</a>
+            <!-- <a href="#" class="submenu-link">General Settings</a>
                 <a href="#" class="submenu-link">Security</a>
-                <a href="#" class="submenu-link">Backup</a>
+                <a href="#" class="submenu-link">Backup</a> -->
             </div>
             <a href="/admin/" target="_blank" class="sidebar-nav-link"><i class="fas fa-shield-halved"></i><span>Admin
                     Panel</span></a>

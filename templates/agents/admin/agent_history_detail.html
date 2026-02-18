@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load tz_filters %}
+
+{% block title %}{{ agent.get_full_name }} – Call History{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-pill {
+        border-radius: 12px;
+        padding: .5rem 1rem;
+        text-align: center;
+    }
+
+    .stat-pill .num {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .stat-pill .lbl {
+        font-size: .75rem;
+        color: #6b7280;
+    }
+
+    .disp-badge {
+        font-size: .72rem;
+        padding: .25em .5em;
+    }
+
+    .call-row.has-rec td:first-child {
+        border-left: 3px solid #22c55e;
+    }
+
+    .call-row.no-rec td:first-child {
+        border-left: 3px solid #e5e7eb;
+    }
+
+    .filter-bar {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="{% url 'agents:agent_history_index' %}" class="text-muted small"><i
+                    class="fas fa-arrow-left me-1"></i>All Agents</a>
+            <h1 class="mt-1 mb-0">
+                <i class="fas fa-user-circle me-2 text-primary"></i>
+                {{ agent.get_full_name|default:agent.username }}
+            </h1>
+            <span class="text-muted">{{ agent.username }}</span>
+        </div>
+        <a href="{% url 'agents:agent_history_export' agent.id %}?date_from={{ f_date_from }}&date_to={{ f_date_to }}"
+            class="btn btn-outline-success">
+            <i class="fas fa-file-csv me-1"></i>Export CSV
+        </a>
+    </div>
+
+    <!-- Stats pills -->
+    <div class="row g-3 mb-4">
+        {% with s=summary %}
+        <div class="col-6 col-md-2">
+            <div class="stat-pill bg-primary bg-opacity-10">
+                <div class="num text-primary">{{ s.total }}</div>
+                <div class="lbl">Total Calls</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stat-pill bg-success bg-opacity-10">
+                <div class="num text-success">{{ s.answered }}</div>
+                <div class="lbl">Answered</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stat-pill bg-info bg-opacity-10">
+                <div class="num text-info">{{ s.contact_rate }}%</div>
+                <div class="lbl">Contact Rate</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stat-pill bg-warning bg-opacity-10">
+                <div class="num text-warning" style="font-size:1.2rem;">{{ s.talk_fmt }}</div>
+                <div class="lbl">Total Talk</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="stat-pill bg-secondary bg-opacity-10">
+                <div class="num text-secondary" style="font-size:1.2rem;">{{ s.avg_talk_fmt }}</div>
+                <div class="lbl">Avg Duration</div>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <div class="row g-4">
+        <!-- Disposition breakdown -->
+        <div class="col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Top Dispositions</h6>
+                </div>
+                <div class="card-body py-2">
+                    {% for d in disp_breakdown %}
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                        <span class="small">{{ d.disposition__name }}</span>
+                        <span class="badge bg-secondary disp-badge">{{ d.count }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted small mt-2">No dispositions yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters + Timeline -->
+        <div class="col-lg-9">
+
+            <!-- Filter bar -->
+            <form method="get" class="filter-bar">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm mb-1">From</label>
+                        <input type="date" name="date_from" value="{{ f_date_from }}"
+                            class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm mb-1">To</label>
+                        <input type="date" name="date_to" value="{{ f_date_to }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm mb-1">Campaign</label>
+                        <select name="campaign" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            {% for c in campaigns %}
+                            <option value="{{ c.id }}" {% if f_campaign==c.id|stringformat:'s' %}selected{% endif %}>{{
+                                c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm mb-1">Disposition</label>
+                        <select name="disposition" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            {% for d in dispositions %}
+                            <option value="{{ d.id }}" {% if f_disposition==d.id|stringformat:'s' %}selected{% endif %}>
+                                {{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label form-label-sm mb-1">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="answered" {% if f_status=='answered' %}selected{% endif %}>Answered</option>
+                            <option value="no_answer" {% if f_status=='no_answer' %}selected{% endif %}>No Answer
+                            </option>
+                            <option value="busy" {% if f_status=='busy' %}selected{% endif %}>Busy</option>
+                            <option value="failed" {% if f_status=='failed' %}selected{% endif %}>Failed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Call timeline table -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Call Timeline <span class="badge bg-light text-dark border ms-2">{{
+                            page_obj.paginator.count }}</span></h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date / Time</th>
+                                <th>Number</th>
+                                <th>Lead</th>
+                                <th>Campaign</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Disposition</th>
+                                <th>🎵</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for call in page_obj %}
+                            <tr class="call-row {% if call.recording_filename %}has-rec{% else %}no-rec{% endif %}">
+                                <td>
+                                    <div>{{ call.start_time | tz_display }}</div>
+                                </td>
+                                <td><code>{{ call.called_number|default:'—' }}</code></td>
+                                <td>
+                                    {% if call.lead %}
+                                    <a href="{% url 'leads:detail' call.lead.id %}" class="text-decoration-none">
+                                        {{ call.lead.first_name }} {{ call.lead.last_name }}
+                                    </a>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td>{{ call.campaign.name|default:'—'|truncatechars:18 }}</td>
+                                <td>
+                                    {% if call.call_status == 'answered' %}
+                                    <span class="badge bg-success">Answered</span>
+                                    {% elif call.call_status == 'no_answer' %}
+                                    <span class="badge bg-secondary">No Answer</span>
+                                    {% elif call.call_status == 'busy' %}
+                                    <span class="badge bg-warning text-dark">Busy</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ call.call_status|capfirst }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ call.talk_duration|default:0 }}s</td>
+                                <td>
+                                    {% if call.disposition %}
+                                    <span class="badge bg-light text-dark border disp-badge">{{ call.disposition.name
+                                        }}</span>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td>
+                                    {% if call.recording_filename %}
+                                    <button class="btn btn-sm btn-link p-0" title="Play recording"
+                                        onclick="playRecording({{ call.id }}, '{{ call.called_number }}')">
+                                        <i class="fas fa-play-circle text-success"></i>
+                                    </button>
+                                    {% else %}
+                                    <i class="fas fa-times text-muted" title="No recording"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">No calls found for selected filters
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+                    </small>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?page={{ page_obj.previous_page_number }}&date_from={{ f_date_from }}&date_to={{ f_date_to }}&campaign={{ f_campaign }}&disposition={{ f_disposition }}&status={{ f_status }}">
+                                    &laquo;
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li
+                                class="page-item">
+                                <a class="page-link"
+                                    href="?page={{ num }}&date_from={{ f_date_from }}&date_to={{ f_date_to }}&campaign={{ f_campaign }}&disposition={{ f_disposition }}&status={{ f_status }}">{{
+                                    num }}</a>
+                                </li>
+                                {% endif %}
+                                {% endfor %}
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                        href="?page={{ page_obj.next_page_number }}&date_from={{ f_date_from }}&date_to={{ f_date_to }}&campaign={{ f_campaign }}&disposition={{ f_disposition }}&status={{ f_status }}">
+                                        &raquo;
+                                    </a>
+                                </li>
+                                {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Recording playback modal -->
+<div class="modal fade" id="recordingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-play-circle me-2 text-success"></i>Call Recording</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="rec-number" class="text-muted mb-3"></div>
+                <audio id="rec-player" controls style="width:100%;"></audio>
+                <div id="rec-error" class="alert alert-warning mt-3" style="display:none;">
+                    Recording file not found on server.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="rec-download-btn" href="#" class="btn btn-outline-primary btn-sm" download>
+                    <i class="fas fa-download me-1"></i>Download
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function playRecording(callId, number) {
+        const player = document.getElementById('rec-player');
+        const errDiv = document.getElementById('rec-error');
+        document.getElementById('rec-number').textContent = 'Number: ' + number;
+        errDiv.style.display = 'none';
+
+        const url = `/telephony/recordings/${callId}/play/`;
+        player.src = url;
+        document.getElementById('rec-download-btn').href = `/telephony/recordings/${callId}/download/`;
+
+        player.onerror = () => { errDiv.style.display = 'block'; };
+        player.load();
+
+        new bootstrap.Modal(document.getElementById('recordingModal')).show();
+    }
+</script>
+{% endblock %}

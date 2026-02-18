@@ -607,16 +607,3 @@ class LeadRecycleLog(TimeStampedModel):
     def __str__(self):
         return f"Lead {self.lead_id}: {self.old_status} -> {self.new_status}"
 
-# apps.py
-from django.apps import AppConfig
-
-class LeadsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'leads'
-    verbose_name = 'Lead Management'
-    
-    def ready(self):
-        import leads.signals  # noqa
-
-# __init__.py
-default_app_config = 'leads.apps.LeadsConfig'

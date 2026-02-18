@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+
+{% block title %}Sarvam AI TTS – Generate Audio{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lang-btn {
+        cursor: pointer;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: .5rem .75rem;
+        transition: .15s;
+    }
+
+    .lang-btn:hover,
+    .lang-btn.active {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    .lang-flag {
+        font-size: 1.5rem;
+    }
+
+    .voice-chip {
+        cursor: pointer;
+        padding: .25rem .75rem;
+        border-radius: 20px;
+        border: 1px solid #d1d5db;
+        font-size: .85rem;
+        transition: .15s;
+    }
+
+    .voice-chip:hover,
+    .voice-chip.active {
+        background: #3b82f6;
+        color: #fff;
+        border-color: #3b82f6;
+    }
+
+    .char-counter {
+        font-size: .75rem;
+    }
+
+    .char-counter.warn {
+        color: #f59e0b;
+    }
+
+    .char-counter.over {
+        color: #ef4444;
+    }
+
+    #preview-player {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .api-unconfigured {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-microphone-alt me-2 text-primary"></i>Sarvam AI TTS</h1>
+            <p class="text-muted mb-0">Generate voice audio in Indian languages for IVR, voicemail, and campaign
+                greetings</p>
+        </div>
+        <a href="{% url 'sarvam:tts_library' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-folder-open me-1"></i>Audio Library
+        </a>
+    </div>
+
+    {% if not tts_configured %}
+    <div class="api-unconfigured mb-4">
+        <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+        <strong>SARVAM_API_KEY is not configured.</strong>
+        Add it to your <code>settings.py</code> or <code>.env</code>:
+        <code>SARVAM_API_KEY = 'your_key_here'</code>
+        &nbsp;—&nbsp;<a href="https://console.sarvam.ai" target="_blank">Get key from Sarvam Console</a>
+    </div>
+    {% endif %}
+
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <div class="row g-4">
+        <!-- Form -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Generate New Audio</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="tts-form">
+                        {% csrf_token %}
+
+                        <!-- Language selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Language</label>
+                            <div class="d-flex flex-wrap gap-2" id="lang-selector">
+                                {% for code, name in language_choices %}
+                                <div class="lang-btn {% if forloop.first %}active{% endif %}" data-lang="{{ code }}"
+                                    onclick="selectLang('{{ code }}', this)">
+                                    <div class="fw-semibold small">{{ code }}</div>
+                                    <div class="text-muted" style="font-size:.72rem;">{{ name }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="language" id="lang-input" value="{{ language_choices.0.0 }}">
+                        </div>
+
+                        <!-- Voice selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Voice</label>
+                            <div class="d-flex flex-wrap gap-2" id="voice-selector"></div>
+                            <input type="hidden" name="voice" id="voice-input" value="aditya">
+                        </div>
+
+                        <!-- Text input -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Text to speak</label>
+                            <textarea name="text" id="tts-text" class="form-control" rows="5"
+                                placeholder="Enter text in the selected language…" maxlength="500"
+                                oninput="updateCounter()">{% if result %}{{ request.POST.text }}{% endif %}</textarea>
+                            <div class="d-flex justify-content-between mt-1">
+                                <div class="char-counter" id="char-count">0 / 500 characters</div>
+                                <div>
+                                    <button type="button" class="btn btn-link btn-sm p-0 me-2" onclick="insertSample()">
+                                        Insert sample text
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Output name -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">File name prefix</label>
+                            <input type="text" name="output_name" class="form-control"
+                                placeholder="e.g. campaign_1_greeting"
+                                value="{% if result %}{{ request.POST.output_name }}{% endif %}">
+                            <div class="form-text">Letters, numbers, underscores only. File saved as prefix_hash.wav
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="force_regen" value="1" class="form-check-input"
+                                id="force-regen">
+                            <label class="form-check-label" for="force-regen">Force regenerate (ignore cache)</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary px-4" {% if not tts_configured %}disabled{% endif
+                            %}>
+                            <i class="fas fa-magic me-1"></i>Generate Audio
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result + tips -->
+        <div class="col-lg-5">
+            {% if result %}
+            <div class="card shadow-sm mb-4 {% if result.success %}border-success{% else %}border-danger{% endif %}">
+                <div
+                    class="card-header {% if result.success %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                    <h6 class="mb-0">
+                        {% if result.success %}
+                        <i class="fas fa-check-circle me-1"></i>Generated Successfully
+                        {% else %}
+                        <i class="fas fa-times-circle me-1"></i>Generation Failed
+                        {% endif %}
+                    </h6>
+                </div>
+                {% if result.success %}
+                <div class="card-body">
+                    <p class="small mb-2"><strong>File:</strong> <code>{{ result.filename }}</code></p>
+                    <audio id="preview-player" controls>
+                        <source src="{% url 'sarvam:tts_play' result.filename %}" type="audio/wav">
+                    </audio>
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="{% url 'sarvam:tts_play' result.filename %}" download
+                            class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download me-1"></i>Download
+                        </a>
+                        <button class="btn btn-sm btn-outline-success"
+                            onclick="showAssignModal('{{ result.filename }}')">
+                            <i class="fas fa-link me-1"></i>Assign to IVR / Campaign
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Tips section removed -->
+    </div>
+</div>
+</div>
+
+<!-- Assign modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Audio File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assign-filename">
+                <div class="mb-3">
+                    <label class="form-label">Assign to</label>
+                    <select id="assign-type" class="form-select" onchange="loadTargets()">
+                        <option value="">— Select type —</option>
+                        <option value="campaign">Campaign voicemail</option>
+                        <option value="ivr">IVR audio prompt</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="assign-target-row" style="display:none;">
+                    <label class="form-label">Target</label>
+                    <select id="assign-target" class="form-select"></select>
+                </div>
+                <div id="assign-feedback"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="doAssign()">Assign</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const VOICE_OPTIONS = {{ voice_options_json| safe }};
+
+    function selectLang(code, el) {
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('lang-input').value = code;
+        renderVoices(code);
+    }
+
+    function selectVoice(v, el) {
+        document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('voice-input').value = v;
+    }
+
+    function renderVoices(lang) {
+        const voices = VOICE_OPTIONS[lang] || ['aditya', 'ritu'];
+        const container = document.getElementById('voice-selector');
+        container.innerHTML = voices.map((v, i) =>
+            `<span class="voice-chip ${i === 0 ? 'active' : ''}" onclick="selectVoice('${v}',this)">${v}</span>`
+        ).join('');
+        document.getElementById('voice-input').value = voices[0];
+    }
+
+    function updateCounter() {
+        const t = document.getElementById('tts-text').value;
+        const el = document.getElementById('char-count');
+        el.textContent = `${t.length} / 500 characters`;
+        el.className = 'char-counter' + (t.length > 480 ? ' over' : t.length > 400 ? ' warn' : '');
+    }
+
+    function insertSample() {
+        const samples = {
+            'hi-IN': 'नमस्ते! आपका कॉल हमें प्राप्त हुआ है। कृपया प्रतीक्षा करें।',
+            'en-IN': 'Hello! Thank you for calling. Please hold while we connect you.',
+            'ta-IN': 'வணக்கம்! உங்கள் அழைப்பை நாங்கள் பெற்றுள்ளோம்.',
+        };
+        const lang = document.getElementById('lang-input').value;
+        document.getElementById('tts-text').value = samples[lang] || samples['en-IN'];
+        updateCounter();
+    }
+
+    function showAssignModal(filename) {
+        document.getElementById('assign-filename').value = filename;
+        new bootstrap.Modal(document.getElementById('assignModal')).show();
+    }
+
+    function loadTargets() {
+        const type = document.getElementById('assign-type').value;
+        const row = document.getElementById('assign-target-row');
+        const sel = document.getElementById('assign-target');
+        if (!type) { row.style.display = 'none'; return; }
+
+        const url = type === 'campaign' ? '/campaigns/api/list/?format=json' : '/telephony/ivrs/?format=json';
+        row.style.display = 'block';
+        sel.innerHTML = '<option>Loading…</option>';
+
+        fetch(url).then(r => r.json()).then(data => {
+            const items = data.campaigns || data.ivrs || data.results || [];
+            sel.innerHTML = items.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+        }).catch(() => {
+            sel.innerHTML = '<option>— Could not load —</option>';
+        });
+    }
+
+    function doAssign() {
+        const filename = document.getElementById('assign-filename').value;
+        const type = document.getElementById('assign-type').value;
+        const target_id = document.getElementById('assign-target').value;
+        const fb = document.getElementById('assign-feedback');
+
+        fetch('{% url "sarvam:tts_assign" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: `filename=${encodeURIComponent(filename)}&assign_type=${type}&target_id=${target_id}`,
+        })
+            .then(r => r.json())
+            .then(d => {
+                fb.innerHTML = d.success
+                    ? `<div class="alert alert-success py-2">${d.message}</div>`
+                    : `<div class="alert alert-danger py-2">${d.error}</div>`;
+            });
+    }
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    // Init
+    renderVoices(document.getElementById('lang-input').value || 'hi-IN');
+    updateCounter();
+</script>
+{% endblock %}

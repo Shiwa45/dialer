@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load tz_filters %}
+
+{% block title %}System Timezone Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tz-card { border-left: 4px solid #0d6efd; }
+    .tz-current-clock {
+        font-size: 2.5rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        color: #0d6efd;
+    }
+    .tz-option-badge {
+        font-size: .75rem;
+        font-weight: 500;
+        min-width: 80px;
+        display: inline-block;
+        text-align: center;
+    }
+    .tz-search-input { max-width: 320px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-globe me-2 text-primary"></i>System Timezone Settings</h1>
+            <p class="text-muted">
+                Set the default timezone used for all date/time display across the system.
+                Individual users can override this in their profile.
+            </p>
+        </div>
+    </div>
+
+    <!-- Current timezone card -->
+    <div class="row mb-4">
+        <div class="col-lg-5">
+            <div class="card tz-card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-3">Current System Timezone</h6>
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-map-marker-alt fa-2x text-primary me-3"></i>
+                        <div>
+                            <div class="fw-bold fs-5">{{ current_tz }}</div>
+                            <div class="text-muted small">{{ current_tz | tz_offset }}</div>
+                        </div>
+                    </div>
+                    <div class="tz-current-clock" id="live-clock">{{ current_time }}</div>
+                    <div class="text-muted small mt-1">Live server clock</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-info"></i>How Timezone Priority Works</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">
+                            <strong>User preference</strong> – each user can set their own timezone in their profile
+                            <span class="badge bg-primary ms-1">highest priority</span>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Campaign timezone</strong> – used for calling-hours compliance checks
+                        </li>
+                        <li class="mb-2">
+                            <strong>System timezone (this page)</strong> – default for all displays when no user/campaign tz is set
+                        </li>
+                        <li>
+                            <strong>Hardcoded fallback</strong> – Asia/Kolkata
+                            <span class="badge bg-secondary ms-1">lowest priority</span>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Update System Timezone</h5>
+                </div>
+                <div class="card-body">
+
+                    {% if messages %}
+                        {% for msg in messages %}
+                        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+                            {{ msg }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Live search filter -->
+                    <div class="mb-3">
+                        <input type="text"
+                               id="tz-search"
+                               class="form-control tz-search-input"
+                               placeholder="Search timezone…"
+                               autocomplete="off">
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4" id="tz-list" style="max-height: 400px; overflow-y: auto;">
+                            {% for tz in tz_choices %}
+                            <div class="form-check mb-2 tz-row" data-label="{{ tz.label|lower }}" data-value="{{ tz.value|lower }}">
+                                <input class="form-check-input"
+                                       type="radio"
+                                       name="timezone"
+                                       id="tz-{{ forloop.counter }}"
+                                       value="{{ tz.value }}"
+                                       {% if tz.current %}checked{% endif %}>
+                                <label class="form-check-label d-flex align-items-center gap-2" for="tz-{{ forloop.counter }}">
+                                    <span class="badge bg-light text-dark tz-option-badge border">{{ tz.offset }}</span>
+                                    <span>{{ tz.label }}</span>
+                                    {% if tz.current %}
+                                        <span class="badge bg-success ms-1">current</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-save me-1"></i>Save System Timezone
+                        </button>
+                        <a href="{% url 'settings:system_timezone' %}" class="btn btn-outline-secondary ms-2">
+                            Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live clock — ticks every second
+(function () {
+    function padTwo(n) { return String(n).padStart(2, '0'); }
+
+    function tick() {
+        const el = document.getElementById('live-clock');
+        if (!el) return;
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString('en-IN', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: true,
+        });
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+
+// Timezone search filter
+document.getElementById('tz-search').addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.tz-row').forEach(row => {
+        const match = row.dataset.label.includes(q) || row.dataset.value.includes(q);
+        row.style.display = match ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

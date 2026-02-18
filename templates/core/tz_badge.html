@@ -1,0 +1,5 @@
+{# core/templates/core/tz_badge.html  –  used by {% tz_badge %} tag #}
+{% if label %}<span class="text-muted small me-1">{{ label }}:</span>{% endif %}
+<span class="tz-badge" title="{{ utc_value }}">
+    {{ display }}{% if tz_abbr %} <span class="badge bg-secondary" style="font-size:.65em;">{{ tz_abbr }}</span>{% endif %}
+</span>

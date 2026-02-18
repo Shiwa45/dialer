@@ -147,3 +147,49 @@ class APIThrottleMiddleware:
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+
+class TimezoneMiddleware:
+    """
+    Activate the effective timezone for every authenticated request.
+    """
+    _DEFAULT = 'Asia/Kolkata'
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        tz_name = self._resolve_timezone(request)
+        try:
+            import pytz
+            timezone.activate(pytz.timezone(tz_name))
+        except Exception:
+            import pytz
+            timezone.activate(pytz.timezone(self._DEFAULT))
+
+        response = self.get_response(request)
+        timezone.deactivate()
+        return response
+
+    def _resolve_timezone(self, request) -> str:
+        import pytz
+        # 1. User preference
+        if request.user.is_authenticated:
+            try:
+                # Check for profile and timezone field
+                if hasattr(request.user, 'profile') and request.user.profile.timezone:
+                    user_tz = request.user.profile.timezone.strip()
+                    if user_tz:
+                        pytz.timezone(user_tz)   # validate
+                        return user_tz
+            except Exception:
+                pass
+
+        # 2. System setting
+        try:
+            from core.timezone_utils import get_system_timezone
+            return get_system_timezone()
+        except Exception:
+            pass
+
+        return self._DEFAULT

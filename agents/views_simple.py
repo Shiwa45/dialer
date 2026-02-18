@@ -22,6 +22,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from agents.stats_broadcaster import broadcast_call_completed
 
 from agents.decorators import agent_required
 from agents.models import AgentCallbackTask
@@ -477,6 +478,13 @@ def set_disposition(request):
         _broadcast_agent_event(agent.id, 'call_cleared', {
             'call_id': call_log.id,
             'disposition': disposition.name,
+        })
+
+        # Phase 5: Broadcast stats update
+        broadcast_call_completed(agent.id, {
+            'call_id': call_log.id,
+            'status': call_log.call_status,
+            'duration': call_log.talk_duration or 0,
         })
 
         return JsonResponse({

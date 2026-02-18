@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load tz_filters %}
+
+{% block title %}Agent Call History{% endblock %}
+
+{% block extra_css %}
+<style>
+    .agent-row:hover {
+        background: #f8fafc;
+        cursor: pointer;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+
+    .status-available {
+        background: #22c55e;
+    }
+
+    .status-busy {
+        background: #f59e0b;
+    }
+
+    .status-break {
+        background: #a78bfa;
+    }
+
+    .status-wrapup {
+        background: #60a5fa;
+    }
+
+    .status-offline {
+        background: #d1d5db;
+    }
+
+    .rate-bar {
+        height: 6px;
+        border-radius: 3px;
+        background: #e5e7eb;
+        margin-top: 4px;
+    }
+
+    .rate-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: #3b82f6;
+        transition: width .4s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-history me-2 text-primary"></i>Agent Call History</h1>
+            <p class="text-muted mb-0">Today — {{ today }}</p>
+        </div>
+        <div>
+            <span class="badge bg-primary fs-6">{{ agent_summaries|length }} agents</span>
+        </div>
+    </div>
+
+    <!-- Summary bar -->
+    <div class="row g-3 mb-4">
+        {% with total_calls=0 %}
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body py-3">
+                    <div class="h2 fw-bold text-primary mb-0">{{ agent_summaries|length }}</div>
+                    <div class="text-muted small">Total Agents</div>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <!-- Agent table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">All Agents — Today's Summary</h5>
+            <input type="text" id="agent-search" class="form-control form-control-sm" style="max-width:220px;"
+                placeholder="Search agent…">
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="agents-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Agent</th>
+                        <th>Status</th>
+                        <th>Total Calls</th>
+                        <th>Answered</th>
+                        <th>Contact Rate</th>
+                        <th>Talk Time</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in agent_summaries %}
+                    <tr class="agent-row" onclick="location.href='{% url 'agents:agent_history_detail' s.agent.id %}'">
+                        <td>
+                            <div class="fw-semibold">{{ s.agent.get_full_name|default:s.agent.username }}</div>
+                            <div class="text-muted small">{{ s.agent.username }}</div>
+                        </td>
+                        <td>
+                            <span class="status-dot status-{{ s.status }}"></span>
+                            {{ s.status|capfirst }}
+                        </td>
+                        <td><strong>{{ s.total_calls }}</strong></td>
+                        <td>{{ s.answered }}</td>
+                        <td>
+                            {{ s.contact_rate }}%
+                            <div class="rate-bar">
+                                <div class="rate-fill" style="width:{{ s.contact_rate }}%"></div>
+                            </div>
+                        </td>
+                        <td>{{ s.talk_time }}</td>
+                        <td>
+                            <a href="{% url 'agents:agent_history_detail' s.agent.id %}"
+                                class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">
+                                <i class="fas fa-search me-1"></i>View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">No agents found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('agent-search').addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#agents-table tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

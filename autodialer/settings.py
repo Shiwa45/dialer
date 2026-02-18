@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'calls',
     'reports',
     'settings',
+    'sarvam',
 ]
 
 MIDDLEWARE = [
@@ -59,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.UserActivityMiddleware',  # Custom middleware for user activity
+    'core.middleware.TimezoneMiddleware',      # Phase 4: per-request timezone activation
 ]
 
 ROOT_URLCONF = 'autodialer.urls'
@@ -218,6 +220,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'campaigns.tasks.check_agent_registrations',
         'schedule': 60.0,  # Every 60 seconds (safety net, real-time events handle most updates)
     },
+    # Phase 5: Periodic agent stats refresh
+    'refresh-agent-stats': {
+        'task': 'agents.tasks.refresh_all_agent_stats',
+        'schedule': 30.0,
+    },
     # Phase 2.4: Lead status reconciliation
     'reconcile-lead-status': {
         'task': 'campaigns.tasks.reconcile_lead_status',
@@ -260,6 +267,9 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+
+# Phase 4: Default display timezone (shown when user has no preference set)
+DEFAULT_DISPLAY_TIMEZONE = 'Asia/Kolkata'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -389,3 +399,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
 # Create logs directory
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 os.makedirs(AUTODIALER_SETTINGS['RECORDING_PATH'], exist_ok=True)
+
+# ─── SARVAM AI TTS CONFIGURATION ──────────────────────────────────────────────
+import os
+SARVAM_API_KEY = os.environ.get('SARVAM_API_KEY', 'sk_8ndku3po_1EbFnhaJADHRAtOpusMVsHqf')
+TTS_AUDIO_DIR = str(BASE_DIR / 'media' / 'tts')

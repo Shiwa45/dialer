@@ -46,6 +46,7 @@ urlpatterns = [
 ]
 
 # ── Call History Module (Phase 2.2) ───────────────────────────────────────
+# ── Call History Module (Phase 2.2) ───────────────────────────────────────
 from . import views_call_history  # noqa: E402
 
 urlpatterns += [
@@ -54,4 +55,14 @@ urlpatterns += [
     path('api/history-stats/', views_call_history.call_history_stats, name='call_history_stats'),
     path('api/call-details/<int:call_id>/', views_call_history.call_details_api, name='call_details_api'),
     path('api/schedule-callback/', views_call_history.schedule_callback, name='schedule_callback'),
+]
+
+# ── Admin Agent History (Phase 6) ─────────────────────────────────────────
+from . import views_admin_history
+
+urlpatterns += [
+    path('admin/history/', views_admin_history.agent_history_index, name='agent_history_index'),
+    path('admin/history/<int:agent_id>/', views_admin_history.agent_history_detail, name='agent_history_detail'),
+    path('admin/history/<int:agent_id>/export/', views_admin_history.agent_history_export, name='agent_history_export'),
+    path('api/admin/history/<int:agent_id>/', views_admin_history.agent_history_api, name='agent_history_api'),
 ]

@@ -590,13 +590,3 @@ class DialerHopper(TimeStampedModel):
         self.completed_at = timezone.now()
         self.save(update_fields=['status', 'completed_at', 'updated_at'])
 
-# campaigns/apps.py
-from django.apps import AppConfig
-
-class CampaignsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'campaigns'
-    verbose_name = 'Campaign Management'
-
-# campaigns/__init__.py
-default_app_config = 'campaigns.apps.CampaignsConfig'

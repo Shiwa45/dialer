@@ -628,22 +628,37 @@ def clone_campaign(request, pk):
         for script in original_campaign.scripts.all():
             script.campaigns.add(cloned_campaign)
         
-        return JsonResponse({
-            'success': True,
-            'message': f'Campaign cloned successfully as "{cloned_campaign.name}"',
-            'campaign_id': cloned_campaign.id,
-            'redirect_url': reverse_lazy('campaigns:detail', kwargs={'pk': cloned_campaign.id})
-        })
-        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
     
 
+# ════════════════════════════════════════════════════════════
+# Phase 8.3: AI Agent Configuration View
+# ════════════════════════════════════════════════════════════
 
-
-
-
-
+@login_required
+def ai_agent_config(request, pk):
+    """
+    View for configuring AI Agent settings for a campaign.
+    Placeholder for Phase 8.3.
+    """
+    campaign = get_object_or_404(Campaign, pk=pk)
+    
+    # Check permissions
+    user = request.user
+    if not (user.is_staff or campaign.created_by == user or 
+            (hasattr(user, 'profile') and user.profile.is_manager())):
+        messages.error(request, 'Permission denied')
+        return redirect('campaigns:detail', pk=pk)
+        
+    if request.method == 'POST':
+        # TODO: Process form data and update campaign AI fields
+        messages.success(request, f"AI Agent configuration updated for {campaign.name}")
+        return redirect('campaigns:ai_agent_config', pk=pk)
+        
+    return render(request, 'campaigns/ai_agent_config.html', {
+        'campaign': campaign
+    })
 # Create this file: core/management/commands/check_user_groups.py
 
 from django.core.management.base import BaseCommand

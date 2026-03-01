@@ -42,6 +42,8 @@ class CampaignCreateForm(forms.ModelForm):
             'auto_wrapup_enabled',
             'auto_wrapup_timeout',
             'auto_wrapup_disposition',
+            # AI fields
+            'ai_enabled',
         ]
         
         widgets = {
@@ -158,6 +160,10 @@ class CampaignCreateForm(forms.ModelForm):
             'auto_wrapup_disposition': forms.Select(attrs={
                 'class': 'form-select',
                 'id': 'id_auto_wrapup_disposition'
+            }),
+            'ai_enabled': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'id_ai_enabled'
             }),
         }
 

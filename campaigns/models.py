@@ -67,6 +67,156 @@ class Campaign(TimeStampedModel):
         ('Australia/Sydney', 'Australian Eastern Time (AEST)'),
     ]
     
+    # ════════════════════════════════════════════════════════════
+    # Phase 8.2: Smart AI fields
+    # ════════════════════════════════════════════════════════════
+    ai_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Enable AI Agent",
+        help_text="Use Sarvam AI agent instead of human agents for this campaign"
+    )
+    
+    # 1. Identity & Persona
+    AI_LANGUAGE_CHOICES = [
+        ('hi-IN', 'Hindi (हिन्दी)'),
+        ('en-IN', 'English'),
+        ('ta-IN', 'Tamil (தமிழ்)'),
+        ('te-IN', 'Telugu (తెలుగు)'),
+        ('kn-IN', 'Kannada (ಕನ್ನಡ)'),
+        ('ml-IN', 'Malayalam (മലയാളം)'),
+        ('mr-IN', 'Marathi (मराठी)'),
+        ('gu-IN', 'Gujarati (ગુજરાતી)'),
+        ('bn-IN', 'Bengali (বাংলা)'),
+        ('pa-IN', 'Punjabi (ਪੰਜਾਬੀ)'),
+    ]
+    ai_language = models.CharField(
+        max_length=10,
+        choices=AI_LANGUAGE_CHOICES,
+        default='hi-IN',
+        verbose_name="AI Language",
+        help_text="Language for AI agent conversations"
+    )
+    
+    ai_agent_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default='AI सहायक',
+        verbose_name="AI Agent Name",
+        help_text='Name the AI will use when introducing itself (e.g., "सीमा", "Raj")'
+    )
+    
+    ai_company_name = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        verbose_name="Company Name",
+        help_text="Company name AI will mention (defaults to system setting)"
+    )
+    
+    ai_system_prompt = models.TextField(
+        blank=True,
+        verbose_name="Custom AI Instructions",
+        help_text="Custom instructions for AI behavior (optional - uses defaults if empty)"
+    )
+    
+    # 2. Conversation Behavior
+    ai_max_turns = models.PositiveIntegerField(
+        default=15,
+        verbose_name="Max Conversation Turns",
+        help_text="Maximum number of back-and-forth exchanges before ending call"
+    )
+    
+    ai_fallback_to_human = models.BooleanField(
+        default=True,
+        verbose_name="Fallback to Human",
+        help_text="Transfer to human agent if AI cannot handle the request"
+    )
+    
+    ai_transfer_on_intents = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Auto-transfer Intents",
+        help_text='List of intents that should automatically transfer to human (e.g., ["complaint", "pricing_inquiry"])'
+    )
+    
+    # 3. Capabilities
+    ai_can_book_appointments = models.BooleanField(
+        default=True,
+        verbose_name="Can Book Appointments",
+        help_text="Allow AI to book appointments"
+    )
+    
+    ai_can_cancel_appointments = models.BooleanField(
+        default=False,
+        verbose_name="Can Cancel Appointments",
+        help_text="Allow AI to cancel appointments"
+    )
+    
+    ai_can_collect_feedback = models.BooleanField(
+        default=True,
+        verbose_name="Can Collect Feedback",
+        help_text="Allow AI to ask for and collect customer feedback"
+    )
+    
+    # 4. Voice Selection (Sarvam TTS voices)
+    AI_VOICE_CHOICES = [
+        ('aditya', 'Aditya (Male)'),
+        ('ritu', 'Ritu (Female)'),
+        ('ashutosh', 'Ashutosh (Male)'),
+        ('priya', 'Priya (Female)'),
+        ('neha', 'Neha (Female)'),
+        ('rahul', 'Rahul (Male)'),
+        ('pooja', 'Pooja (Female)'),
+        ('rohan', 'Rohan (Male)'),
+        ('simran', 'Simran (Female)'),
+        ('kavya', 'Kavya (Female)'),
+    ]
+    ai_voice = models.CharField(
+        max_length=50,
+        choices=AI_VOICE_CHOICES,
+        default='aditya',
+        blank=True,
+        verbose_name="AI Voice",
+        help_text="Voice to use for TTS"
+    )
+    
+    # 5. Statistics & Tracking
+    ai_total_calls = models.IntegerField(
+        default=0,
+        verbose_name="Total AI Calls",
+        help_text="Total calls handled by AI"
+    )
+    
+    ai_successful_calls = models.IntegerField(
+        default=0,
+        verbose_name="Successful AI Calls",
+        help_text="Calls completed successfully by AI without transfer"
+    )
+    
+    ai_transferred_calls = models.IntegerField(
+        default=0,
+        verbose_name="Transferred Calls",
+        help_text="Calls transferred to human agents"
+    )
+    
+    ai_appointments_booked = models.IntegerField(
+        default=0,
+        verbose_name="Appointments Booked by AI",
+        help_text="Number of appointments booked by AI agent"
+    )
+    
+    ai_enabled_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="AI Enabled Date",
+        help_text="When AI was enabled for this campaign"
+    )
+    
+    ai_last_used_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="AI Last Used",
+        help_text="Last time AI handled a call"
+    )
+    
     # Scheduling
     start_date = models.DateTimeField()
     end_date = models.DateTimeField(null=True, blank=True)
@@ -257,7 +407,53 @@ class Campaign(TimeStampedModel):
                 self.dial_prefix = self.outbound_carrier.dial_prefix
         except Exception:
             pass
+            
+        # Track AI enabled date
+        if self.ai_enabled and not self.ai_enabled_at:
+            self.ai_enabled_at = timezone.now()
+            
         super().save(*args, **kwargs)
+
+    def get_ai_config(self) -> dict:
+        """Returns AI configuration dict for the call handler."""
+        return {
+            'enabled': self.ai_enabled,
+            'language': self.ai_language,
+            'agent_name': self.ai_agent_name,
+            'company_name': self.ai_company_name,
+            'system_prompt': self.ai_system_prompt,
+            'max_turns': self.ai_max_turns,
+            'fallback_to_human': self.ai_fallback_to_human,
+            'transfer_intents': self.ai_transfer_on_intents,
+            'capabilities': {
+                'book_appointments': self.ai_can_book_appointments,
+                'cancel_appointments': self.ai_can_cancel_appointments,
+                'collect_feedback': self.ai_can_collect_feedback,
+            },
+            'voice': self.ai_voice,
+        }
+        
+    def increment_ai_call_stats(self, success=False, transferred=False, appointment_booked=False):
+        """Update AI statistics after a call."""
+        # Note: In production you should use F() expressions to avoid race conditions
+        from django.db.models import F
+        
+        updates = {
+            'ai_total_calls': F('ai_total_calls') + 1,
+            'ai_last_used_at': timezone.now()
+        }
+        
+        if success:
+            updates['ai_successful_calls'] = F('ai_successful_calls') + 1
+            
+        if transferred:
+            updates['ai_transferred_calls'] = F('ai_transferred_calls') + 1
+            
+        if appointment_booked:
+            updates['ai_appointments_booked'] = F('ai_appointments_booked') + 1
+            
+        Campaign.objects.filter(pk=self.pk).update(**updates)
+        self.refresh_from_db(fields=list(updates.keys()))
 
 class CampaignAgent(TimeStampedModel):
     """

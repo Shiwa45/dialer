@@ -258,7 +258,7 @@ def role_required(*roles):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect('login')
+                return redirect('users:login')
             
             user_groups = request.user.groups.values_list('name', flat=True)
             
@@ -279,7 +279,7 @@ def agent_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         # Check if user has agent profile and appropriate role
         if hasattr(request.user, 'profile'):
@@ -307,7 +307,7 @@ def supervisor_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         # Check if user has supervisor profile
         if hasattr(request.user, 'profile'):
@@ -335,7 +335,7 @@ def manager_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         # Check if user has manager profile
         if hasattr(request.user, 'profile'):
@@ -375,7 +375,7 @@ def active_session_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         # Check if user has an active agent session
         from calls.models import AgentSession
@@ -400,7 +400,7 @@ def campaign_access_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         campaign_id = kwargs.get('campaign_id') or request.GET.get('campaign_id') or request.POST.get('campaign_id')
         
@@ -444,7 +444,7 @@ def phone_session_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         # Check if user has an active WebRTC session
         from agents.models import AgentWebRTCSession
@@ -470,7 +470,7 @@ def check_user_status(allowed_statuses):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect('login')
+                return redirect('users:login')
             
             # Get user's current status
             from users.models import AgentStatus
@@ -512,7 +512,7 @@ class RoleRequiredMixin:
     
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         if not self.required_roles:
             return super().dispatch(request, *args, **kwargs)
@@ -555,7 +555,7 @@ def permission_required_with_message(perm, message=None):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect('login')
+                return redirect('users:login')
             
             if request.user.has_perm(perm) or request.user.is_superuser:
                 return view_func(request, *args, **kwargs)

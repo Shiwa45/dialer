@@ -43,6 +43,9 @@ urlpatterns = [
 
     # ── Force logout — supervisor/admin only ─────────────────────────────
     path('api/force-logout/', views_simple.force_logout_agent, name='force_logout'),
+
+    # ── Campaign selector — agent switches campaign mid-session ───────────
+    path('api/select-campaign/', views_simple.select_campaign, name='select_campaign'),
 ]
 
 # ── Call History Module (Phase 2.2) ───────────────────────────────────────

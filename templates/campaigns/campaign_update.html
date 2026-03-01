@@ -221,6 +221,14 @@
                                     {{ form.amd_enabled }}
                                     <label class="form-check-label" for="{{ form.amd_enabled.id_for_label }}">
                                         Enable Answering Machine Detection
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.ai_enabled }}
+                                    <label class="form-check-label text-primary fw-bold"
+                                        for="{{ form.ai_enabled.id_for_label }}">
+                                        <i class="fas fa-robot me-2"></i>Enable Smart AI Agent
+                                    </label>
                                 </div>
                             </div>
                         </div>

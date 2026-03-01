@@ -32,7 +32,7 @@ def build_dial_number(phone_number: str, campaign=None, carrier=None) -> str:
         prefix += carrier.dial_prefix
     if campaign and getattr(campaign, 'dial_prefix', ''):
         prefix += campaign.dial_prefix
-    return f\"{prefix}{phone_number}\" if prefix else phone_number
+    return f"{prefix}{phone_number}" if prefix else phone_number
 
 
 def build_call_variables(

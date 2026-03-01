@@ -129,6 +129,66 @@ class CallLog(TimeStampedModel):
     amd_action = models.CharField(max_length=20, blank=True)
     ring_duration = models.IntegerField(null=True, blank=True)
     
+    # ════════════════════════════════════════════════════════════
+    # Phase 8.2: AI Call Tracking Fields
+    # ════════════════════════════════════════════════════════════
+    
+    handled_by_ai = models.BooleanField(
+        default=False,
+        verbose_name="Handled by AI",
+        help_text="True if this call was handled by AI agent"
+    )
+    
+    ai_conversation_transcript = models.JSONField(
+        null=True, blank=True,
+        verbose_name="AI Conversation",
+        help_text="Full conversation history (list of turns)"
+    )
+    
+    ai_turn_count = models.IntegerField(
+        default=0,
+        verbose_name="Conversation Turns",
+        help_text="Number of back-and-forth exchanges"
+    )
+    
+    ai_final_intent = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Final Intent",
+        help_text="Last detected customer intent"
+    )
+    
+    ai_collected_data = models.JSONField(
+        null=True, blank=True,
+        verbose_name="Collected Data",
+        help_text="Data collected during conversation (dates, preferences, etc.)"
+    )
+    
+    ai_requested_transfer = models.BooleanField(
+        default=False,
+        verbose_name="Transfer Requested",
+        help_text="AI requested transfer to human"
+    )
+    
+    transfer_reason = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Transfer Reason",
+        help_text="Why AI requested transfer"
+    )
+    
+    has_complaint = models.BooleanField(
+        default=False,
+        verbose_name="Has Complaint",
+        help_text="Customer registered a complaint"
+    )
+    
+    complaint_text = models.TextField(
+        blank=True,
+        verbose_name="Complaint Details",
+        help_text="Complaint description"
+    )
+    
     class Meta:
         verbose_name = "Call Log"
         verbose_name_plural = "Call Logs"

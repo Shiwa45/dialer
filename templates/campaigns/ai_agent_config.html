@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Agent Configuration - {{ campaign.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ai-config-card {
+        border-left: 4px solid #3b82f6;
+    }
+    .capability-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+    .capability-toggle:hover {
+        background: #f9fafb;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    .stat-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .stat-box h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .stat-box p {
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+    }
+    .voice-preview-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">
+                <i class="fas fa-robot me-2 text-primary"></i>
+                AI Agent Configuration
+            </h1>
+            <p class="text-muted mb-0">{{ campaign.name }}</p>
+        </div>
+        <a href="{% url 'campaigns:detail' campaign.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Campaign
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Configuration Form -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm ai-config-card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>AI Agent Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="ai-config-form">
+                        {% csrf_token %}
+
+                        <!-- Enable AI -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="ai_enabled" 
+                                       name="ai_enabled" value="1" 
+                                       {% if campaign.ai_enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="ai_enabled">
+                                    Enable AI Agent for this Campaign
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                When enabled, calls will be handled by AI instead of human agents
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Language -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Language</label>
+                            <select name="ai_language" class="form-select">
+                                <option value="hi-IN" {% if campaign.ai_language == 'hi-IN' %}selected{% endif %}>Hindi (हिन्दी)</option>
+                                <option value="en-IN" {% if campaign.ai_language == 'en-IN' %}selected{% endif %}>English</option>
+                                <option value="ta-IN" {% if campaign.ai_language == 'ta-IN' %}selected{% endif %}>Tamil (தமிழ்)</option>
+                                <option value="te-IN" {% if campaign.ai_language == 'te-IN' %}selected{% endif %}>Telugu (తెలుగు)</option>
+                                <option value="kn-IN" {% if campaign.ai_language == 'kn-IN' %}selected{% endif %}>Kannada (ಕನ್ನಡ)</option>
+                                <option value="ml-IN" {% if campaign.ai_language == 'ml-IN' %}selected{% endif %}>Malayalam (മലയാളം)</option>
+                                <option value="mr-IN" {% if campaign.ai_language == 'mr-IN' %}selected{% endif %}>Marathi (मराठी)</option>
+                                <option value="gu-IN" {% if campaign.ai_language == 'gu-IN' %}selected{% endif %}>Gujarati (ગુજરાતી)</option>
+                                <option value="bn-IN" {% if campaign.ai_language == 'bn-IN' %}selected{% endif %}>Bengali (বাংলা)</option>
+                                <option value="pa-IN" {% if campaign.ai_language == 'pa-IN' %}selected{% endif %}>Punjabi (ਪੰਜਾਬੀ)</option>
+                            </select>
+                        </div>
+
+                        <!-- Agent Name -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">AI Agent Name</label>
+                            <input type="text" name="ai_agent_name" class="form-control" 
+                                   value="{{ campaign.ai_agent_name }}" 
+                                   placeholder="e.g., सीमा, Raj, AI सहायक">
+                            <small class="text-muted">Name the AI will use when introducing itself</small>
+                        </div>
+
+                        <!-- Company Name -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Company Name</label>
+                            <input type="text" name="ai_company_name" class="form-control" 
+                                   value="{{ campaign.ai_company_name }}" 
+                                   placeholder="आपकी कंपनी">
+                            <small class="text-muted">Company name AI will mention (optional)</small>
+                        </div>
+
+                        <!-- Voice Selection -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Voice</label>
+                            <div class="row g-2">
+                                <div class="col-md-10">
+                                    <select name="ai_voice" class="form-select" id="voice-select">
+                                        <option value="aditya" {% if campaign.ai_voice == 'aditya' %}selected{% endif %}>Aditya (Male)</option>
+                                        <option value="ritu" {% if campaign.ai_voice == 'ritu' %}selected{% endif %}>Ritu (Female)</option>
+                                        <option value="ashutosh" {% if campaign.ai_voice == 'ashutosh' %}selected{% endif %}>Ashutosh (Male)</option>
+                                        <option value="priya" {% if campaign.ai_voice == 'priya' %}selected{% endif %}>Priya (Female)</option>
+                                        <option value="neha" {% if campaign.ai_voice == 'neha' %}selected{% endif %}>Neha (Female)</option>
+                                        <option value="rahul" {% if campaign.ai_voice == 'rahul' %}selected{% endif %}>Rahul (Male)</option>
+                                        <option value="pooja" {% if campaign.ai_voice == 'pooja' %}selected{% endif %}>Pooja (Female)</option>
+                                        <option value="simran" {% if campaign.ai_voice == 'simran' %}selected{% endif %}>Simran (Female)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-primary w-100" 
+                                            onclick="previewVoice()">
+                                        <i class="fas fa-volume-up"></i> Test
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Capabilities -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">AI Capabilities</label>
+                            
+                            <div class="capability-toggle">
+                                <div>
+                                    <i class="fas fa-calendar-check text-success me-2"></i>
+                                    Book Appointments
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="ai_can_book_appointments" 
+                                           {% if campaign.ai_can_book_appointments %}checked{% endif %}>
+                                </div>
+                            </div>
+
+                            <div class="capability-toggle">
+                                <div>
+                                    <i class="fas fa-calendar-times text-danger me-2"></i>
+                                    Cancel Appointments
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="ai_can_cancel_appointments" 
+                                           {% if campaign.ai_can_cancel_appointments %}checked{% endif %}>
+                                </div>
+                            </div>
+
+                            <div class="capability-toggle">
+                                <div>
+                                    <i class="fas fa-comment-dots text-primary me-2"></i>
+                                    Collect Feedback
+                                </div>
+                                <div class="form-check-input form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="ai_can_collect_feedback" 
+                                           {% if campaign.ai_can_collect_feedback %}checked{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Fallback Settings -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ai_fallback_to_human" 
+                                       name="ai_fallback_to_human" 
+                                       {% if campaign.ai_fallback_to_human %}checked{% endif %}>
+                                <label class="form-check-label" for="ai_fallback_to_human">
+                                    Transfer to human agent if AI cannot handle
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Max Turns -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Max Conversation Turns</label>
+                            <input type="number" name="ai_max_turns" class="form-control" 
+                                   value="{{ campaign.ai_max_turns }}" min="5" max="30">
+                            <small class="text-muted">Maximum back-and-forth exchanges before ending call</small>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-secondary" 
+                                    onclick="testAICall()">
+                                <i class="fas fa-phone me-1"></i>Test AI Call
+                            </button>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-1"></i>Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Sidebar -->
+        <div class="col-lg-4">
+            <!-- Current Status -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">AI Agent Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <strong>Status:</strong>
+                        </div>
+                        {% if campaign.ai_enabled %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Disabled</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if campaign.ai_enabled_at %}
+                    <small class="text-muted">
+                        Enabled: {{ campaign.ai_enabled_at|date:"M d, Y" }}
+                    </small>
+                    {% endif %}
+                    
+                    {% if campaign.ai_last_used_at %}
+                    <small class="text-muted d-block mt-1">
+                        Last Used: {{ campaign.ai_last_used_at|date:"M d, Y H:i" }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">AI Performance Stats</h6>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="stat-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <h3>{{ campaign.ai_total_calls }}</h3>
+                            <p>Total Calls</p>
+                        </div>
+                        
+                        <div class="stat-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <h3>{{ campaign.ai_successful_calls }}</h3>
+                            <p>Successful</p>
+                        </div>
+                        
+                        <div class="stat-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <h3>{{ campaign.ai_transferred_calls }}</h3>
+                            <p>Transferred</p>
+                        </div>
+                        
+                        <div class="stat-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <h3>{{ campaign.ai_appointments_booked }}</h3>
+                            <p>Appointments</p>
+                        </div>
+                    </div>
+                    
+                    {% if campaign.ai_total_calls > 0 %}
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Success Rate:</span>
+                            <strong>{{ campaign.ai_successful_calls|floatformat:0 }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-success" style="width: {{ campaign.ai_successful_calls }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewVoice() {
+    const voice = document.getElementById('voice-select').value;
+    const language = document.querySelector('[name="ai_language"]').value;
+    
+    alert(`Voice preview for ${voice} in ${language} - Feature coming soon!`);
+    // TODO: Implement TTS preview via AJAX
+}
+
+function testAICall() {
+    const phone = prompt('Enter test phone number (with country code):');
+    if (!phone) return;
+    
+    if (confirm(`Make test AI call to ${phone}?`)) {
+        fetch(`/sarvam/test-ai-call/{{ campaign.id }}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone_number: phone })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('Test call initiated! Check your phone.');
+            } else {
+                alert('Error: ' + (d.error || 'Unknown error'));
+            }
+        })
+        .catch(e => alert('Request failed: ' + e));
+    }
+}
+
+function getCookie(name) {
+    let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+</script>
+{% endblock %}

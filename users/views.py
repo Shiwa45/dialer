@@ -137,7 +137,7 @@ class CustomLogoutView(View):
 
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
 
         user = request.user
         is_agent = hasattr(user, 'profile') and user.profile.is_agent()
@@ -171,7 +171,7 @@ class CustomLogoutView(View):
         self._cleanup_on_logout(user)
         logout(request)
         messages.info(request, 'You have been successfully logged out.')
-        return redirect('login')
+        return redirect('users:login')
 
     def get(self, request, *args, **kwargs):
         return self.post(request, *args, **kwargs)

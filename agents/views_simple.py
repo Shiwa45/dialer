@@ -25,7 +25,7 @@ from asgiref.sync import async_to_sync
 from agents.stats_broadcaster import broadcast_call_completed
 
 from agents.decorators import agent_required
-from agents.models import AgentCallbackTask
+from agents.models import AgentCallbackTask, AgentDialerSession
 from calls.models import CallLog
 from campaigns.models import Campaign, Disposition, CampaignDisposition, OutboundQueue
 from leads.models import Lead
@@ -50,6 +50,49 @@ def _get_agent_phone(agent):
         except Exception:
             pass
     return phone
+
+
+def _ensure_agent_dialer_session(agent, agent_status, phone):
+    """
+    Gap 1 Fix: Ensure an AgentDialerSession record exists and is 'ready' when
+    an agent loads the dashboard.  We do NOT pre-bridge a channel — session-on-call
+    is preserved.  This is only a DB record so _assign_autodial_answer() can find
+    the agent when a customer call arrives.
+    """
+    if not phone:
+        return
+    try:
+        from telephony.models import AsteriskServer
+        server = AsteriskServer.objects.filter(is_active=True).first()
+        if not server:
+            return
+
+        # Pick the agent's current or first assigned active campaign
+        campaign = agent_status.current_campaign
+        if not campaign:
+            campaign = Campaign.objects.filter(
+                assigned_users=agent, status='active'
+            ).first()
+        if not campaign:
+            return
+
+        # Upsert: one record per agent.  Reset channel IDs so stale data
+        # from a previous call does not confuse _assign_autodial_answer.
+        AgentDialerSession.objects.update_or_create(
+            agent=agent,
+            defaults={
+                'campaign': campaign,
+                'asterisk_server': server,
+                'agent_extension': phone.extension,
+                'agent_channel_id': '',   # no live channel yet
+                'agent_bridge_id': '',    # no bridge yet
+                'status': 'ready',
+                'ended_at': None,
+            }
+        )
+        logger.debug(f"AgentDialerSession ensured: agent={agent.username} campaign={campaign.name}")
+    except Exception as e:
+        logger.warning(f"_ensure_agent_dialer_session failed: {e}")
 
 
 def _build_webrtc_config(phone, agent=None):
@@ -83,6 +126,8 @@ def _get_dashboard_context(request, agent, agent_status, phone):
     from agents.models import AgentCallbackTask
 
     assigned_campaigns = Campaign.objects.filter(assigned_users=agent, status='active')
+    # Convert to list so it can be iterated multiple times in template
+    assigned_campaigns_list = list(assigned_campaigns.values('id', 'name'))
     current_campaign = agent_status.current_campaign
     if not current_campaign and assigned_campaigns.exists():
         current_campaign = assigned_campaigns.first()
@@ -152,6 +197,7 @@ def _get_dashboard_context(request, agent, agent_status, phone):
         'agent': agent,
         'agent_status': agent_status,
         'assigned_campaigns': assigned_campaigns,
+        'assigned_campaigns_list': assigned_campaigns_list,
         'current_campaign': current_campaign,
         'today_stats': today_stats,
         'pending_callbacks': pending_callbacks,
@@ -204,6 +250,12 @@ def simple_dashboard(request):
     agent_status.save(update_fields=['last_heartbeat'])
 
     phone = _get_agent_phone(agent)
+
+    # ── Gap 1 Fix: ensure AgentDialerSession exists so the autodial
+    #   worker can find this agent when a customer call arrives.
+    #   No Asterisk channel is opened — session-on-call approach preserved.
+    _ensure_agent_dialer_session(agent, agent_status, phone)
+
     context = _get_dashboard_context(request, agent, agent_status, phone)
 
     if phone and getattr(phone, 'webrtc_enabled', False):
@@ -349,6 +401,27 @@ def update_status(request):
                 'call_id': agent_status.wrapup_call_id or agent_status.current_call_id,
             })
 
+        # ── Gap 3 Fix: update current_campaign when going available ──
+        campaign_id = request.POST.get('campaign_id', '').strip()
+        if mapped == 'available' and campaign_id:
+            try:
+                campaign = Campaign.objects.get(
+                    id=int(campaign_id), assigned_users=agent, status='active'
+                )
+                agent_status.current_campaign = campaign
+                agent_status.save(update_fields=['current_campaign'])
+                # Also update the AgentDialerSession campaign so the ARI worker
+                # can find this agent under the correct campaign.
+                AgentDialerSession.objects.filter(agent=agent).update(campaign=campaign)
+            except (Campaign.DoesNotExist, ValueError):
+                pass
+
+        # ── Gap 2 Fix (logout side): mark session offline when agent goes offline ──
+        if mapped == 'offline':
+            AgentDialerSession.objects.filter(
+                agent=agent, status__in=['ready', 'connecting']
+            ).update(status='offline', ended_at=timezone.now())
+
         agent_status.set_status(mapped)
         return JsonResponse({
             'success': True,
@@ -357,6 +430,87 @@ def update_status(request):
         })
     except Exception as e:
         logger.error(f"update_status error for {agent.username}: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==========================================================================
+# SELECT CAMPAIGN  — agent switches campaign mid-session
+# ==========================================================================
+
+@login_required
+@agent_required
+@require_POST
+def select_campaign(request):
+    """
+    Switch the agent's active campaign.
+    Updates AgentStatus.current_campaign and AgentDialerSession.campaign.
+    Returns the new campaign's dispositions so the UI can refresh the
+    disposition modal without a page reload.
+    """
+    agent = request.user
+    campaign_id = request.POST.get('campaign_id', '').strip()
+    if not campaign_id:
+        return JsonResponse({'success': False, 'error': 'campaign_id required'})
+
+    try:
+        campaign = Campaign.objects.get(
+            id=int(campaign_id), assigned_users=agent, status='active'
+        )
+    except (Campaign.DoesNotExist, ValueError):
+        return JsonResponse({'success': False, 'error': 'Campaign not found or not assigned'})
+
+    try:
+        agent_status, _ = AgentStatus.objects.get_or_create(user=agent)
+
+        # Block campaign switch during a live call or pending disposition
+        if agent_status.status in ('busy',):
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot switch campaign while on a call',
+            })
+        if agent_status.needs_disposition():
+            return JsonResponse({
+                'success': False,
+                'error': 'Cannot switch campaign — please dispose the current call first',
+            })
+
+        # Update campaign on both models
+        agent_status.current_campaign = campaign
+        agent_status.save(update_fields=['current_campaign'])
+
+        AgentDialerSession.objects.filter(agent=agent).update(campaign=campaign)
+
+        # Rebuild dispositions for the new campaign so JS can refresh the modal
+        camp_disps = CampaignDisposition.objects.filter(
+            campaign=campaign, is_active=True
+        ).select_related('disposition').order_by('sort_order')
+        dispositions = [
+            {
+                'id': cd.disposition.id,
+                'name': cd.disposition.name,
+                'category': cd.disposition.category,
+                'is_sale': cd.disposition.is_sale,
+                'is_callback': cd.disposition.requires_callback,
+            }
+            for cd in camp_disps if cd.disposition.is_active
+        ]
+        # Fallback to all active dispositions if campaign has none configured
+        if not dispositions:
+            dispositions = [
+                {'id': d.id, 'name': d.name, 'category': d.category,
+                 'is_sale': d.is_sale, 'is_callback': d.requires_callback}
+                for d in Disposition.objects.filter(is_active=True).order_by('name')
+            ]
+
+        logger.info(f"Agent {agent.username} switched to campaign {campaign.name}")
+        return JsonResponse({
+            'success': True,
+            'campaign_id': campaign.id,
+            'campaign_name': campaign.name,
+            'dispositions': dispositions,
+        })
+    except Exception as e:
+        logger.error(f"select_campaign error: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)})
 
 
@@ -508,6 +662,7 @@ def set_disposition(request):
 def hangup_call(request):
     """
     Hang up a call and move agent to wrapup (disposition required).
+    ── FIXED: Now sends AMI Hangup to Asterisk so the CLIENT phone also disconnects.
     The call_id is stored in wrapup_call_id so it survives page refresh.
     """
     agent = request.user
@@ -539,6 +694,35 @@ def hangup_call(request):
                 'wrapup': True,
             })
 
+        # ── FIXED: Send AMI Hangup to Asterisk so the client phone disconnects ──
+        try:
+            from telephony.models import AsteriskServer
+            from telephony.services import AsteriskService
+            asterisk_server = AsteriskServer.objects.filter(is_active=True).first()
+            if asterisk_server:
+                asterisk_svc = AsteriskService(asterisk_server)
+                # Hang up customer channel by uniqueid (most reliable)
+                if call_log.uniqueid:
+                    asterisk_svc.hangup_channel(call_log.uniqueid)
+                # Also try channel name as fallback
+                if call_log.channel and call_log.channel != call_log.uniqueid:
+                    asterisk_svc.hangup_channel(call_log.channel)
+                # Also hang up any active agent dialer session bridge
+                try:
+                    from agents.models import AgentDialerSession
+                    session = AgentDialerSession.objects.filter(
+                        agent=agent, status__in=['connecting', 'ready']
+                    ).first()
+                    if session:
+                        if session.agent_bridge_id:
+                            asterisk_svc.destroy_bridge(session.agent_bridge_id)
+                        elif session.agent_channel_id:
+                            asterisk_svc.hangup_channel(session.agent_channel_id)
+                except Exception:
+                    pass
+        except Exception as ami_err:
+            logger.warning(f"hangup_call: AMI hangup failed (non-fatal): {ami_err}")
+
         # Update call log
         if call_log.call_status not in ('completed', 'hangup', 'answered'):
             call_log.call_status = 'hangup'
@@ -559,6 +743,7 @@ def hangup_call(request):
 
         # Broadcast wrapup needed
         _broadcast_agent_event(agent.id, 'call_ended', {
+            'type': 'call_ended',
             'call_id': call_log.id,
             'disposition_needed': True,
             'message': 'Call ended — please set disposition',

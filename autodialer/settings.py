@@ -133,7 +133,7 @@ else:
 #         'ENGINE': 'django.db.backends.sqlite3',
 #         'NAME': BASE_DIR / "db.sqlite3",
 #     }
-# }
+# }postgres
 
 
 ASTERISK_SERVERS = {
@@ -243,6 +243,15 @@ CELERY_BEAT_SCHEDULE = {
     'close-stale-timelogs': {
         'task': 'users.close_open_timelogs',
         'schedule': 600,   # 10 minutes
+    },
+    # Phase 8: AI call queue processing
+    'process-ai-call-queues': {
+        'task': 'campaigns.tasks.process_ai_call_queue',
+        'schedule': 60.0,  # Every 60 seconds
+        'kwargs': {
+            'campaign_id': 1,  # Set your campaign ID
+            'max_calls': 10,
+        }
     },
 }
 

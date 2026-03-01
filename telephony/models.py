@@ -144,6 +144,16 @@ class Carrier(TimeStampedModel):
                         'direct_media': 'no',
                         'force_rport': 'yes',
                         'rewrite_contact': 'yes',
+                        
+                        # Explicitly disable WebRTC for Carriers
+                        'webrtc': 'no',
+                        'media_encryption': 'no',
+                        'use_avpf': 'no',
+                        'ice_support': 'no',
+                        'media_use_received_transport': 'no',
+                        'rtcp_mux': 'no',
+                        'dtls_verify': 'no',
+                        'dtls_setup': '',
                     }
                 )
                 # Auth
@@ -378,7 +388,7 @@ class Phone(TimeStampedModel):
     context = models.CharField(max_length=100, default='agents')
     
     # Codec and Quality
-    codec = models.CharField(max_length=100, default='ulaw,alaw')
+    codec = models.CharField(max_length=100, default='opus,ulaw,alaw')
     qualify = models.CharField(max_length=20, default='yes')
     nat = models.CharField(max_length=20, default='force_rport,comedia')
     
@@ -393,7 +403,7 @@ class Phone(TimeStampedModel):
     asterisk_server = models.ForeignKey(AsteriskServer, on_delete=models.CASCADE, related_name='phones')
     
     # WebRTC Specific
-    webrtc_enabled = models.BooleanField(default=False)
+    webrtc_enabled = models.BooleanField(default=True)
     ice_host = models.CharField(max_length=200, blank=True)
     
     class Meta:

@@ -1,179 +1,199 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent Dashboard — WebRTC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* ── Design tokens ──────────────────────────────────────────────── */
         :root {
-            --bg: #f4f4f5;
-            --bg-sec: #e8e8ea;
+            --bg: #f0efe9;
+            --bg-sec: #e4e3dc;
             --card: #ffffff;
-            --card-light: #f9f9fa;
-            --text: #111827;
-            --text-sec: #4b5563;
-            --text-muted: #9ca3af;
-            --border: #e5e7eb;
-            --border-light: #d1d5db;
-            --accent: #dc2626;
-            --accent-light: rgba(220, 38, 38, .08);
-            --success: #16a34a;
-            --danger: #dc2626;
-            --warning: #f59e0b;
+            --card-light: #f7f7f4;
+            --card-dark: #eae9e3;
+            --text: #1a1a1a;
+            --text-sec: #555550;
+            --text-muted: #8a8a80;
+            --border: #d5d4ce;
+            --border-light: #c0bfb8;
+            --accent: #e63920;
+            --accent-light: rgba(230, 57, 32, .07);
+            --accent-glow: rgba(230, 57, 32, .25);
+            --success: #1a9a4a;
+            --danger: #e63920;
+            --warning: #d4890a;
             --wrapup: #7c3aed;
-            --shadow: rgba(0, 0, 0, .06);
+            --wrapup-glow: rgba(124, 58, 237, .3);
+            --shadow: rgba(0, 0, 0, .08);
+            --shadow-lg: rgba(0, 0, 0, .12);
+            --phone-body: #2a2a2e;
+            --phone-screen: #0a0e14;
+            --phone-bezel: #1e1e22;
+            --phone-key-bg: #353539;
+            --phone-key-hover: #45454a;
+            --neon-green: #00ff88;
+            --neon-amber: #ffaa00;
+            --neon-cyan: #00d4ff;
+            --glass: rgba(255,255,255,.6);
+            --glass-border: rgba(255,255,255,.3);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --radius-xs: 6px;
         }
 
         [data-theme="dark"] {
-            --bg: #0a0a0b;
-            --bg-sec: #131315;
-            --card: #1c1c1e;
-            --card-light: #242427;
-            --text: #f0f0f0;
-            --text-sec: #a1a1aa;
-            --text-muted: #71717a;
-            --border: #27272a;
-            --border-light: #3f3f46;
-            --accent: #ef4444;
-            --accent-light: rgba(239, 68, 68, .1);
+            --bg: #0c0c0f;
+            --bg-sec: #111116;
+            --card: #18181d;
+            --card-light: #1f1f25;
+            --card-dark: #141418;
+            --text: #eaeae6;
+            --text-sec: #9e9e96;
+            --text-muted: #5e5e58;
+            --border: #2a2a30;
+            --border-light: #36363e;
+            --accent: #ff4433;
+            --accent-light: rgba(255, 68, 51, .1);
+            --accent-glow: rgba(255, 68, 51, .35);
             --success: #22c55e;
-            --danger: #ef4444;
+            --danger: #ff4433;
             --warning: #f59e0b;
-            --shadow: rgba(0, 0, 0, .4);
+            --shadow: rgba(0, 0, 0, .3);
+            --shadow-lg: rgba(0, 0, 0, .5);
+            --glass: rgba(255,255,255,.04);
+            --glass-border: rgba(255,255,255,.08);
         }
 
         /* ── Reset ──────────────────────────────────────────────────────── */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: .15;
+            pointer-events: none;
+            z-index: 0;
         }
 
         /* ── Wrapup bar (fixed top) ─────────────────────────────────────── */
         #wrapup-bar {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             z-index: 6000;
-            background: var(--wrapup);
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
             color: #fff;
-            padding: 10px 24px;
+            padding: 12px 28px;
             align-items: center;
             justify-content: center;
-            gap: 14px;
-            font-size: .875rem;
+            gap: 16px;
+            font-size: .85rem;
             font-weight: 700;
-            box-shadow: 0 2px 16px rgba(124, 58, 237, .4);
+            font-family: 'Outfit', sans-serif;
+            box-shadow: 0 4px 24px var(--wrapup-glow);
+            backdrop-filter: blur(12px);
         }
-
-        #wrapup-bar.visible {
-            display: flex;
-        }
+        #wrapup-bar.visible { display: flex; }
 
         #wrapup-bar .wrapup-dispose-btn {
             background: #fff;
             color: var(--wrapup);
             border: none;
-            border-radius: 6px;
-            padding: 6px 16px;
-            font-size: .8rem;
+            border-radius: var(--radius-xs);
+            padding: 8px 20px;
+            font-size: .78rem;
             font-weight: 800;
             cursor: pointer;
             white-space: nowrap;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: .03em;
+            transition: all .2s;
         }
+        #wrapup-bar .wrapup-dispose-btn:hover { background: #ede9fe; transform: translateY(-1px); }
 
-        #wrapup-bar .wrapup-dispose-btn:hover {
-            background: #ede9fe;
-        }
-
-        /* ── Logout blocked banner (fixed bottom) ───────────────────────── */
+        /* ── Logout blocked banner ───────────────────────────── */
         #logout-banner {
             display: none;
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 0; left: 0; right: 0;
             z-index: 6000;
-            background: var(--danger);
+            background: linear-gradient(135deg, var(--danger), #c0291a);
             color: #fff;
-            padding: 8px 24px;
+            padding: 10px 24px;
             text-align: center;
             font-size: .8rem;
             font-weight: 700;
+            font-family: 'Outfit', sans-serif;
         }
+        #logout-banner.visible { display: block; }
 
-        #logout-banner.visible {
-            display: block;
-        }
-
-        /* ── Disposition overlay (full-screen, non-dismissible) ─────────── */
+        /* ── Disposition overlay ─────────── */
         #disposition-overlay {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 7000;
-            background: rgba(15, 23, 42, .82);
-            backdrop-filter: blur(6px);
+            background: rgba(8, 8, 12, .85);
+            backdrop-filter: blur(16px);
             align-items: center;
             justify-content: center;
         }
-
-        #disposition-overlay.visible {
-            display: flex;
-        }
+        #disposition-overlay.visible { display: flex; }
 
         .disp-modal {
             background: var(--card);
-            border-radius: 14px;
-            padding: 28px 30px 24px;
-            width: min(520px, 95vw);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            width: min(540px, 94vw);
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, .45);
+            box-shadow: 0 32px 80px rgba(0,0,0,.5);
         }
-
         .disp-modal h3 {
-            font-size: 1.1rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
             font-weight: 800;
             border-bottom: 2px solid var(--wrapup);
-            padding-bottom: .5rem;
-            margin-bottom: .375rem;
+            padding-bottom: .6rem;
+            margin-bottom: .4rem;
         }
-
         .disp-modal .disp-subtitle {
             color: var(--text-muted);
             font-size: .8rem;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
-
         .disp-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 8px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
-
         .disp-btn {
-            padding: 10px 8px;
+            padding: 12px 10px;
             border: 2px solid var(--border);
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             background: var(--card-light);
             color: var(--text);
             font-size: .8rem;
@@ -181,66 +201,48 @@
             cursor: pointer;
             transition: all .15s;
             text-align: center;
+            font-family: 'Outfit', sans-serif;
         }
-
-        .disp-btn:hover {
-            border-color: var(--wrapup);
-            background: rgba(124, 58, 237, .08);
-        }
-
-        .disp-btn.selected {
-            border-color: var(--wrapup);
-            background: var(--wrapup);
-            color: #fff;
-        }
+        .disp-btn:hover { border-color: var(--wrapup); background: rgba(124,58,237,.08); }
+        .disp-btn.selected { border-color: var(--wrapup); background: var(--wrapup); color: #fff; }
 
         .disp-notes {
             width: 100%;
             background: var(--card-light);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: var(--radius-sm);
+            padding: 12px;
             color: var(--text);
             resize: vertical;
             min-height: 72px;
-            margin-bottom: 14px;
-            font-family: inherit;
+            margin-bottom: 16px;
+            font-family: 'Outfit', sans-serif;
             font-size: .85rem;
         }
-
-        .disp-notes:focus {
-            outline: 2px solid var(--wrapup);
-            border-color: transparent;
-        }
+        .disp-notes:focus { outline: 2px solid var(--wrapup); border-color: transparent; }
 
         .disp-save-btn {
             display: block;
             width: 100%;
-            padding: 12px;
-            background: var(--wrapup);
+            padding: 14px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             font-size: .9rem;
             font-weight: 700;
             cursor: pointer;
-            transition: opacity .15s;
+            transition: all .2s;
+            font-family: 'Outfit', sans-serif;
         }
-
-        .disp-save-btn:disabled {
-            opacity: .45;
-            cursor: not-allowed;
-        }
-
-        .disp-save-btn:not(:disabled):hover {
-            filter: brightness(1.1);
-        }
+        .disp-save-btn:disabled { opacity: .4; cursor: not-allowed; }
+        .disp-save-btn:not(:disabled):hover { filter: brightness(1.12); transform: translateY(-1px); }
 
         .disp-warning {
             text-align: center;
             color: var(--text-muted);
             font-size: .72rem;
-            margin-top: 10px;
+            margin-top: 12px;
         }
 
         /* ── Toast ──────────────────────────────────────────────────────── */
@@ -248,794 +250,939 @@
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            padding: .75rem 1.5rem;
-            border-radius: 8px;
+            padding: .85rem 1.75rem;
+            border-radius: var(--radius-sm);
             color: #fff;
             font-weight: 600;
-            font-size: .875rem;
+            font-size: .85rem;
+            font-family: 'Outfit', sans-serif;
             z-index: 8000;
             transform: translateY(80px);
             opacity: 0;
-            transition: all .3s;
+            transition: all .35s cubic-bezier(.4,0,.2,1);
             pointer-events: none;
+            backdrop-filter: blur(8px);
         }
-
-        #toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        #toast.success {
-            background: var(--success);
-        }
-
-        #toast.error {
-            background: var(--danger);
-        }
-
-        #toast.info {
-            background: #3b82f6;
-        }
-
-        #toast.warning {
-            background: var(--warning);
-            color: #1c1917;
-        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        #toast.success { background: var(--success); }
+        #toast.error { background: var(--danger); }
+        #toast.info { background: #3b82f6; }
+        #toast.warning { background: var(--warning); color: #1c1917; }
 
         /* ── Header ─────────────────────────────────────────────────────── */
         .agent-header {
+            position: relative;
+            z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 2rem;
+            padding: 14px 28px;
             background: var(--card);
             border-bottom: 1px solid var(--border);
-            box-shadow: 0 1px 4px var(--shadow);
+            box-shadow: 0 1px 8px var(--shadow);
         }
 
-        .agent-header h1 {
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
+        .header-left { display: flex; align-items: center; gap: 18px; }
 
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header-brand-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--accent), #ff6b4a);
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff;
+            font-size: .9rem;
+            box-shadow: 0 2px 12px var(--accent-glow);
+        }
+        .header-brand h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: -.01em;
+        }
         .agent-subtitle {
             color: var(--text-muted);
-            font-size: .8rem;
-            margin-top: .2rem;
+            font-size: .75rem;
+            margin-top: 1px;
         }
 
         .header-right {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 12px;
         }
+
+        .header-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--text-sec);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: var(--radius-xs);
+            text-decoration: none;
+            transition: all .2s;
+            font-family: 'Outfit', sans-serif;
+        }
+        .header-link:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 
         /* Theme toggle */
         .theme-toggle {
-            width: 52px;
-            height: 26px;
+            width: 48px; height: 26px;
             border-radius: 13px;
             border: 2px solid var(--border);
             background: var(--card-light);
             cursor: pointer;
             position: relative;
+            transition: all .3s;
         }
-
+        .theme-toggle:hover { border-color: var(--accent); }
         .theme-slider {
             position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 18px;
-            height: 18px;
+            top: 2px; left: 2px;
+            width: 18px; height: 18px;
             border-radius: 50%;
             background: var(--accent);
-            transition: transform .3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: transform .3s cubic-bezier(.4,0,.2,1);
+            display: flex; align-items: center; justify-content: center;
             color: #fff;
-            font-size: .65rem;
+            font-size: .6rem;
         }
-
-        [data-theme="dark"] .theme-slider {
-            transform: translateX(24px);
-        }
+        [data-theme="dark"] .theme-slider { transform: translateX(22px); }
 
         /* Status pill */
         .status-pill {
-            padding: .5rem 1.25rem;
-            border-radius: 6px;
+            padding: 6px 16px;
+            border-radius: 20px;
             background: var(--accent);
             color: #fff;
-            font-size: .72rem;
+            font-size: .7rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: .06em;
+            letter-spacing: .08em;
             display: inline-flex;
             align-items: center;
-            gap: .5rem;
+            gap: 8px;
+            font-family: 'Outfit', sans-serif;
+            box-shadow: 0 2px 12px var(--accent-glow);
         }
-
         .status-pill::before {
             content: '';
-            width: 7px;
-            height: 7px;
+            width: 7px; height: 7px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, .7);
+            background: rgba(255,255,255,.8);
             animation: pulse 2s infinite;
         }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1
-            }
-
-            50% {
-                opacity: .3
-            }
-        }
-
-        /* ── Layout ─────────────────────────────────────────────────────── */
+        /* ── Main Layout ─────────────────────────────────────────────────── */
         .agent-layout {
+            position: relative;
+            z-index: 1;
             flex: 1;
             display: grid;
-            grid-template-columns: 1fr 1fr 370px;
-            gap: 1.25rem;
-            padding: 1.25rem 2rem 2rem;
-            max-width: 1900px;
+            grid-template-columns: 340px 1fr 380px;
+            gap: 0;
+            max-width: 100%;
             width: 100%;
-            margin: 0 auto;
         }
 
-        .panel {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 12px var(--shadow);
+        /* ── LEFT SIDEBAR — Phone ────────────────────────────────────────── */
+        .sidebar-phone {
+            background: var(--phone-body);
+            border-right: 1px solid #2a2a30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 16px;
+            overflow-y: auto;
+            max-height: calc(100vh - 55px);
         }
 
-        .panel>h2 {
-            font-size: 1rem;
+        /* Retro Phone Container */
+        .retro-phone {
+            width: 100%;
+            max-width: 310px;
+        }
+
+        .phone-brand {
+            font-family: 'Space Mono', monospace;
             font-weight: 700;
+            font-size: .72rem;
             text-transform: uppercase;
-            letter-spacing: .05em;
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: .5rem;
-            margin-bottom: 1rem;
+            letter-spacing: .35em;
+            color: #666;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .phone-model {
+            font-family: 'Space Mono', monospace;
+            font-size: .55rem;
+            color: #444;
+            text-align: center;
+            letter-spacing: .15em;
+            margin-bottom: 14px;
         }
 
-        /* ── Status chips ───────────────────────────────────────────────── */
-        .status-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: .625rem;
-            margin-top: 1rem;
-        }
-
-        .status-chip {
-            border: 1px solid var(--border-light);
-            border-radius: 6px;
-            padding: .7rem 1rem;
-            background: var(--card-light);
-            color: var(--text);
-            font-size: .82rem;
+        /* WebRTC status */
+        .webrtc-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: var(--radius-xs);
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.06);
+            font-size: .72rem;
             font-weight: 600;
+            color: #999;
+            margin-bottom: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .webrtc-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #555;
+            flex-shrink: 0;
+            transition: all .3s;
+        }
+        .webrtc-dot.connecting { background: var(--warning); animation: pulse 1s infinite; box-shadow: 0 0 8px rgba(245,158,11,.4); }
+        .webrtc-dot.registered { background: var(--neon-green); box-shadow: 0 0 8px rgba(0,255,136,.5); }
+        .webrtc-dot.failed { background: var(--danger); box-shadow: 0 0 8px rgba(255,68,51,.4); }
+
+        /* Auto-answer */
+        .auto-answer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            border-radius: var(--radius-xs);
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.06);
+            margin-bottom: 10px;
+            font-size: .72rem;
+            font-weight: 600;
+            color: #aaa;
+            font-family: 'Outfit', sans-serif;
+        }
+        .toggle-sw { position: relative; width: 38px; height: 20px; cursor: pointer; }
+        .toggle-sw input { opacity: 0; width: 0; height: 0; }
+        .toggle-track {
+            position: absolute; inset: 0;
+            background: #444;
+            border-radius: 10px;
+            transition: .3s;
+        }
+        .toggle-track::before {
+            content: '';
+            position: absolute;
+            width: 14px; height: 14px;
+            left: 3px; bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .3s;
+        }
+        .toggle-sw input:checked + .toggle-track { background: var(--success); }
+        .toggle-sw input:checked + .toggle-track::before { transform: translateX(18px); }
+
+        /* ── Phone Screen — CRT feel ─────────────────────── */
+        .phone-screen {
+            background: var(--phone-screen);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            border: 3px solid var(--phone-bezel);
+            position: relative;
+            overflow: hidden;
+            box-shadow:
+                inset 0 0 40px rgba(0,255,136,.03),
+                0 4px 20px rgba(0,0,0,.4);
+        }
+        /* CRT scanlines */
+        .phone-screen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,.15) 2px,
+                rgba(0,0,0,.15) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+        /* Screen glow */
+        .phone-screen::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(0,255,136,.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .phone-num-disp {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--neon-green);
+            min-height: 1.8rem;
+            letter-spacing: .06em;
+            word-break: break-all;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(0,255,136,.4);
+        }
+        .phone-status-disp {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .75rem;
+            color: rgba(0,255,136,.6);
+            margin-top: 4px;
+            position: relative;
+            z-index: 2;
+        }
+        .phone-timer {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--neon-amber);
+            margin-top: 4px;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(255,170,0,.3);
+        }
+        .phone-ext-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .58rem;
+            color: #334455;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── Keypad — Metallic tactile buttons ────────── */
+        .phone-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+            padding: 0 4px;
+        }
+        .phone-key {
+            aspect-ratio: 1.35;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(180deg, #3a3a40 0%, #2e2e34 100%);
+            color: #ddd;
+            font-size: 1.15rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
             cursor: pointer;
-            transition: all .2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all .12s;
+            box-shadow: 0 2px 4px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08);
+            position: relative;
+        }
+        .phone-key:hover {
+            background: linear-gradient(180deg, #454550 0%, #3a3a42 100%);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+        }
+        .phone-key:active {
+            transform: scale(.95);
+            background: linear-gradient(180deg, #2e2e34 0%, #252528 100%);
+            box-shadow: 0 1px 2px rgba(0,0,0,.4), inset 0 2px 4px rgba(0,0,0,.2);
+        }
+        .phone-key-sub {
+            font-size: .42rem;
+            color: #666;
+            margin-top: 1px;
+            letter-spacing: .15em;
+        }
+
+        /* ── Call / Hangup ─────────────────────────────── */
+        .phone-controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            padding: 0 4px;
+        }
+        .ctrl-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: .78rem;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: .4rem;
-        }
-
-        .status-chip:hover:not(.is-active):not(:disabled) {
-            border-color: var(--accent);
-            background: var(--accent-light);
-            transform: translateY(-1px);
-        }
-
-        .status-chip.is-active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-            box-shadow: 0 3px 10px rgba(220, 38, 38, .3);
-        }
-
-        .status-chip:disabled {
-            opacity: .45;
-            cursor: not-allowed;
-        }
-
-        /* ── Info grid ──────────────────────────────────────────────────── */
-        .grid-two {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            gap: .875rem;
-            margin-top: 1.25rem;
-        }
-
-        .info-card {
-            background: var(--card-light);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 1.1rem;
-        }
-
-        .info-card label {
-            display: block;
-            color: var(--text-muted);
-            font-size: .7rem;
+            gap: 6px;
             text-transform: uppercase;
             letter-spacing: .06em;
+            transition: all .2s;
+        }
+        .ctrl-btn.call {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: #fff;
+            box-shadow: 0 3px 16px rgba(22,163,74,.35);
+        }
+        .ctrl-btn.hangup {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+            box-shadow: 0 3px 16px rgba(239,68,68,.35);
+        }
+        .ctrl-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+        .ctrl-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+        /* Extra buttons */
+        .phone-extras {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            padding: 0 4px;
+        }
+        .extra-btn {
+            padding: 9px 4px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: var(--radius-xs);
+            background: rgba(255,255,255,.04);
+            color: #999;
+            font-size: .62rem;
             font-weight: 600;
-            margin-bottom: .375rem;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            transition: all .2s;
+        }
+        .extra-btn:hover:not(:disabled) { border-color: var(--accent); color: #fff; background: rgba(255,68,51,.1); }
+        .extra-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .extra-btn:disabled { opacity: .25; cursor: not-allowed; }
+
+        /* ── CENTER — Main Content ───────────────────────────────────────── */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: calc(100vh - 55px);
+            padding: 24px;
+            gap: 20px;
         }
 
-        .info-card strong {
-            font-size: 1.1rem;
+        /* ── Call Spotlight — Hero area ───────────────── */
+        .call-spotlight {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 2px 16px var(--shadow);
+        }
+        .call-spotlight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .call-spotlight-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: .85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-sec);
+        }
+
+        .call-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
             font-weight: 700;
+            font-size: .72rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            font-family: 'Outfit', sans-serif;
+        }
+        .call-badge.idle { background: var(--card-light); color: var(--text-muted); border: 1px solid var(--border); }
+        .call-badge.ringing { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .call-badge.connected { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .call-badge.wrapup { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+
+        .call-placeholder {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .call-placeholder i {
+            display: block;
+            font-size: 2.2rem;
+            margin-bottom: 12px;
+            opacity: .4;
+        }
+        .call-placeholder p { font-size: .85rem; }
+
+        .call-meta {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            background: var(--card-light);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .call-meta > div {
+            text-align: center;
+        }
+        .call-meta label {
+            display: block;
+            font-size: .62rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: .06em;
+            margin-bottom: 4px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .call-meta strong {
+            font-size: .95rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
         }
 
         /* ── Tabs ───────────────────────────────────────────────────────── */
-        .tab-container {
-            margin-top: 1.25rem;
-        }
+        .tab-container { margin-top: 0; }
 
         .tab-buttons {
             display: flex;
-            gap: .375rem;
-            border-bottom: 2px solid var(--border);
-            margin-bottom: 1rem;
+            gap: 2px;
+            background: var(--card-light);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
         }
-
         .tab-btn {
-            padding: .65rem 1.25rem;
+            flex: 1;
+            padding: 10px 16px;
             background: transparent;
             border: none;
-            border-bottom: 3px solid transparent;
-            color: var(--text-sec);
-            font-size: .8rem;
+            border-radius: var(--radius-xs);
+            color: var(--text-muted);
+            font-size: .75rem;
             font-weight: 600;
             cursor: pointer;
             text-transform: uppercase;
-            letter-spacing: .04em;
-            position: relative;
-            top: 2px;
-            transition: color .2s;
+            letter-spacing: .05em;
+            transition: all .2s;
+            font-family: 'Outfit', sans-serif;
         }
-
-        .tab-btn:hover {
-            color: var(--text);
-        }
-
+        .tab-btn:hover { color: var(--text); background: var(--glass); }
         .tab-btn.active {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
+            color: #fff;
+            background: var(--accent);
+            box-shadow: 0 2px 8px var(--accent-glow);
         }
 
-        .tab-pane {
-            display: none;
-        }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeUp .25s ease; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 
-        .tab-pane.active {
-            display: block;
-            animation: fadeUp .25s ease;
-        }
-
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(6px)
-            }
-
-            to {
-                opacity: 1;
-                transform: none
-            }
-        }
-
-        /* ── Call panel ─────────────────────────────────────────────────── */
+        /* Call panel inside tabs */
         .call-panel {
-            background: var(--bg-sec);
+            background: var(--card-light);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.25rem;
+            border-radius: var(--radius-sm);
+            padding: 20px;
         }
-
         .call-panel h3 {
-            font-size: .9rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: .82rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: .05em;
-            margin-bottom: .75rem;
+            letter-spacing: .06em;
+            margin-bottom: 12px;
+            color: var(--text-sec);
         }
 
         .call-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .call-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .4rem .9rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: .78rem;
-            text-transform: uppercase;
-        }
-
-        .call-badge.idle {
-            background: var(--card-light);
-            color: var(--text-muted);
-        }
-
-        .call-badge.ringing {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .call-badge.connected {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .call-badge.wrapup {
-            background: #ede9fe;
-            color: #5b21b6;
-        }
-
-        .call-placeholder {
-            border: 2px dashed var(--border-light);
-            border-radius: 6px;
-            padding: 2rem;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .call-placeholder i {
-            display: block;
-            font-size: 2rem;
-            margin-bottom: .75rem;
-        }
-
-        .call-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: .875rem;
-            background: var(--card);
-            padding: 1rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-
-        .call-meta label {
-            display: block;
-            font-size: .7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: 600;
-            margin-bottom: .3rem;
-        }
-
-        .call-meta strong {
-            font-size: 1.05rem;
-            font-weight: 700;
+            margin-bottom: 16px;
         }
 
         /* Lead card */
         .lead-card {
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 1rem;
-            background: var(--card);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            background: var(--card-light);
         }
-
         .lead-card__header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: .75rem;
-            padding-bottom: .75rem;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--border);
         }
-
         .lead-pill {
-            padding: .2rem .65rem;
-            border-radius: 4px;
-            font-size: .72rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: .68rem;
             font-weight: 600;
-            background: var(--card-light);
+            background: var(--card);
             color: var(--text-muted);
+            border: 1px solid var(--border);
         }
 
-        /* Notes textarea */
+        /* Notes */
         .note-input {
             width: 100%;
-            background: var(--card-light);
+            background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: .75rem;
+            border-radius: var(--radius-sm);
+            padding: 12px;
             color: var(--text);
             resize: vertical;
             min-height: 80px;
-            font-family: inherit;
+            font-family: 'Outfit', sans-serif;
             font-size: .875rem;
         }
+        .note-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
-        .note-input:focus {
-            outline: 2px solid var(--accent);
-            border-color: transparent;
+        /* ── Info grid ──────────────────────────────────────────────────── */
+        .grid-two {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+        }
+        .info-card {
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+        }
+        .info-card label {
+            display: block;
+            color: var(--text-muted);
+            font-size: .62rem;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .info-card strong {
+            font-size: .95rem;
+            font-weight: 700;
         }
 
-        /* ── WebRTC phone ───────────────────────────────────────────────── */
-        .retro-phone {
+        /* ── RIGHT SIDEBAR — Status & Info ────────────────────────────────── */
+        .sidebar-info {
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 55px);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .sidebar-section {
+            background: var(--card-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+        }
+        .sidebar-section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: .72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-sec);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-section-title i { color: var(--accent); font-size: .7rem; }
+
+        /* Status chips */
+        .status-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        .status-chip {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xs);
+            padding: 10px 8px;
+            background: var(--card);
+            color: var(--text-sec);
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .status-chip:hover:not(.is-active):not(:disabled) {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--text);
+            transform: translateY(-1px);
+        }
+        .status-chip.is-active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 3px 12px var(--accent-glow);
+        }
+        .status-chip:disabled { opacity: .35; cursor: not-allowed; }
+
+        /* ── Campaign Selector ────────────────────────── */
+        .campaign-selector { margin-top: 0; padding: 0; background: none; border: none; border-radius: 0; }
+        .campaign-selector label {
+            display: block;
+            font-size: .62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .campaign-selector-row { display: flex; gap: 6px; align-items: center; }
+        .campaign-select {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xs);
+            background: var(--card);
+            color: var(--text);
+            font-size: .8rem;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .campaign-select:focus { border-color: var(--accent); }
+        .campaign-select:disabled { opacity: .4; cursor: not-allowed; }
+
+        .campaign-switch-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: var(--radius-xs);
+            background: var(--accent);
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all .2s;
+            font-family: 'Outfit', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .campaign-switch-btn:hover:not(:disabled) { filter: brightness(1.12); }
+        .campaign-switch-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+        .campaign-active-label {
+            font-size: .7rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .campaign-active-label strong { color: var(--accent); }
+
+        /* ── Status timer widget ─────────────────────── */
+        .status-timer-widget {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stw-cell { text-align: center; }
+        .stw-cell label {
+            display: block;
+            font-size: .58rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .stw-timer {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            line-height: 1;
+        }
+        .stw-timer.t-status { color: var(--accent); }
+        .stw-timer.t-login { color: var(--neon-cyan); }
+        .stw-sub { font-size: .6rem; color: var(--text-muted); margin-top: 3px; }
+
+        /* ── Stats compact grid ──────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xs);
+            padding: 12px;
             text-align: center;
         }
-
-        .phone-brand {
-            font-weight: 800;
-            font-size: 1rem;
+        .stat-card label {
+            display: block;
+            font-size: .58rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: .15em;
-            color: var(--accent);
-            margin-bottom: .625rem;
+            letter-spacing: .07em;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .stat-card strong {
+            font-size: 1.1rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .webrtc-status {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .45rem .75rem;
-            border-radius: 6px;
-            background: var(--card-light);
+        /* ── Callbacks ─────────────────────────────────── */
+        .callback-item {
+            background: var(--card);
             border: 1px solid var(--border);
-            font-size: .76rem;
-            font-weight: 600;
-            margin-bottom: .625rem;
+            border-radius: var(--radius-xs);
+            padding: 10px 12px;
+            margin-bottom: 6px;
         }
-
-        .webrtc-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: #888;
-            flex-shrink: 0;
-            transition: all .3s;
+        .callback-item label {
+            display: block;
+            font-size: .62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            font-family: 'Outfit', sans-serif;
         }
-
-        .webrtc-dot.connecting {
-            background: var(--warning);
-            animation: pulse 1s infinite;
-        }
-
-        .webrtc-dot.registered {
-            background: var(--success);
-            box-shadow: 0 0 6px rgba(22, 163, 74, .5);
-        }
-
-        .webrtc-dot.failed {
-            background: var(--danger);
-        }
-
-        /* Auto-answer toggle */
-        .auto-answer-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: .5rem .75rem;
-            border-radius: 6px;
-            background: var(--card-light);
-            border: 1px solid var(--border);
-            margin-bottom: .625rem;
+        .callback-item strong {
             font-size: .78rem;
             font-weight: 600;
         }
 
-        .toggle-sw {
-            position: relative;
-            width: 40px;
-            height: 22px;
-            cursor: pointer;
-        }
-
-        .toggle-sw input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-track {
-            position: absolute;
-            inset: 0;
-            background: #ccc;
-            border-radius: 11px;
-            transition: .3s;
-        }
-
-        .toggle-track::before {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            left: 3px;
-            bottom: 3px;
-            background: #fff;
-            border-radius: 50%;
-            transition: .3s;
-        }
-
-        .toggle-sw input:checked+.toggle-track {
-            background: var(--success);
-        }
-
-        .toggle-sw input:checked+.toggle-track::before {
-            transform: translateX(18px);
-        }
-
-        /* Phone screen */
-        .phone-screen {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 1.1rem 1.25rem;
-            margin-bottom: .875rem;
-            border: 2px solid #2a2a2a;
-        }
-
-        .phone-num-disp {
-            font-family: 'Courier New', monospace;
-            font-size: 1.5rem;
-            color: #00ff88;
-            min-height: 2rem;
-            letter-spacing: .08em;
-            word-break: break-all;
-        }
-
-        .phone-status-disp {
-            font-family: 'Courier New', monospace;
-            font-size: .82rem;
-            color: #66ffaa;
-            margin-top: .25rem;
-        }
-
-        .phone-timer {
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
-            color: #ffaa00;
-            margin-top: .3rem;
-        }
-
-        .phone-ext-line {
-            font-size: .65rem;
-            color: #557788;
-            margin-top: .375rem;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-        }
-
-        /* Keypad */
-        .phone-keypad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: .4rem;
-            margin-bottom: .75rem;
-        }
-
-        .phone-key {
-            aspect-ratio: 1.3;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--card-light);
-            color: var(--text);
-            font-size: 1.2rem;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all .15s;
-        }
-
-        .phone-key:hover {
-            background: var(--accent-light);
-            border-color: var(--accent);
-        }
-
-        .phone-key:active {
-            transform: scale(.94);
-        }
-
-        .phone-key-sub {
-            font-size: .5rem;
-            color: var(--text-muted);
-            margin-top: .1rem;
-            letter-spacing: .1em;
-        }
-
-        /* Call / hangup buttons */
-        .phone-controls {
-            display: flex;
-            gap: .4rem;
-            margin-bottom: .625rem;
-        }
-
-        .ctrl-btn {
-            flex: 1;
-            padding: .7rem;
-            border: none;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: .8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .4rem;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            transition: filter .2s;
-        }
-
-        .ctrl-btn.call {
-            background: var(--success);
-            color: #fff;
-        }
-
-        .ctrl-btn.hangup {
-            background: var(--danger);
-            color: #fff;
-        }
-
-        .ctrl-btn:hover:not(:disabled) {
-            filter: brightness(1.1);
-        }
-
-        .ctrl-btn:disabled {
-            opacity: .45;
-            cursor: not-allowed;
-        }
-
-        /* Extra buttons */
-        .phone-extras {
-            display: flex;
-            gap: .375rem;
-            flex-wrap: wrap;
-        }
-
-        .extra-btn {
-            flex: 1;
-            min-width: 66px;
-            padding: .55rem .4rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--card-light);
-            color: var(--text);
-            font-size: .68rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .3rem;
-            text-transform: uppercase;
-            transition: all .2s;
-        }
-
-        .extra-btn:hover:not(:disabled) {
-            border-color: var(--accent);
-            background: var(--accent-light);
-        }
-
-        .extra-btn.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-        }
-
-        .extra-btn:disabled {
-            opacity: .35;
-            cursor: not-allowed;
-        }
-
-        /* ── Status / Login timer widget (same data as realtime monitor) ── */
-        .status-timer-widget {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: .625rem;
-            margin-top: 1rem;
-            padding: .875rem 1rem;
-            background: var(--card-light);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
-
-        .stw-cell {
-            text-align: center;
-        }
-
-        .stw-cell label {
-            display: block;
-            font-size: .65rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            color: var(--text-muted);
-            margin-bottom: .3rem;
-        }
-
-        .stw-timer {
-            font-family: 'Courier New', monospace;
-            font-size: 1.3rem;
-            font-weight: 800;
-            letter-spacing: .04em;
-            line-height: 1;
-        }
-
-        .stw-timer.t-status {
-            color: var(--accent);
-        }
-
-        .stw-timer.t-login {
-            color: #3b82f6;
-        }
-
-        .stw-sub {
-            font-size: .65rem;
-            color: var(--text-muted);
-            margin-top: .2rem;
-        }
+        /* ── Panel compatibility (hidden but needed for JS) ──────────── */
+        .panel > h2 { display: none; }
 
         /* ── Responsive ─────────────────────────────────────────────────── */
         @media (max-width: 1400px) {
             .agent-layout {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .panel:last-child {
-                grid-column: span 2;
-                max-width: 420px;
-                margin: 0 auto;
+                grid-template-columns: 300px 1fr 340px;
             }
         }
 
-        @media (max-width: 1100px) {
+        @media (max-width: 1200px) {
             .agent-layout {
                 grid-template-columns: 1fr;
             }
-
-            .panel:last-child {
-                grid-column: span 1;
+            .sidebar-phone {
+                border-right: none;
+                border-bottom: 1px solid #2a2a30;
+                max-height: none;
+                padding: 16px;
             }
+            .retro-phone {
+                max-width: 320px;
+                margin: 0 auto;
+            }
+            .sidebar-info {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                max-height: none;
+            }
+            .main-content {
+                max-height: none;
+            }
+            .phone-keypad {
+                max-width: 280px;
+                margin-left: auto;
+                margin-right: auto;
+                margin-bottom: 10px;
+            }
+            .phone-controls, .phone-extras {
+                max-width: 280px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .phone-controls { margin-bottom: 10px; }
         }
 
-        @media (max-width: 720px) {
+        @media (max-width: 768px) {
             .agent-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: .75rem;
+                padding: 10px 16px;
+                flex-wrap: wrap;
+                gap: 8px;
             }
-
-            .agent-layout {
-                padding: 1rem;
-            }
-
-            .status-actions {
-                grid-template-columns: 1fr 1fr;
-            }
+            .header-left { gap: 10px; }
+            .header-brand h1 { font-size: .9rem; }
+            .main-content { padding: 16px; }
+            .call-meta { grid-template-columns: repeat(2, 1fr); }
+            .status-actions { grid-template-columns: repeat(3, 1fr); }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
         }
+
+        @media (max-width: 480px) {
+            .agent-header { padding: 8px 12px; }
+            .header-link { display: none; }
+            .main-content { padding: 12px; }
+            .call-meta { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .tab-btn { padding: 8px 8px; font-size: .68rem; }
+            .status-actions { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ── Utility: scrollbar styling ──────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
     </style>
 </head>
 
 <body>
 
-    <!-- ── Wrapup bar (fixed top, visible during wrapup) ─────────────────── -->
+    <!-- ── Wrapup bar ─────────────────── -->
     <div id="wrapup-bar">
         <i class="fas fa-clipboard-check"></i>
         <span>⚠️ Wrap-up Required — Please dispose the call before continuing.</span>
@@ -1044,23 +1191,29 @@
         </button>
     </div>
 
-    <!-- ── Logout blocked banner (fixed bottom) ─────────────────────────── -->
+    <!-- ── Logout blocked banner ──────── -->
     <div id="logout-banner">
         ⛔ You cannot log out until you dispose the current call.
     </div>
 
-    <!-- ── Main app ─────────────────────────────────────────────────────── -->
+    <!-- ── Main app ───────────────────── -->
     <div id="agent-app" data-agent-id="{{ agent.id }}" data-status="{{ agent_status.status }}">
 
+        <!-- ══ HEADER ══════════════════════════════════════════════════════ -->
         <header class="agent-header">
-            <div>
-                <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
-                <p class="agent-subtitle">
-                    WebRTC Agent — {{ assigned_campaigns|length }} campaign{{ assigned_campaigns|length|pluralize }}
-                    assigned
-                </p>
-                <a href="{% url 'agents:call_history_page' %}"
-                    style="display:inline-block;margin-top:8px;font-size:.78rem;font-weight:600;color:var(--accent);border:1px solid var(--border);padding:4px 10px;border-radius:4px;text-decoration:none;">
+            <div class="header-left">
+                <div class="header-brand">
+                    <div class="header-brand-icon">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+                    <div>
+                        <h1>Welcome back, {{ agent.first_name|default:agent.username }} 👋</h1>
+                        <p class="agent-subtitle">
+                            WebRTC Agent — {{ assigned_campaigns|length }} campaign{{ assigned_campaigns|length|pluralize }} assigned
+                        </p>
+                    </div>
+                </div>
+                <a href="{% url 'agents:call_history_page' %}" class="header-link">
                     <i class="fas fa-history"></i> Call History
                 </a>
             </div>
@@ -1072,157 +1225,15 @@
             </div>
         </header>
 
+        <!-- ══ 3-COLUMN LAYOUT ════════════════════════════════════════════ -->
         <main class="agent-layout">
 
-            <!-- ── LEFT: Availability + Call Info ─────────────────────── -->
-            <section class="panel">
-                <h2>Availability</h2>
-                <p class="agent-subtitle">Update your state so the dialer knows when to connect calls.</p>
-                <div class="status-actions" id="status-actions">
-                    <button class="status-chip" data-set-status="available"><i class="fa-solid fa-headset"></i>
-                        Available</button>
-                    <button class="status-chip" data-set-status="break"><i class="fa-solid fa-mug-hot"></i>
-                        Break</button>
-                    <button class="status-chip" data-set-status="lunch"><i class="fa-solid fa-utensils"></i>
-                        Lunch</button>
-                    <button class="status-chip" data-set-status="training"><i class="fa-solid fa-graduation-cap"></i>
-                        Training</button>
-                    <button class="status-chip" data-set-status="meeting"><i class="fa-solid fa-people-group"></i>
-                        Meeting</button>
-                    <button class="status-chip" data-set-status="offline"><i class="fa-solid fa-power-off"></i>
-                        Offline</button>
-                </div>
-
-                <!-- ── Status & Login timer — mirrors realtime monitor exactly ── -->
-                <div class="status-timer-widget">
-                    <div class="stw-cell">
-                        <label><i class="fas fa-clock"></i> Status Time</label>
-                        <div class="stw-timer t-status" id="stw-status-timer">—</div>
-                        <div class="stw-sub" id="stw-status-label">Loading…</div>
-                    </div>
-                    <div class="stw-cell">
-                        <label><i class="fas fa-sign-in-alt"></i> Login Time Today</label>
-                        <div class="stw-timer t-login" id="stw-login-timer">—</div>
-                        <div class="stw-sub" id="stw-login-since">—</div>
-                    </div>
-                </div>
-
-                <div class="grid-two">
-                    <div class="info-card">
-                        <label>Extension</label>
-                        <strong>{{ phone_info.extension|default:"N/A" }}</strong>
-                        <p id="reg-text" style="color:var(--success);font-size:.75rem;margin-top:.25rem;">Connecting…
-                        </p>
-                    </div>
-                    <div class="info-card">
-                        <label>Campaign</label>
-                        <strong>{{ current_campaign.name|default:"None" }}</strong>
-                    </div>
-                    <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls }}</strong></div>
-                    <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls }}</strong></div>
-                </div>
-
-                <div class="tab-container">
-                    <div class="tab-buttons">
-                        <button class="tab-btn active" data-tab="call-info">Call Info</button>
-                        <button class="tab-btn" data-tab="lead">Lead</button>
-                        <button class="tab-btn" data-tab="scripts">Scripts</button>
-                        <button class="tab-btn" data-tab="notes">Notes</button>
-                    </div>
-
-                    <div class="tab-pane active" id="tab-call-info">
-                        <div class="call-panel">
-                            <div class="call-header">
-                                <h3>Current Call</h3>
-                                <span class="call-badge idle" id="call-badge">
-                                    <i class="fa-solid fa-phone-slash"></i> No Active Call
-                                </span>
-                            </div>
-                            <div id="call-placeholder" class="call-placeholder">
-                                <i class="fa-solid fa-headset"></i>
-                                <p>Waiting for a call…</p>
-                                <p class="agent-subtitle" style="margin-top:.375rem;">Set status to
-                                    <strong>Available</strong> to receive calls.
-                                </p>
-                            </div>
-                            <div id="call-details" style="display:none;">
-                                <div class="call-meta">
-                                    <div><label>Number</label><strong id="call-number">—</strong></div>
-                                    <div><label>Duration</label><strong id="call-duration">00:00</strong></div>
-                                    <div><label>Status</label><strong id="call-status-text">—</strong></div>
-                                    <div><label>Lead</label><strong id="call-lead-name">—</strong></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-lead">
-                        <div class="lead-card">
-                            <div class="lead-card__header">
-                                <strong id="lead-name">No lead loaded</strong>
-                                <span class="lead-pill" id="lead-status">—</span>
-                            </div>
-                            <div class="grid-two" style="margin-top:0;">
-                                <div><label>Phone</label><strong id="lead-phone">—</strong></div>
-                                <div><label>Email</label><strong id="lead-email">—</strong></div>
-                                <div><label>Company</label><strong id="lead-company">—</strong></div>
-                                <div><label>City</label><strong id="lead-city">—</strong></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-scripts">
-                        <div class="call-panel">
-                            <h3>Call Script</h3>
-                            <pre
-                                style="white-space:pre-wrap;font-size:.875rem;line-height:1.6;">{{ script_content|default:"No script available." }}</pre>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane" id="tab-notes">
-                        <div class="call-panel">
-                            <h3>Quick Notes</h3>
-                            <textarea class="note-input" id="agent-notes" placeholder="e.g. Customer asked for pricing…"
-                                style="min-height:280px;margin-top:.75rem;"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ── CENTER: Callbacks + Performance ────────────────────── -->
-            <section class="panel">
-                <h2>Callbacks</h2>
-                {% if pending_callbacks %}
-                {% for cb in pending_callbacks %}
-                <div class="info-card" style="margin-bottom:.5rem;">
-                    <label>{{ cb.scheduled_time|date:"M d, H:i" }}</label>
-                    <strong>{{ cb.lead.first_name }} {{ cb.lead.last_name }} — {{ cb.lead.phone_number }}</strong>
-                </div>
-                {% endfor %}
-                {% else %}
-                <p class="agent-subtitle" style="margin-bottom:1rem;">No pending callbacks.</p>
-                {% endif %}
-
-                <h2 style="margin-top:1.5rem;">Today's Performance</h2>
-                <div class="grid-two" style="margin-top:.75rem;">
-                    <div class="info-card"><label>Total Calls</label><strong>{{ today_stats.total_calls }}</strong>
-                    </div>
-                    <div class="info-card"><label>Answered</label><strong>{{ today_stats.answered_calls }}</strong>
-                    </div>
-                    <div class="info-card"><label>Talk Time</label><strong>{{ today_stats.talk_time }}s</strong></div>
-                    <div class="info-card">
-                        <label>Contact Rate</label>
-                        <strong>
-                            {% if today_stats.total_calls > 0 %}{{ today_stats.answered_calls }}%{% else %}0%{% endif %}
-                        </strong>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ── RIGHT: WebRTC Phone ────────────────────────────────── -->
-            <section class="panel">
+            <!-- ── LEFT: WebRTC Phone ──────────────────────────────────── -->
+            <section class="sidebar-phone panel">
+                <h2>Phone</h2>
                 <div class="retro-phone">
                     <div class="phone-brand">EASYIAN PHONE</div>
+                    <div class="phone-model">WebRTC Softphone v3.0</div>
 
                     <div class="webrtc-status">
                         <span class="webrtc-dot" id="webrtc-dot"></span>
@@ -1260,26 +1271,197 @@
                     </div>
 
                     <div class="phone-controls">
-                        <button class="ctrl-btn call" id="btn-call" disabled><i class="fa-solid fa-phone"></i>
-                            CALL</button>
-                        <button class="ctrl-btn hangup" id="btn-hangup" style="display:none;"><i
-                                class="fa-solid fa-phone-slash"></i> HANG UP</button>
+                        <button class="ctrl-btn call" id="btn-call" disabled><i class="fa-solid fa-phone"></i> CALL</button>
+                        <button class="ctrl-btn hangup" id="btn-hangup" style="display:none;"><i class="fa-solid fa-phone-slash"></i> HANG UP</button>
                     </div>
 
                     <div class="phone-extras">
-                        <button class="extra-btn" id="btn-mute" disabled><i class="fa-solid fa-microphone"></i>
-                            Mute</button>
+                        <button class="extra-btn" id="btn-mute" disabled><i class="fa-solid fa-microphone"></i> Mute</button>
                         <button class="extra-btn" id="btn-hold" disabled><i class="fa-solid fa-pause"></i> Hold</button>
-                        <button class="extra-btn" id="btn-transfer" disabled><i class="fa-solid fa-right-left"></i>
-                            Xfer</button>
+                        <button class="extra-btn" id="btn-transfer" disabled><i class="fa-solid fa-right-left"></i> Xfer</button>
                         <button class="extra-btn" id="btn-clear"><i class="fa-solid fa-delete-left"></i> Clear</button>
                     </div>
                 </div>
             </section>
-        </main>
-    </div><!-- /#agent-app -->
 
-    <!-- ── Disposition overlay (cannot dismiss during wrapup) ────────────── -->
+            <!-- ── CENTER: Call Details + Tabs ─────────────────────────── -->
+            <section class="main-content panel">
+                <h2>Call Details</h2>
+
+                <!-- Call Spotlight -->
+                <div class="call-spotlight">
+                    <div class="call-spotlight-header">
+                        <span class="call-spotlight-title"><i class="fa-solid fa-phone-volume"></i> &nbsp;Current Call</span>
+                        <span class="call-badge idle" id="call-badge">
+                            <i class="fa-solid fa-phone-slash"></i> No Active Call
+                        </span>
+                    </div>
+                    <div id="call-placeholder" class="call-placeholder">
+                        <i class="fa-solid fa-headset"></i>
+                        <p>Waiting for a call…</p>
+                        <p class="agent-subtitle" style="margin-top:6px;">Set status to <strong>Available</strong> to receive calls.</p>
+                    </div>
+                    <div id="call-details" style="display:none;">
+                        <div class="call-meta">
+                            <div><label>Number</label><strong id="call-number">—</strong></div>
+                            <div><label>Duration</label><strong id="call-duration">00:00</strong></div>
+                            <div><label>Status</label><strong id="call-status-text">—</strong></div>
+                            <div><label>Lead</label><strong id="call-lead-name">—</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tab-container">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="call-info">Call Info</button>
+                        <button class="tab-btn" data-tab="lead">Lead</button>
+                        <button class="tab-btn" data-tab="scripts">Scripts</button>
+                        <button class="tab-btn" data-tab="notes">Notes</button>
+                    </div>
+
+                    <div class="tab-pane active" id="tab-call-info">
+                        <div class="call-panel">
+                            <h3><i class="fa-solid fa-chart-simple"></i> &nbsp;Extension & Stats</h3>
+                            <div class="grid-two">
+                                <div class="info-card">
+                                    <label>Extension</label>
+                                    <strong>{{ phone_info.extension|default:"N/A" }}</strong>
+                                    <p id="reg-text" style="color:var(--success);font-size:.72rem;margin-top:4px;">Connecting…</p>
+                                </div>
+                                <div class="info-card">
+                                    <label>Campaign</label>
+                                    <strong>{{ current_campaign.name|default:"None" }}</strong>
+                                </div>
+                                <div class="info-card"><label>Calls Today</label><strong id="stat-calls">{{ today_stats.total_calls }}</strong></div>
+                                <div class="info-card"><label>Answered</label><strong id="stat-ans">{{ today_stats.answered_calls }}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-lead">
+                        <div class="lead-card">
+                            <div class="lead-card__header">
+                                <strong id="lead-name">No lead loaded</strong>
+                                <span class="lead-pill" id="lead-status">—</span>
+                            </div>
+                            <div class="grid-two" style="margin-top:0;">
+                                <div class="info-card"><label>Phone</label><strong id="lead-phone">—</strong></div>
+                                <div class="info-card"><label>Email</label><strong id="lead-email">—</strong></div>
+                                <div class="info-card"><label>Company</label><strong id="lead-company">—</strong></div>
+                                <div class="info-card"><label>City</label><strong id="lead-city">—</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-scripts">
+                        <div class="call-panel">
+                            <h3><i class="fa-solid fa-scroll"></i> &nbsp;Call Script</h3>
+                            <pre style="white-space:pre-wrap;font-size:.875rem;line-height:1.7;font-family:'Outfit',sans-serif;color:var(--text-sec);">{{ script_content|default:"No script available." }}</pre>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-notes">
+                        <div class="call-panel">
+                            <h3><i class="fa-solid fa-sticky-note"></i> &nbsp;Quick Notes</h3>
+                            <textarea class="note-input" id="agent-notes" placeholder="e.g. Customer asked for pricing…"
+                                style="min-height:200px;margin-top:10px;"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── RIGHT SIDEBAR: Status, Timers, Callbacks ────────────── -->
+            <section class="sidebar-info panel">
+                <h2>Info</h2>
+
+                <!-- Availability -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fas fa-signal"></i> Availability</div>
+                    <div class="status-actions" id="status-actions">
+                        <button class="status-chip" data-set-status="available"><i class="fa-solid fa-headset"></i> Available</button>
+                        <button class="status-chip" data-set-status="break"><i class="fa-solid fa-mug-hot"></i> Break</button>
+                        <button class="status-chip" data-set-status="lunch"><i class="fa-solid fa-utensils"></i> Lunch</button>
+                        <button class="status-chip" data-set-status="training"><i class="fa-solid fa-graduation-cap"></i> Training</button>
+                        <button class="status-chip" data-set-status="meeting"><i class="fa-solid fa-people-group"></i> Meeting</button>
+                        <button class="status-chip" data-set-status="offline"><i class="fa-solid fa-power-off"></i> Offline</button>
+                    </div>
+                </div>
+
+                <!-- Campaign Selector -->
+                {% if assigned_campaigns_list|length > 0 %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fas fa-bullhorn"></i> Campaign</div>
+                    <div class="campaign-selector" id="campaign-selector-panel">
+                        <div class="campaign-selector-row">
+                            <select class="campaign-select" id="campaign-select">
+                                {% for c in assigned_campaigns_list %}
+                                <option value="{{ c.id }}" {% if current_campaign and current_campaign.id == c.id %}selected{% endif %}>
+                                    {{ c.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button class="campaign-switch-btn" id="btn-switch-campaign" onclick="selectCampaign()">
+                                <i class="fas fa-exchange-alt"></i> Switch
+                            </button>
+                        </div>
+                        <p class="campaign-active-label">Currently on:
+                            <strong id="current-campaign-name">{{ current_campaign.name|default:"None" }}</strong>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Timers -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fas fa-clock"></i> Session Timers</div>
+                    <div class="status-timer-widget">
+                        <div class="stw-cell">
+                            <label><i class="fas fa-clock"></i> Status Time</label>
+                            <div class="stw-timer t-status" id="stw-status-timer">—</div>
+                            <div class="stw-sub" id="stw-status-label">Loading…</div>
+                        </div>
+                        <div class="stw-cell">
+                            <label><i class="fas fa-sign-in-alt"></i> Login Time</label>
+                            <div class="stw-timer t-login" id="stw-login-timer">—</div>
+                            <div class="stw-sub" id="stw-login-since">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fas fa-chart-bar"></i> Today's Performance</div>
+                    <div class="stats-grid">
+                        <div class="stat-card"><label>Total Calls</label><strong>{{ today_stats.total_calls }}</strong></div>
+                        <div class="stat-card"><label>Answered</label><strong>{{ today_stats.answered_calls }}</strong></div>
+                        <div class="stat-card"><label>Talk Time</label><strong>{{ today_stats.talk_time }}s</strong></div>
+                        <div class="stat-card">
+                            <label>Contact Rate</label>
+                            <strong>{% if today_stats.total_calls > 0 %}{{ today_stats.answered_calls }}%{% else %}0%{% endif %}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Callbacks -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fas fa-phone-missed"></i> Callbacks</div>
+                    {% if pending_callbacks %}
+                    {% for cb in pending_callbacks %}
+                    <div class="callback-item">
+                        <label>{{ cb.scheduled_time|date:"M d, H:i" }}</label>
+                        <strong>{{ cb.lead.first_name }} {{ cb.lead.last_name }} — {{ cb.lead.phone_number }}</strong>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p style="color:var(--text-muted);font-size:.78rem;">No pending callbacks.</p>
+                    {% endif %}
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ── Disposition overlay ────────────── -->
     <div id="disposition-overlay">
         <div class="disp-modal">
             <h3><i class="fas fa-clipboard-check" style="color:var(--wrapup)"></i> Select Disposition</h3>
@@ -1296,8 +1478,7 @@
                 <button class="disp-btn" data-disp-id="busy" data-disp-name="Busy">Busy</button>
                 <button class="disp-btn" data-disp-id="voicemail" data-disp-name="Voicemail">Voicemail</button>
                 <button class="disp-btn" data-disp-id="dnc" data-disp-name="Do Not Call">Do Not Call</button>
-                <button class="disp-btn" data-disp-id="not_interested" data-disp-name="Not Interested">Not
-                    Interested</button>
+                <button class="disp-btn" data-disp-id="not_interested" data-disp-name="Not Interested">Not Interested</button>
                 <button class="disp-btn" data-disp-id="wrong_number" data-disp-name="Wrong Number">Wrong Number</button>
                 {% endfor %}
             </div>
@@ -1312,7 +1493,6 @@
     <div id="toast"></div>
     <audio id="remote-audio" autoplay playsinline></audio>
 
-    <!-- ICE servers injected safely via json_script ──────────────────────── -->
     {{ webrtc_config.ice_servers|json_script:"webrtc-ice-servers" }}
     <script src="{% static 'js/jssip.min.js' %}"></script>
 
@@ -1335,6 +1515,7 @@
             const URL_WRAPUP_STATE = '{% url "agents:wrapup_state" %}';
             const URL_CAN_LOGOUT = '{% url "agents:can_logout" %}';
             const URL_STATUS_INFO = '{% url "agents:status_info" %}';
+            const URL_SELECT_CAMPAIGN = '{% url "agents:select_campaign" %}';
             const CSRF = '{{ csrf_token }}';
             const AGENT_ID = '{{ agent.id }}';
 
@@ -1371,18 +1552,19 @@
             let ua = null, session = null;
             let dialNum = '', callSec = 0, callTimer = null;
             let muted = false, held = false, autoAns = false;
-            let callId = null;           // current call DB id
-            let selDispId = null;      // selected disposition id
-            let selDispName = null;      // selected disposition name
-            let inWrapup = false;     // true → must dispose before anything
+            let callId = null;
+            let lastKnownCallId = null;
+            let pendingCallId = null;
+            let agentInitiatedHangup = false;
+            let selDispId = null;
+            let selDispName = null;
+            let inWrapup = false;
 
             // ── Status / login timer state ─────────────────────────────────────────
-            // Both timers tick from an absolute Unix-ms anchor, exactly like the
-            // realtime monitor — so they always agree, even after page refresh.
-            let _stwSkewMs = 0;       // server time − client time (ms)
-            let _stwStatusMs = null;    // Unix ms when current status started
-            let _stwLoginMs = null;    // Unix ms of first login today
-            let _stwTick = null;    // setInterval handle
+            let _stwSkewMs = 0;
+            let _stwStatusMs = null;
+            let _stwLoginMs = null;
+            let _stwTick = null;
 
             // ── DOM shortcuts ──────────────────────────────────────────────────────
             const $ = id => document.getElementById(id);
@@ -1476,7 +1658,7 @@
                 setPhoneStatus(ua && ua.isRegistered() ? 'READY' : 'OFFLINE');
             }
 
-            // ── Status / Login timer (mirrors realtime monitor) ────────────────────
+            // ── Status / Login timer ────────────────────
             function _stwFmt(secs) {
                 secs = Math.max(0, Math.floor(secs));
                 const h = Math.floor(secs / 3600);
@@ -1503,58 +1685,56 @@
             }
 
             function initStatusTimers() {
-                // Fetch accurate timestamps from server DB — same source as realtime monitor
                 fetch(URL_STATUS_INFO, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': CSRF }
                 })
                     .then(r => r.json())
                     .then(d => {
-                        if (!d.success) return;
-
-                        // Compute clock skew so our tick stays in sync with server
+                        console.log('[initStatusTimers] response', d);
+                        if (!d.success) {
+                            const statusLabelEl = document.getElementById('stw-status-label');
+                            if (statusLabelEl) statusLabelEl.textContent = 'Status unavailable';
+                            return;
+                        }
                         if (d.server_time_ms) _stwSkewMs = d.server_time_ms - Date.now();
-
                         _stwStatusMs = d.status_changed_at_ms || null;
                         _stwLoginMs = d.login_at_ms || null;
-
-                        // Labels
                         const statusLabelEl = document.getElementById('stw-status-label');
                         if (statusLabelEl) statusLabelEl.textContent = d.status_display || d.status || '';
-
                         const loginSinceEl = document.getElementById('stw-login-since');
                         if (loginSinceEl && _stwLoginMs) {
                             loginSinceEl.textContent = 'since ' + new Date(_stwLoginMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         }
-
-                        // Start ticking (one shared interval for both timers)
                         if (_stwTick) clearInterval(_stwTick);
                         _stwTick = setInterval(_stwTick_fn, 1000);
-                        _stwTick_fn(); // immediate first tick
+                        _stwTick_fn();
                     })
-                    .catch(() => { });
+                    .catch(err => {
+                        console.error('[initStatusTimers] fetch error', err);
+                        const statusLabelEl = document.getElementById('stw-status-label');
+                        if (statusLabelEl) statusLabelEl.textContent = 'Status load failed';
+                    });
             }
 
             function refreshStatusTimer(newStatus, newStatusDisplay) {
-                // Called immediately after a successful status change API call
-                // Re-fetch from DB to get accurate AgentTimeLog.started_at timestamp.
                 initStatusTimers();
             }
-
-
 
             // ── Wrapup state ───────────────────────────────────────────────────────
             function enterWrapup(cid) {
                 inWrapup = true;
-                if (cid) callId = cid;
+                if (cid) { callId = cid; lastKnownCallId = cid; }
+                try { sessionStorage.setItem('wrapup_call_id', callId || ''); } catch (_) { }
                 wrapupBar.classList.add('visible');
                 logoutBanner.classList.add('visible');
                 document.body.style.paddingTop = '52px';
-                // Block status chips during wrapup
                 document.querySelectorAll('.status-chip').forEach(b => b.disabled = true);
-                // Update call badge
+                _updateCampaignSelectorState();
                 callBadge.className = 'call-badge wrapup';
-                callBadge.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Wrap-up';
-                // Sync the status timer to wrapup start
+                callBadge.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Wrap-up — Dispose Required';
+                callPlaceholder.style.display = 'none';
+                callDetails.style.display = 'block';
+                $('call-status-text').textContent = 'Wrap-up';
                 refreshStatusTimer('wrapup', 'Wrap-up');
                 openDisposition();
             }
@@ -1562,11 +1742,14 @@
             function exitWrapup() {
                 inWrapup = false;
                 callId = null;
+                lastKnownCallId = null;
+                agentInitiatedHangup = false;
+                try { sessionStorage.removeItem('wrapup_call_id'); } catch (_) { }
                 wrapupBar.classList.remove('visible');
                 logoutBanner.classList.remove('visible');
                 document.body.style.paddingTop = '';
                 document.querySelectorAll('.status-chip').forEach(b => b.disabled = false);
-                // Refresh timers from server to get accurate post-disposition state
+                _updateCampaignSelectorState();
                 setTimeout(initStatusTimers, 400);
                 resetCallUI();
             }
@@ -1587,13 +1770,10 @@
 
             function saveDisposition() {
                 if (!selDispId) { toast('Please select a disposition', 'warning'); return; }
-
                 const saveBtn = $('btn-save-disp');
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
-
                 const notes = $('disp-notes').value;
-
                 post(URL_DISP, {
                     call_id: callId || '',
                     disposition_id: selDispId,
@@ -1615,31 +1795,152 @@
                 });
             }
 
-            // ── Heartbeat — zombie prevention ─────────────────────────────────────
+            // ── Campaign selector ──────────────────────────────────────────────────
+            function selectCampaign() {
+                const sel = $('campaign-select');
+                const btn = $('btn-switch-campaign');
+                if (!sel || !btn) return;
+                const campaignId = sel.value;
+                if (!campaignId) return;
+                if (inWrapup) {
+                    toast('Dispose the current call before switching campaigns', 'warning');
+                    return;
+                }
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Switching…';
+                post(URL_SELECT_CAMPAIGN, { campaign_id: campaignId })
+                    .then(r => {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Switch';
+                        if (r.success) {
+                            const nameEl = $('current-campaign-name');
+                            if (nameEl) nameEl.textContent = r.campaign_name;
+                            document.querySelectorAll('.info-card strong').forEach(el => {
+                                if (el.closest('.info-card')?.querySelector('label')?.textContent?.includes('Campaign')) {
+                                    el.textContent = r.campaign_name;
+                                }
+                            });
+                            if (r.dispositions && r.dispositions.length) {
+                                const grid = $('disp-grid');
+                                if (grid) {
+                                    grid.innerHTML = r.dispositions.map(d =>
+                                        `<button class="disp-btn" data-disp-id="${d.id}" data-disp-name="${d.name.replace(/"/g, '&quot;')}">${d.name}</button>`
+                                    ).join('');
+                                    grid.querySelectorAll('.disp-btn').forEach(b => {
+                                        b.onclick = function () {
+                                            grid.querySelectorAll('.disp-btn').forEach(x => x.classList.remove('selected'));
+                                            this.classList.add('selected');
+                                            selDispId = this.dataset.dispId;
+                                            selDispName = this.dataset.dispName;
+                                            $('btn-save-disp').disabled = false;
+                                        };
+                                    });
+                                }
+                            }
+                            toast(`Switched to campaign: ${r.campaign_name}`, 'success');
+                        } else {
+                            toast(r.error || 'Campaign switch failed', 'error');
+                        }
+                    })
+                    .catch(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Switch';
+                        toast('Network error switching campaign', 'error');
+                    });
+            }
+
+            function _updateCampaignSelectorState() {
+                const sel = $('campaign-select');
+                const btn = $('btn-switch-campaign');
+                const disabled = inWrapup || (session !== null);
+                if (sel) sel.disabled = disabled;
+                if (btn) btn.disabled = disabled;
+            }
+
+            // ── Heartbeat ─────────────────────────────────────────────────────────
             function startHeartbeat() {
                 const beat = () => post(URL_HEARTBEAT).catch(() => { });
                 beat();
                 setInterval(beat, 30000);
             }
 
-            // ── Restore wrapup state on page load ─────────────────────────────────
-            function checkWrapupOnLoad() {
-                fetch(URL_WRAPUP_STATE, { headers: { 'X-CSRFToken': CSRF } })
+            // ── MASTER DB SYNC LOOP (moved to outer scope so other functions can call it)
+            let _syncBusy = false;
+            function syncFromDB() {
+                if (_syncBusy) return;
+                _syncBusy = true;
+                fetch(URL_CALL_STATUS, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(r => r.json())
                     .then(d => {
-                        if (d.needs_disposition) {
-                            callId = d.call_id;
-                            enterWrapup(d.call_id);
-                            toast('⚠️ Please dispose your pending call', 'warning');
+                        _syncBusy = false;
+                        if (!d.success) return;
+
+                        const dbStatus = d.status;
+                        const dbCall = d.current_call;
+                        const needsDisp = d.needs_disposition;
+                        const wrapCallId = d.wrapup_call_id;
+
+                        if (statusPill && d.display) statusPill.textContent = d.display;
+                        document.querySelectorAll('.status-chip').forEach(b => {
+                            b.classList.toggle('is-active', b.dataset.setStatus === dbStatus);
+                            b.disabled = needsDisp;
+                        });
+
+                        if (needsDisp && !inWrapup) {
+                            const wid = wrapCallId || (dbCall && String(dbCall.id)) || lastKnownCallId;
+                            if (wid) {
+                                console.log('[syncFromDB] Entering wrapup for call', wid);
+                                callId = wid;
+                                lastKnownCallId = wid;
+                                try { sessionStorage.setItem('wrapup_call_id', wid); } catch (_) { }
+                                inWrapup = true;
+                                wrapupBar.classList.add('visible');
+                                logoutBanner.classList.add('visible');
+                                document.body.style.paddingTop = '52px';
+                                callBadge.className = 'call-badge wrapup';
+                                callBadge.innerHTML = '<i class="fa-solid fa-clipboard-check"></i> Wrap-up — Dispose Required';
+                                if (callPlaceholder) callPlaceholder.style.display = 'none';
+                                if (callDetails) callDetails.style.display = 'block';
+                                $('call-status-text').textContent = 'Wrap-up';
+                                if (dbCall) {
+                                    $('call-number').textContent = dbCall.number || '—';
+                                    if (dbCall.lead_id) fetchLead(dbCall.lead_id);
+                                }
+                                refreshStatusTimer('wrapup', 'Wrap-up');
+                                openDisposition();
+                            }
+                        } else if (!needsDisp && inWrapup) {
+                            console.log('[syncFromDB] Exiting wrapup (server cleared)');
+                            exitWrapup();
                         }
-                        if (d.status) {
-                            // Sync the status chip
-                            document.querySelectorAll('.status-chip').forEach(b => {
-                                b.classList.toggle('is-active', b.dataset.setStatus === d.status);
-                            });
+
+                        if (dbStatus === 'busy' && dbCall && !inWrapup) {
+                            if (!callId) { callId = String(dbCall.id); lastKnownCallId = String(dbCall.id); }
+                            $('call-number').textContent = dbCall.number || '—';
+                            if (dbCall.lead_id) fetchLead(dbCall.lead_id);
+                            if (callPlaceholder) callPlaceholder.style.display = 'none';
+                            if (callDetails) callDetails.style.display = 'block';
+                        }
+
+                        if (!needsDisp && !inWrapup && !dbCall && !session) {
+                            if (callDetails && callDetails.style.display === 'block') {
+                                resetCallUI();
+                            }
                         }
                     })
-                    .catch(() => { });
+                    .catch(() => { _syncBusy = false; });
+            }
+
+            // ── Restore wrapup on load ────────────────────────────────────────────
+            function checkWrapupOnLoad() {
+                try {
+                    const storedId = sessionStorage.getItem('wrapup_call_id');
+                    if (storedId) {
+                        callId = storedId;
+                        lastKnownCallId = storedId;
+                    }
+                } catch (_) { }
+                syncFromDB();
             }
 
             // ── Intercept logout ──────────────────────────────────────────────────
@@ -1653,7 +1954,6 @@
                             openDisposition();
                             return false;
                         }
-                        // Server-side double-check
                         fetch(URL_CAN_LOGOUT, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                             .then(r => r.json())
                             .then(d => {
@@ -1666,7 +1966,6 @@
                             .catch(() => { });
                     });
                 });
-
                 window.addEventListener('beforeunload', e => {
                     if (inWrapup) {
                         e.preventDefault();
@@ -1742,26 +2041,27 @@
                 }
             }
 
-// ── Session handling ──────────────────────────────────────────────────
+            // ── Session handling ──────────────────────────────────────────────────
             function handleSession(e) {
                 const s = e.session;
                 const dir = s.direction;
-
-                // Reject new incoming if already in a call
                 if (session) {
                     if (dir === 'incoming') s.terminate({ status_code: 486 });
                     return;
                 }
                 session = s;
+                agentInitiatedHangup = false;
+                if (pendingCallId && !callId) {
+                    callId = pendingCallId;
+                    lastKnownCallId = pendingCallId;
+                }
 
-                // Attach remote audio stream
                 s.on('peerconnection', pc => {
                     pc.peerconnection.addEventListener('track', ev => {
                         if (ev.streams?.[0]) remAudio.srcObject = ev.streams[0];
                     });
                 });
 
-                // Ringing / Progress
                 s.on('progress', () => {
                     setPhoneStatus(dir === 'incoming' ? 'RINGING…' : 'CALLING…');
                     callBadge.className = 'call-badge ringing';
@@ -1769,7 +2069,6 @@
                     $('call-status-text').textContent = dir === 'incoming' ? 'Incoming' : 'Ringing';
                 });
 
-                // Accepted
                 s.on('accepted', () => {
                     setPhoneStatus('CONNECTED');
                     callBadge.className = 'call-badge connected';
@@ -1779,40 +2078,33 @@
                     startTimer();
                 });
 
-                // Confirmed (media flowing)
                 s.on('confirmed', () => {
                     setPhoneStatus('CONNECTED');
                     setCallUI(true);
                     if (!callTimer) startTimer();
                 });
 
-                // End / Fail
-                s.on('ended', () => endSession('Call ended'));
+                s.on('ended', (ev) => {
+                    const cause = ev?.cause || '';
+                    endSession('Call ended' + (cause ? ': ' + cause : ''));
+                });
                 s.on('failed', ev => endSession('Failed: ' + (ev.cause || '')));
 
-                // Show caller info
                 const rNum = s.remote_identity?.uri?.user || dialNum || 'Unknown';
                 $('call-number').textContent = rNum;
                 numDisp.textContent = rNum;
+                $('call-status-text').textContent = 'Connecting…';
                 setCallUI(true);
 
-                // ── INCOMING CALL LOGIC ───────────────────────────────────────────
                 if (dir === 'incoming') {
                     setPhoneStatus('INCOMING: ' + rNum);
-
-                    // ⭐ PRODUCTION SAFE AUTO-ANSWER
                     if (autoAns) {
                         toast('Auto-answering…', 'info');
-
                         let attempts = 0;
                         const maxAttempts = 10;
-
                         const tryAnswer = () => {
                             if (!session) return;
-
-                            // Only answer when call still incoming
                             if (session.direction !== 'incoming') return;
-
                             try {
                                 session.answer({
                                     mediaConstraints: { audio: true, video: false },
@@ -1821,13 +2113,10 @@
                             } catch (err) {
                                 attempts++;
                                 if (attempts < maxAttempts) {
-                                    // retry after short delay
                                     setTimeout(tryAnswer, 250);
                                 } else {
                                     console.warn('Auto-answer failed after retries:', err);
                                     toast('Auto-answer failed, manual answer required', 'warning');
-
-                                    // fallback to manual answer UI
                                     btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> ANSWER';
                                     btnCall.style.display = 'flex';
                                     btnCall.disabled = false;
@@ -1835,13 +2124,8 @@
                                 }
                             }
                         };
-
-                        // small delay so SDP + ICE ready
                         setTimeout(tryAnswer, 350);
-                    }
-
-                    // Manual answer UI
-                    else {
+                    } else {
                         btnCall.innerHTML = '<i class="fa-solid fa-phone"></i> ANSWER';
                         btnCall.style.display = 'flex';
                         btnCall.disabled = false;
@@ -1851,20 +2135,14 @@
             }
 
             function endSession(reason) {
-                console.log('[WebRTC] Session ended:', reason);
-                const endedCallId = callId;
+                console.log('[WebRTC] SIP session ended:', reason);
                 session = null;
+                pendingCallId = null;
+                agentInitiatedHangup = false;
                 stopTimer();
                 dialNum = ''; updNumDisp();
                 toast(reason, 'info');
-
-                // Enter wrapup so agent must dispose before continuing
-                if (endedCallId) {
-                    enterWrapup(endedCallId);
-                } else {
-                    resetCallUI();
-                    setPhoneStatus('READY');
-                }
+                setTimeout(syncFromDB, 800);
             }
 
             // ── Call actions ──────────────────────────────────────────────────────
@@ -1903,11 +2181,26 @@
             }
 
             function hangupCall() {
-                if (session) {
-                    try { session.terminate(); } catch (e) { console.warn(e); }
-                }
-                if (callId) {
-                    post(URL_HANGUP, { call_id: callId }).catch(() => { });
+                agentInitiatedHangup = true;
+                const cid = callId || lastKnownCallId || pendingCallId;
+                const doSipHangup = () => {
+                    if (session) try { session.terminate(); } catch (e) { console.warn(e); }
+                };
+                if (cid) {
+                    post(URL_HANGUP, { call_id: cid })
+                        .then(r => {
+                            console.log('[WebRTC] Backend hangup OK:', r);
+                            doSipHangup();
+                            setTimeout(syncFromDB, 500);
+                        })
+                        .catch(err => {
+                            console.warn('[WebRTC] Backend hangup failed (still terminating SIP):', err);
+                            doSipHangup();
+                            setTimeout(syncFromDB, 800);
+                        });
+                } else {
+                    doSipHangup();
+                    setTimeout(syncFromDB, 800);
                 }
             }
 
@@ -1960,7 +2253,12 @@
                 const t = d.type || '';
 
                 if (t === 'call_incoming' || t === 'call_started' || t === 'call_connecting') {
-                    callId = d.call_id || d.call?.id || null;
+                    const wsCallId = d.call_id || d.call?.id || null;
+                    if (wsCallId) {
+                        callId = String(wsCallId);
+                        lastKnownCallId = String(wsCallId);
+                        pendingCallId = String(wsCallId);
+                    }
                     const num = d.phone_number || d.call?.number || d.called_number || '';
                     if (num) { $('call-number').textContent = num; numDisp.textContent = num; }
                     if (d.lead_id || d.call?.lead_id) fetchLead(d.lead_id || d.call.lead_id);
@@ -1971,35 +2269,57 @@
                 }
 
                 if (t === 'call_connected' || t === 'call_update') {
-                    callId = d.call_id || d.call?.id || callId;
+                    const connCallId = d.call_id || d.call?.id || callId;
+                    if (connCallId) { callId = String(connCallId); lastKnownCallId = String(connCallId); }
                     callBadge.className = 'call-badge connected';
                     callBadge.innerHTML = '<i class="fa-solid fa-phone"></i> Connected';
                     $('call-status-text').textContent = 'Connected';
                 }
 
                 if (t === 'call_ended') {
-                    const cid = d.call_id || callId;
-                    if (cid && !session) { callId = cid; enterWrapup(cid); }
+                    console.log('[WS] call_ended received', d);
+                    const wid = d.wrapup_call_id || d.call_id;
+                    if (wid) {
+                        callId = String(wid);
+                        lastKnownCallId = String(wid);
+                        try { sessionStorage.setItem('wrapup_call_id', callId); } catch (_) { }
+                    }
+                    if (d.needs_disposition && wid && !inWrapup) {
+                        console.log('[WS] Entering wrapup directly from call_ended payload');
+                        enterWrapup(callId);
+                    } else {
+                        setTimeout(syncFromDB, 300);
+                    }
                 }
 
                 if (t === 'call_cleared') {
-                    // Server confirmed disposition saved — exit wrapup
                     exitWrapup();
                     dispOverlay.classList.remove('visible');
                 }
 
                 if (t === 'status_update' || t === 'status_changed') {
-                    const st = d.status || d.display || '';
-                    statusPill.textContent = d.display || st;
+                    const st = d.status || '';
+                    if (statusPill && d.display) statusPill.textContent = d.display;
                     document.querySelectorAll('.status-chip').forEach(b => {
                         b.classList.toggle('is-active', b.dataset.setStatus === st);
                     });
-                    // Re-fetch timer from DB to get accurate AgentTimeLog.started_at
                     initStatusTimers();
+                    if (typeof d.needs_disposition !== 'undefined') {
+                        if (d.needs_disposition && !inWrapup) {
+                            const wid = d.wrapup_call_id || callId || lastKnownCallId;
+                            if (wid) {
+                                callId = wid; lastKnownCallId = wid;
+                                syncFromDB();
+                            }
+                        } else if (!d.needs_disposition && inWrapup) {
+                            exitWrapup();
+                        }
+                    } else {
+                        syncFromDB();
+                    }
                 }
 
                 if (t === 'force_logout') {
-                    // Supervisor forced logout — show message then redirect to logout URL
                     toast('⚠️ ' + (d.reason || 'You have been logged out by a supervisor'), 'warning');
                     setTimeout(() => {
                         window.location.href = '/logout/';
@@ -2035,7 +2355,7 @@
                     localStorage.setItem('theme', t);
                     $('theme-icon').className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
                 };
-                applyTheme(localStorage.getItem('theme') || 'light');
+                applyTheme(localStorage.getItem('theme') || 'dark');
                 $('theme-toggle').onclick = () => {
                     applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
                 };
@@ -2067,7 +2387,6 @@
                                 this.classList.add('is-active');
                                 statusPill.textContent = r.display || st;
                                 toast('Status: ' + (r.display || st), 'success');
-                                // ── Reset status timer from this exact moment ──────
                                 initStatusTimers();
                             } else {
                                 toast(r.error || 'Status update failed', 'error');
@@ -2138,32 +2457,17 @@
                     if (e.key === 'Escape' && session) hangupCall();
                 });
 
-                // Call status poll every 10s
-                setInterval(() => {
-                    fetch(URL_CALL_STATUS, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                        .then(r => r.json())
-                        .then(d => {
-                            if (d.success && d.current_call) {
-                                callId = d.current_call.id;
-                                $('call-number').textContent = d.current_call.number || '—';
-                                if (d.current_call.lead_id) fetchLead(d.current_call.lead_id);
-                                callPlaceholder.style.display = 'none';
-                                callDetails.style.display = 'block';
-                            }
-                            if (d.needs_disposition && !inWrapup) {
-                                enterWrapup(d.wrapup_call_id || callId);
-                            }
-                        })
-                        .catch(() => { });
-                }, 10000);
+                // setInterval(syncFromDB, 15000);  // left inside init() so we start it when init runs
 
                 // Start subsystems
                 initJsSIP();
                 connectWS();
                 startHeartbeat();
+                syncFromDB();
+                setInterval(syncFromDB, 15000);
                 checkWrapupOnLoad();
                 interceptLogout();
-                initStatusTimers();  // seed status/login timers from DB, same as realtime monitor
+                initStatusTimers();
             }
 
             if (document.readyState === 'loading') {

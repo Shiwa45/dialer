@@ -29,6 +29,9 @@ from users.models import AgentStatus
 from telephony.services import AsteriskService
 from users.tracking import get_tracker
 
+# Phase 8.2: AI Worker Integration
+from sarvam.ai_call_handler import AICallHandler
+
 logger = logging.getLogger(__name__)
 
 
@@ -179,8 +182,81 @@ class Command(BaseCommand):
         
         PHASE 1.1 FIX: Send immediate notification when autodial call starts
         PHASE 4.1: Handle AMD results
+        PHASE 8.2: AI Agent Integration Interception
         """
         logger.info(f"StasisStart: channel={chan_id}, call_type={call_type}, lead={lead_id}")
+
+        # ──────────────────────────────────────────────────────────────────
+        # PHASE 8.2: CHECK IF CAMPAIGN IS AI-ENABLED
+        # ──────────────────────────────────────────────────────────────────
+        if campaign_id and call_type in ['autodial', 'outbound']:
+            try:
+                from campaigns.models import Campaign
+                campaign = Campaign.objects.get(id=campaign_id)
+                
+                # Check if AI is enabled for this campaign
+                if campaign.ai_enabled:
+                    logger.info(f"Campaign {campaign_id} is AI-enabled - launching AI handler")
+                    
+                    # Get lead if available
+                    lead = None
+                    if lead_id:
+                        from leads.models import Lead
+                        try:
+                            lead = Lead.objects.get(id=lead_id)
+                        except Lead.DoesNotExist:
+                            pass
+                    
+                    # Create call log (if not exists)
+                    from calls.models import CallLog
+                    call_log, created = CallLog.objects.get_or_create(
+                        channel=chan_id,
+                        defaults={
+                            'campaign_id': campaign_id,
+                            'lead_id': lead_id,
+                            'called_number': customer_number or '',
+                            'call_type': call_type,
+                            'call_status': 'answered',
+                            'handled_by_ai': True,
+                        }
+                    )
+                    
+                    if not created:
+                        call_log.handled_by_ai = True
+                        call_log.save()
+                    
+                    # Get AI configuration
+                    ai_config = campaign.get_ai_config()
+                    
+                    # Create Asterisk service instance
+                    from telephony.services import AsteriskService
+                    asterisk = AsteriskService(server)
+                    
+                    # Launch AI Call Handler
+                    ai_handler = AICallHandler(
+                        asterisk_service=asterisk,
+                        channel_id=chan_id,
+                        call_log=call_log,
+                        lead=lead,
+                        language=ai_config['language'],
+                        agent_name=ai_config['agent_name'],
+                        company_name=ai_config['company_name'],
+                    )
+                    
+                    # Run AI handler asynchronously
+                    asyncio.create_task(ai_handler.start())
+                    
+                    # Update campaign stats
+                    campaign.increment_ai_call_stats()
+                    
+                    # Exit early - AI is handling this call
+                    return
+            
+            except Campaign.DoesNotExist:
+                logger.warning(f"Campaign {campaign_id} not found")
+            except Exception as e:
+                logger.error(f"AI handler launch error: {e}", exc_info=True)
+                # Fall through to regular handling
 
         # Phase 4.1: AMD Handling
         if amd_status:
@@ -651,6 +727,28 @@ class Command(BaseCommand):
             if cl.answer_time:
                 cl.talk_duration = int((cl.end_time - cl.answer_time).total_seconds())
             cl.save()
+            
+            # ──────────────────────────────────────────────────────────────────
+            # PHASE 8.2: Update AI stats if this was an AI call
+            # ──────────────────────────────────────────────────────────────────
+            if getattr(cl, 'handled_by_ai', False) and cl.campaign_id:
+                try:
+                    from campaigns.models import Campaign
+                    campaign = Campaign.objects.filter(id=cl.campaign_id).first()
+                    if campaign:
+                        # Determine if call was successful
+                        success = not cl.ai_requested_transfer
+                        transferred = cl.ai_requested_transfer
+                        appointment_booked = 'book_appointment' in (cl.ai_final_intent or '')
+                        
+                        campaign.increment_ai_call_stats(
+                            success=success,
+                            transferred=transferred,
+                            appointment_booked=appointment_booked,
+                        )
+                        logger.info(f"Updated AI stats for campaign {campaign.id}: success={success}, transferred={transferred}")
+                except Exception as e:
+                    logger.error(f"AI stats update error: {e}")
 
             # Send disposition prompt to agent
             if cl.agent_id:
@@ -667,21 +765,24 @@ class Command(BaseCommand):
                 logger.info(f"Channel destroyed: call_type_param={call_type}, cl.call_type={cl.call_type}, is_customer_call={is_customer_call}")
 
                 if is_customer_call:
-                    # CRITICAL FIX: Update agent status to wrapup immediately
+                    # ── USE set_status() so the enriched WS broadcast fires ──────────
+                    # This sends needs_disposition + wrapup_call_id to the browser
+                    # IMMEDIATELY via WebSocket — the frontend disposition popup opens
+                    # in ~100ms even if SIP BYE was never delivered (network drop, etc.)
                     from users.models import AgentStatus
-                    AgentStatus.objects.filter(user_id=cl.agent_id).update(
-                        status='wrapup',
-                        status_changed_at=timezone.now()
-                    )
-                    logger.info(f"Updated agent {cl.agent_id} status to wrapup after customer call ended")
-                    
-                    # Broadcast status update to UI
-                    self.broadcast_message(cl.agent_id, {
-                        'type': 'status_update',
-                        'status': 'wrapup',
-                        'message': 'Call ended - Please select disposition'
-                    })
-                    
+                    agent_status_obj = AgentStatus.objects.filter(user_id=cl.agent_id).first()
+                    if agent_status_obj:
+                        # Store wrapup_call_id BEFORE set_status so the broadcast includes it
+                        agent_status_obj.wrapup_call_id = str(cl.id)
+                        agent_status_obj.current_call_id = ''
+                        agent_status_obj.save(update_fields=['wrapup_call_id', 'current_call_id'])
+                        # set_status() saves status + calls _broadcast_status_change()
+                        # which pushes {status, needs_disposition, wrapup_call_id} over WS
+                        agent_status_obj.set_status('wrapup')
+                        logger.info(f"set_status(wrapup) called for agent {cl.agent_id}, call {cl.id}")
+                    else:
+                        logger.warning(f"AgentStatus not found for agent {cl.agent_id}")
+
                     # Update AgentDialerSession status
                     try:
                         from agents.models import AgentDialerSession
@@ -694,11 +795,14 @@ class Command(BaseCommand):
                             logger.info(f"Updated AgentDialerSession to wrapup status")
                     except Exception as e:
                         logger.error(f"Error updating AgentDialerSession: {e}")
-                    
-                    # Send call_ended message with force_disconnect flag
+
+                    # Send enriched call_ended broadcast so the frontend can act
+                    # even before the next syncFromDB() poll tick
                     self.broadcast_message(cl.agent_id, {
                         'type': 'call_ended',
-                        'call_id': cl.id,
+                        'call_id': str(cl.id),
+                        'wrapup_call_id': str(cl.id),
+                        'needs_disposition': True,
                         'disposition_needed': True,
                         'force_disconnect': True,
                         'message': 'Call ended - Please select disposition'
@@ -816,23 +920,25 @@ class Command(BaseCommand):
         try:
             # Update agent dialer sessions
             AgentDialerSession.objects.filter(agent_id=agent_id).update(status='offline')
-            
-            # Reset agent status
-            AgentStatus.objects.filter(user_id=agent_id).update(
-                status='available',
-                current_call_id='',
-                call_start_time=None,
-                status_changed_at=timezone.now()
-            )
-            
-            self.broadcast_message(agent_id, {
-                'type': 'status_update',
-                'status': 'available',
-                'message': 'Softphone offline'
-            })
-            
+
+            # Use set_status() so the WS broadcast fires with the correct payload
+            agent_status_obj = AgentStatus.objects.filter(user_id=agent_id).first()
+            if agent_status_obj:
+                agent_status_obj.current_call_id = ''
+                agent_status_obj.call_start_time = None
+                agent_status_obj.save(update_fields=['current_call_id', 'call_start_time'])
+                agent_status_obj.set_status('available')  # triggers enriched WS broadcast
+            else:
+                # Fallback if record missing
+                AgentStatus.objects.filter(user_id=agent_id).update(
+                    status='available',
+                    current_call_id='',
+                    call_start_time=None,
+                    status_changed_at=timezone.now()
+                )
+
             logger.info(f"Cleaned up session for agent {agent_id}")
-            
+
         except Exception as e:
             logger.error(f"Error cleaning up agent session: {e}")
 
@@ -991,6 +1097,25 @@ class Command(BaseCommand):
                     start_time=timezone.now(),
                     answer_time=timezone.now()
                 )
+
+                # ── Gap 2 Fix: upsert AgentDialerSession with the real channel + bridge IDs
+                # so _handle_channel_destroyed can match this agent's leg and
+                # call _cleanup_agent_session() correctly when the call ends.
+                try:
+                    AgentDialerSession.objects.update_or_create(
+                        agent=available.user,
+                        defaults={
+                            'campaign_id': campaign_id,
+                            'asterisk_server': server,
+                            'agent_extension': phone.extension,
+                            'agent_channel_id': orig['channel_id'],
+                            'agent_bridge_id': bridge_id,
+                            'status': 'ready',
+                            'ended_at': None,
+                        }
+                    )
+                except Exception as _sess_err:
+                    logger.warning(f"Could not upsert AgentDialerSession for fallback: {_sess_err}")
 
                 # Mark agent busy
                 available.status = 'busy'

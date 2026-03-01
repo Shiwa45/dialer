@@ -231,7 +231,11 @@ class AgentStatus(TimeStampedModel):
         return self.last_heartbeat < cutoff
 
     def _broadcast_status_change(self, new_status):
-        """Broadcast status update to WebSocket group."""
+        """
+        Broadcast status update to the agent's WebSocket group.
+        Payload is rich enough for the frontend to update ALL UI state immediately
+        without needing a follow-up REST API call.
+        """
         try:
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
@@ -245,11 +249,17 @@ class AgentStatus(TimeStampedModel):
                             'type': 'status_changed',
                             'status': new_status,
                             'display': self.get_status_display(),
+                            # Include these so the frontend can enter/exit wrapup
+                            # without waiting for the next syncFromDB() poll tick.
+                            'needs_disposition': self.needs_disposition(),
+                            'wrapup_call_id': self.wrapup_call_id or '',
+                            'current_call_id': self.current_call_id or '',
                         }
                     }
                 )
         except Exception as e:
             logger.debug(f"WS broadcast skipped: {e}")
+
 
 
 class AgentTimeLog(models.Model):

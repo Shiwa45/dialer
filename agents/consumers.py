@@ -85,6 +85,15 @@ class AgentConsumer(AsyncWebsocketConsumer):
             **event.get('data', {}),
         }))
 
+    async def call_event(self, event):
+        """
+        Relay call.event messages from telephony service to agent browser.
+        Django Channels maps 'type: call.event' → call_event() method.
+        This was MISSING — broadcasts from the dialer engine were silently dropped.
+        """
+        data = event.get('data', {})
+        await self.send(text_data=json.dumps(data))
+
     async def status_update(self, event):
         """Relay status update to agent."""
         await self.send(text_data=json.dumps({

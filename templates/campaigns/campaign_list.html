@@ -8,7 +8,8 @@
 {% block breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb shadow-sm bg-white p-3 rounded-3 border-0">
-        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}"
+                class="text-decoration-none text-secondary">Dashboard</a></li>
         <li class="breadcrumb-item active" aria-current="page">Campaigns</li>
     </ol>
 </nav>
@@ -18,13 +19,20 @@
 <!-- Enhanced Campaign List CSS -->
 <style>
     :root {
-        --theme-primary: #10b981; /* Emerald 500 */
-        --theme-primary-dark: #059669; /* Emerald 600 */
-        --theme-secondary: #64748b; /* Slate 500 */
-        --theme-accent: #6366f1; /* Indigo 500 */
-        --theme-warning: #f59e0b; /* Amber 500 */
-        --theme-danger: #f43f5e; /* Rose 500 */
-        --theme-bg: #f8fafc; /* Slate 50 */
+        --theme-primary: #10b981;
+        /* Emerald 500 */
+        --theme-primary-dark: #059669;
+        /* Emerald 600 */
+        --theme-secondary: #64748b;
+        /* Slate 500 */
+        --theme-accent: #6366f1;
+        /* Indigo 500 */
+        --theme-warning: #f59e0b;
+        /* Amber 500 */
+        --theme-danger: #f43f5e;
+        /* Rose 500 */
+        --theme-bg: #f8fafc;
+        /* Slate 50 */
         --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
@@ -40,16 +48,18 @@
         border-color: var(--theme-primary);
         color: white;
     }
+
     .btn-emerald:hover {
         background-color: var(--theme-primary-dark);
         border-color: var(--theme-primary-dark);
         color: white;
     }
-    
+
     .btn-outline-emerald {
         color: var(--theme-primary);
         border-color: var(--theme-primary);
     }
+
     .btn-outline-emerald:hover {
         background-color: var(--theme-primary);
         border-color: var(--theme-primary);
@@ -68,7 +78,7 @@
         display: flex;
         flex-direction: column;
     }
-    
+
     .campaign-card:hover {
         transform: translateY(-5px);
         box-shadow: var(--card-shadow-hover);
@@ -91,7 +101,7 @@
         background-color: #f8fafc;
         border-top: 1px solid #e2e8f0;
     }
-    
+
     /* Status Badges */
     .status-badge {
         padding: 0.35rem 0.75rem;
@@ -103,10 +113,26 @@
         align-items: center;
         gap: 0.5rem;
     }
-    .status-active { background-color: #d1fae5; color: #065f46; }
-    .status-paused { background-color: #fef3c7; color: #92400e; }
-    .status-completed { background-color: #e0f2fe; color: #075985; }
-    .status-inactive { background-color: #f1f5f9; color: #475569; }
+
+    .status-active {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-paused {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-completed {
+        background-color: #e0f2fe;
+        color: #075985;
+    }
+
+    .status-inactive {
+        background-color: #f1f5f9;
+        color: #475569;
+    }
 
     /* Progress Ring */
     .progress-ring-wrapper {
@@ -114,13 +140,16 @@
         width: 70px;
         height: 70px;
     }
+
     .progress-ring {
         transform: rotate(-90deg);
     }
+
     .progress-ring__circle {
         transition: stroke-dashoffset 0.35s;
         transform-origin: 50% 50%;
     }
+
     .progress-text {
         position: absolute;
         top: 50%;
@@ -139,15 +168,18 @@
         text-align: center;
         transition: background 0.2s;
     }
+
     .stat-box:hover {
         background: #e2e8f0;
     }
+
     .stat-value {
         font-size: 1.1rem;
         font-weight: 700;
         display: block;
         margin-bottom: 0.25rem;
     }
+
     .stat-label {
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -155,10 +187,22 @@
         color: #64748b;
         font-weight: 600;
     }
-    .text-emerald { color: var(--theme-primary); }
-    .text-indigo { color: var(--theme-accent); }
-    .text-amber { color: var(--theme-warning); }
-    .text-slate { color: var(--theme-secondary); }
+
+    .text-emerald {
+        color: var(--theme-primary);
+    }
+
+    .text-indigo {
+        color: var(--theme-accent);
+    }
+
+    .text-amber {
+        color: var(--theme-warning);
+    }
+
+    .text-slate {
+        color: var(--theme-secondary);
+    }
 
     /* Header Stats Cards */
     .stat-card {
@@ -169,10 +213,22 @@
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         height: 100%;
     }
-    .bg-gradient-emerald { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
-    .bg-gradient-sky { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
-    .bg-gradient-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-    .bg-gradient-slate { background: linear-gradient(135deg, #64748b 0%, #334155 100%); }
+
+    .bg-gradient-emerald {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    }
+
+    .bg-gradient-sky {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    }
+
+    .bg-gradient-amber {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .bg-gradient-slate {
+        background: linear-gradient(135deg, #64748b 0%, #334155 100%);
+    }
 
     /* Filter Card */
     .filter-card {
@@ -181,8 +237,9 @@
         box-shadow: var(--card-shadow);
         border: 1px solid #e2e8f0;
     }
-    
-    .form-control:focus, .form-select:focus {
+
+    .form-control:focus,
+    .form-select:focus {
         border-color: var(--theme-primary);
         box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.15);
     }
@@ -205,13 +262,18 @@
     <div class="d-flex gap-2">
         {% if user.is_staff or user.profile.is_manager %}
         <div class="dropdown">
-            <button class="btn btn-white border bg-white text-secondary shadow-sm dropdown-toggle" data-bs-toggle="dropdown">
+            <button class="btn btn-white border bg-white text-secondary shadow-sm dropdown-toggle"
+                data-bs-toggle="dropdown">
                 <i class="fas fa-ellipsis-v me-2"></i>Actions
             </button>
             <ul class="dropdown-menu shadow border-0">
-                <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2 text-secondary"></i>Export Campaigns</a></li>
-                <li><a class="dropdown-item" href="#"><i class="fas fa-upload me-2 text-secondary"></i>Import Campaigns</a></li>
-                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2 text-secondary"></i>Export
+                        Campaigns</a></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-upload me-2 text-secondary"></i>Import
+                        Campaigns</a></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
                 <li><a class="dropdown-item" href="#"><i class="fas fa-copy me-2 text-secondary"></i>Bulk Clone</a></li>
             </ul>
         </div>
@@ -239,7 +301,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-3 col-md-6">
         <div class="card stat-card bg-gradient-sky">
             <div class="card-body p-4 position-relative">
@@ -255,7 +317,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-3 col-md-6">
         <div class="card stat-card bg-gradient-amber">
             <div class="card-body p-4 position-relative">
@@ -271,7 +333,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-3 col-md-6">
         <div class="card stat-card bg-gradient-slate">
             <div class="card-body p-4 position-relative">
@@ -298,18 +360,14 @@
                     <i class="fas fa-search me-1 text-secondary"></i>Search
                 </label>
                 <div class="input-group">
-                    <input type="text" 
-                           class="form-control border-end-0" 
-                           id="search" 
-                           name="search" 
-                           placeholder="Name, ID, or description..."
-                           value="{{ request.GET.search }}">
+                    <input type="text" class="form-control border-end-0" id="search" name="search"
+                        placeholder="Name, ID, or description..." value="{{ request.GET.search }}">
                     <span class="input-group-text bg-white border-start-0">
                         <i class="fas fa-search text-muted"></i>
                     </span>
                 </div>
             </div>
-            
+
             <div class="col-lg-2 col-md-6">
                 <label for="status" class="form-label fw-bold text-slate-700 small">
                     <i class="fas fa-flag me-1 text-secondary"></i>Status
@@ -317,25 +375,31 @@
                 <select class="form-select" id="status" name="status">
                     <option value="">All Status</option>
                     <option value="active" {% if request.GET.status == "active" %}selected{% endif %}>Active</option>
-                    <option value="inactive" {% if request.GET.status == "inactive" %}selected{% endif %}>Inactive</option>
+                    <option value="inactive" {% if request.GET.status == "inactive" %}selected{% endif %}>Inactive
+                    </option>
                     <option value="paused" {% if request.GET.status == "paused" %}selected{% endif %}>Paused</option>
-                    <option value="completed" {% if request.GET.status == "completed" %}selected{% endif %}>Completed</option>
-                    <option value="archived" {% if request.GET.status == "archived" %}selected{% endif %}>Archived</option>
+                    <option value="completed" {% if request.GET.status == "completed" %}selected{% endif %}>Completed
+                    </option>
+                    <option value="archived" {% if request.GET.status == "archived" %}selected{% endif %}>Archived
+                    </option>
                 </select>
             </div>
-            
+
             <div class="col-lg-2 col-md-6">
                 <label for="campaign_type" class="form-label fw-bold text-slate-700 small">
                     <i class="fas fa-tags me-1 text-secondary"></i>Type
                 </label>
                 <select class="form-select" id="campaign_type" name="campaign_type">
                     <option value="">All Types</option>
-                    <option value="outbound" {% if request.GET.campaign_type == "outbound" %}selected{% endif %}>Outbound</option>
-                    <option value="inbound" {% if request.GET.campaign_type == "inbound" %}selected{% endif %}>Inbound</option>
-                    <option value="blended" {% if request.GET.campaign_type == "blended" %}selected{% endif %}>Blended</option>
+                    <option value="outbound" {% if request.GET.campaign_type == "outbound" %}selected{% endif %}>Outbound
+                    </option>
+                    <option value="inbound" {% if request.GET.campaign_type == "inbound" %}selected{% endif %}>Inbound
+                    </option>
+                    <option value="blended" {% if request.GET.campaign_type == "blended" %}selected{% endif %}>Blended
+                    </option>
                 </select>
             </div>
-            
+
             <div class="col-lg-2 col-md-6">
                 <label for="created_by" class="form-label fw-bold text-slate-700 small">
                     <i class="fas fa-user me-1 text-secondary"></i>Creator
@@ -349,7 +413,7 @@
                     {% endfor %}
                 </select>
             </div>
-            
+
             <div class="col-lg-2 col-md-12">
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-dark flex-fill">
@@ -370,20 +434,21 @@
     {% for campaign in campaigns %}
     <div class="col-lg-6 col-xl-4">
         <div class="card campaign-card">
-            
+
             <!-- Top Section: Title, Status, Progress -->
             <div class="card-top-section d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1 me-3">
                     <div class="mb-2">
-                        <span class="status-badge {% if campaign.status == 'active' %}status-active{% elif campaign.status == 'paused' %}status-paused{% elif campaign.status == 'completed' %}status-completed{% else %}status-inactive{% endif %}">
+                        <span
+                            class="status-badge {% if campaign.status == 'active' %}status-active{% elif campaign.status == 'paused' %}status-paused{% elif campaign.status == 'completed' %}status-completed{% else %}status-inactive{% endif %}">
                             {% if campaign.status == 'active' %}
-                                <i class="fas fa-circle fa-xs"></i> Active
+                            <i class="fas fa-circle fa-xs"></i> Active
                             {% elif campaign.status == 'paused' %}
-                                <i class="fas fa-circle fa-xs"></i> Paused
+                            <i class="fas fa-circle fa-xs"></i> Paused
                             {% elif campaign.status == 'completed' %}
-                                <i class="fas fa-check"></i> Completed
+                            <i class="fas fa-check"></i> Completed
                             {% else %}
-                                <i class="fas fa-stop"></i> Inactive
+                            <i class="fas fa-stop"></i> Inactive
                             {% endif %}
                         </span>
                     </div>
@@ -396,55 +461,54 @@
                         <i class="fas fa-hashtag me-1"></i>{{ campaign.campaign_id }}
                     </small>
                 </div>
-                
+
                 <!-- Progress Ring -->
                 <div class="progress-ring-wrapper flex-shrink-0">
                     <svg class="progress-ring" width="70" height="70">
-                        <circle class="progress-ring__circle bg-secondary" 
-                                stroke="#e2e8f0" 
-                                stroke-width="6" 
-                                fill="transparent" 
-                                r="28" 
-                                cx="35" 
-                                cy="35"/>
-                        <circle class="progress-ring__circle" 
-                                stroke="{% if campaign.status == 'active' %}#10b981{% elif campaign.status == 'paused' %}#f59e0b{% else %}#64748b{% endif %}" 
-                                stroke-width="6" 
-                                stroke-linecap="round" 
-                                fill="transparent" 
-                                r="28" 
-                                cx="35" 
-                                cy="35"
-                                stroke-dasharray="{% if campaign.total_leads > 0 %}{{ 175|mul:campaign.leads_called|div:campaign.total_leads }}{% else %}0{% endif %} 175"/>
+                        <circle class="progress-ring__circle bg-secondary" stroke="#e2e8f0" stroke-width="6"
+                            fill="transparent" r="28" cx="35" cy="35" />
+                        <circle class="progress-ring__circle"
+                            stroke="{% if campaign.status == 'active' %}#10b981{% elif campaign.status == 'paused' %}#f59e0b{% else %}#64748b{% endif %}"
+                            stroke-width="6" stroke-linecap="round" fill="transparent" r="28" cx="35" cy="35"
+                            stroke-dasharray="{% if campaign.total_leads > 0 %}{{ 175|mul:campaign.leads_called|div:campaign.total_leads }}{% else %}0{% endif %} 175" />
                     </svg>
                     <div class="progress-text">
                         {% if campaign.total_leads > 0 %}
-                            {{ campaign.leads_called|mul:100|div:campaign.total_leads|floatformat:0 }}%
+                        {{ campaign.leads_called|mul:100|div:campaign.total_leads|floatformat:0 }}%
                         {% else %}
-                            0%
+                        0%
                         {% endif %}
                     </div>
                 </div>
             </div>
-            
+
             <!-- Body Section: Tags, Stats, Info -->
             <div class="card-body-section">
                 <!-- Tags -->
                 <div class="mb-3 d-flex gap-2 flex-wrap">
-                    <span class="badge bg-opacity-10 text-emerald border border-emerald" style="background-color: #d1fae5; color: #065f46; border-color: #d1fae5;">
+                    <span class="badge bg-opacity-10 text-emerald border border-emerald"
+                        style="background-color: #d1fae5; color: #065f46; border-color: #d1fae5;">
                         {{ campaign.get_campaign_type_display }}
                     </span>
-                    <span class="badge bg-opacity-10 text-indigo border border-indigo" style="background-color: #e0e7ff; color: #3730a3; border-color: #e0e7ff;">
+                    <span class="badge bg-opacity-10 text-indigo border border-indigo"
+                        style="background-color: #e0e7ff; color: #3730a3; border-color: #e0e7ff;">
                         {{ campaign.get_dial_method_display }}
                     </span>
+                    {% if campaign.ai_enabled %}
+                    <span class="badge bg-opacity-10 text-primary border border-primary"
+                        style="background-color: #cce5ff; color: #004085; border-color: #b8daff;">
+                        <i class="fas fa-robot me-1"></i>AI Agent
+                    </span>
+                    {% endif %}
                 </div>
-                
+
                 {% if campaign.description %}
-                <p class="text-muted small mb-3" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                <p class="text-muted small mb-3"
+                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                     {{ campaign.description|truncatechars:100 }}
                 </p>
                 {% endif %}
-                
+
                 <!-- Stats Grid -->
                 <div class="row g-2 mb-3">
                     <div class="col-6">
@@ -472,12 +536,14 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Meta Info -->
-                <div class="small text-muted bg-light p-2 rounded" style="background-color: #f8fafc; font-size: 0.75rem;">
+                <div class="small text-muted bg-light p-2 rounded"
+                    style="background-color: #f8fafc; font-size: 0.75rem;">
                     <div class="d-flex justify-content-between mb-1">
                         <span><i class="fas fa-user me-2"></i>Created by:</span>
-                        <span class="text-truncate ms-2 fw-medium text-slate-700">{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}</span>
+                        <span class="text-truncate ms-2 fw-medium text-slate-700">{{
+                            campaign.created_by.get_full_name|default:campaign.created_by.username }}</span>
                     </div>
                     <div class="d-flex justify-content-between">
                         <span><i class="fas fa-calendar me-2"></i>Created:</span>
@@ -485,16 +551,18 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Footer Section: Actions -->
             <div class="card-footer-section d-flex gap-2">
-                <a href="{% url 'campaigns:detail' campaign.pk %}" class="btn btn-outline-secondary btn-sm flex-fill fw-medium">
+                <a href="{% url 'campaigns:detail' campaign.pk %}"
+                    class="btn btn-outline-secondary btn-sm flex-fill fw-medium">
                     <i class="fas fa-eye me-1"></i>View
                 </a>
-                
+
                 {% if user.is_staff or campaign.created_by == user or user.profile.is_manager %}
                 <div class="dropdown">
-                    <button class="btn btn-emerald btn-sm dropdown-toggle" data-bs-toggle="dropdown" style="padding: 0.25rem 0.5rem;">
+                    <button class="btn btn-emerald btn-sm dropdown-toggle" data-bs-toggle="dropdown"
+                        style="padding: 0.25rem 0.5rem;">
                         <i class="fas fa-cog"></i>
                     </button>
                     <ul class="dropdown-menu shadow border-0">
@@ -508,37 +576,57 @@
                                 <i class="fas fa-users me-2 text-secondary"></i>Manage Agents
                             </a>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         {% if campaign.status == 'inactive' %}
                         <li>
-                            <a class="dropdown-item text-success fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
+                            <a class="dropdown-item text-success fw-medium" href="#"
+                                onclick="controlCampaign({{ campaign.pk }}, 'start')">
                                 <i class="fas fa-play me-2"></i>Start Campaign
                             </a>
                         </li>
                         {% elif campaign.status == 'active' %}
                         <li>
-                            <a class="dropdown-item text-warning fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'pause')">
+                            <a class="dropdown-item text-warning fw-medium" href="#"
+                                onclick="controlCampaign({{ campaign.pk }}, 'pause')">
                                 <i class="fas fa-pause me-2"></i>Pause Campaign
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item text-danger fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
+                            <a class="dropdown-item text-danger fw-medium" href="#"
+                                onclick="controlCampaign({{ campaign.pk }}, 'stop')">
                                 <i class="fas fa-stop me-2"></i>Stop Campaign
                             </a>
                         </li>
                         {% elif campaign.status == 'paused' %}
                         <li>
-                            <a class="dropdown-item text-success fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'start')">
+                            <a class="dropdown-item text-success fw-medium" href="#"
+                                onclick="controlCampaign({{ campaign.pk }}, 'start')">
                                 <i class="fas fa-play me-2"></i>Resume Campaign
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item text-danger fw-medium" href="#" onclick="controlCampaign({{ campaign.pk }}, 'stop')">
+                            <a class="dropdown-item text-danger fw-medium" href="#"
+                                onclick="controlCampaign({{ campaign.pk }}, 'stop')">
                                 <i class="fas fa-stop me-2"></i>Stop Campaign
                             </a>
                         </li>
                         {% endif %}
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        {% if campaign.ai_enabled %}
+                        <li>
+                            <a class="dropdown-item fw-bold text-primary"
+                                href="{% url 'campaigns:ai_agent_config' campaign.pk %}">
+                                <i class="fas fa-robot me-2"></i>Configure AI Agent
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        {% endif %}
                         <li>
                             <a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
                                 <i class="fas fa-copy me-2 text-secondary"></i>Clone Campaign
@@ -558,44 +646,50 @@
 <nav aria-label="Campaign pagination" class="mt-5">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link border-0 bg-white text-secondary shadow-sm me-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
-                    <i class="fas fa-angle-double-left"></i>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link border-0 bg-white text-secondary shadow-sm me-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
-                    <i class="fas fa-angle-left"></i>
-                </a>
-            </li>
+        <li class="page-item">
+            <a class="page-link border-0 bg-white text-secondary shadow-sm me-1 rounded"
+                href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link border-0 bg-white text-secondary shadow-sm me-1 rounded"
+                href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
         {% endif %}
-        
+
         {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <li class="page-item active">
-                    <span class="page-link border-0 text-white shadow-sm mx-1 rounded" style="background-color: var(--theme-primary);">{{ num }}</span>
-                </li>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <li class="page-item">
-                    <a class="page-link border-0 bg-white text-secondary shadow-sm mx-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
-                </li>
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+            <span class="page-link border-0 text-white shadow-sm mx-1 rounded"
+                style="background-color: var(--theme-primary);">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
+            <a class="page-link border-0 bg-white text-secondary shadow-sm mx-1 rounded"
+                href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{
+                num }}</a>
+            </li>
             {% endif %}
-        {% endfor %}
-        
-        {% if page_obj.has_next %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link border-0 bg-white text-secondary shadow-sm ms-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                <a class="page-link border-0 bg-white text-secondary shadow-sm ms-1 rounded"
+                    href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
                     <i class="fas fa-angle-right"></i>
                 </a>
             </li>
             <li class="page-item">
-                <a class="page-link border-0 bg-white text-secondary shadow-sm ms-1 rounded" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                <a class="page-link border-0 bg-white text-secondary shadow-sm ms-1 rounded"
+                    href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
                     <i class="fas fa-angle-double-right"></i>
                 </a>
             </li>
-        {% endif %}
+            {% endif %}
     </ul>
-    
+
     <div class="text-center text-muted small mt-2">
         Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} campaigns
     </div>
@@ -610,14 +704,14 @@
     </div>
     <h3 class="fw-bold text-slate-700 mb-3">No Campaigns Found</h3>
     {% if request.GET.search or request.GET.status or request.GET.campaign_type or request.GET.created_by %}
-        <p class="text-muted mb-4">No campaigns match your current search criteria.</p>
-        <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary me-3 px-4">
-            <i class="fas fa-times me-2"></i>Clear Filters
-        </a>
+    <p class="text-muted mb-4">No campaigns match your current search criteria.</p>
+    <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary me-3 px-4">
+        <i class="fas fa-times me-2"></i>Clear Filters
+    </a>
     {% else %}
-        <p class="text-muted mb-4">Create your first campaign to get started with calling.</p>
+    <p class="text-muted mb-4">Create your first campaign to get started with calling.</p>
     {% endif %}
-    
+
     {% if user.is_staff or user.profile.is_manager %}
     <a href="{% url 'campaigns:create' %}" class="btn btn-emerald px-4 shadow-sm">
         <i class="fas fa-plus me-2"></i>Create First Campaign
@@ -630,127 +724,127 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-submit search form on input changes
-    const searchInput = document.getElementById('search');
-    let searchTimeout;
-    
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            if (this.value.length >= 3 || this.value.length === 0) {
-                document.getElementById('campaignSearchForm').submit();
-            }
-        }, 500);
-    });
-    
-    // Auto-submit on filter changes
-    document.querySelectorAll('#campaignSearchForm select').forEach(select => {
-        select.addEventListener('change', function() {
-            document.getElementById('campaignSearchForm').submit();
-        });
-    });
-    
-    // Campaign card hover effects
-    document.querySelectorAll('.campaign-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.borderColor = '#10b981'; // Emerald
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.borderColor = '#e2e8f0';
-        });
-    });
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        // Auto-submit search form on input changes
+        const searchInput = document.getElementById('search');
+        let searchTimeout;
 
-// Campaign control functions
-function controlCampaign(campaignId, action) {
-    const actionText = action.charAt(0).toUpperCase() + action.slice(1);
-    
-    if (confirm(`Are you sure you want to ${action} this campaign?`)) {
-        fetch(`/campaigns/${campaignId}/control/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify({ action: action })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(data.message, 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showNotification(data.error || 'Failed to control campaign', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('An error occurred while controlling the campaign', 'error');
-        });
-    }
-}
-
-function cloneCampaign(campaignId) {
-    if (confirm('Clone this campaign with all its settings?')) {
-        fetch(`/campaigns/${campaignId}/clone/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(data.message, 'success');
-                if (data.redirect_url) {
-                    setTimeout(() => window.location.href = data.redirect_url, 1000);
-                } else {
-                    setTimeout(() => location.reload(), 1000);
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    document.getElementById('campaignSearchForm').submit();
                 }
-            } else {
-                showNotification(data.error || 'Failed to clone campaign', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('An error occurred while cloning the campaign', 'error');
+            }, 500);
         });
+
+        // Auto-submit on filter changes
+        document.querySelectorAll('#campaignSearchForm select').forEach(select => {
+            select.addEventListener('change', function () {
+                document.getElementById('campaignSearchForm').submit();
+            });
+        });
+
+        // Campaign card hover effects
+        document.querySelectorAll('.campaign-card').forEach(card => {
+            card.addEventListener('mouseenter', function () {
+                this.style.borderColor = '#10b981'; // Emerald
+            });
+
+            card.addEventListener('mouseleave', function () {
+                this.style.borderColor = '#e2e8f0';
+            });
+        });
+    });
+
+    // Campaign control functions
+    function controlCampaign(campaignId, action) {
+        const actionText = action.charAt(0).toUpperCase() + action.slice(1);
+
+        if (confirm(`Are you sure you want to ${action} this campaign?`)) {
+            fetch(`/campaigns/${campaignId}/control/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ action: action })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.error || 'Failed to control campaign', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('An error occurred while controlling the campaign', 'error');
+                });
+        }
     }
-}
 
-// Utility function for notifications
-function showNotification(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    let bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-secondary');
-    
-    // Override bootstrap colors with theme colors if needed, but keeping standard classes for simplicity in JS
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);';
-    
-    // Custom color mapping for notifications
-    if(type === 'success') alertDiv.style.backgroundColor = '#10b981';
-    if(type === 'error') alertDiv.style.backgroundColor = '#f43f5e';
-    if(type === 'info') alertDiv.style.backgroundColor = '#64748b';
-    alertDiv.style.color = 'white';
-    alertDiv.style.border = 'none';
+    function cloneCampaign(campaignId) {
+        if (confirm('Clone this campaign with all its settings?')) {
+            fetch(`/campaigns/${campaignId}/clone/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        if (data.redirect_url) {
+                            setTimeout(() => window.location.href = data.redirect_url, 1000);
+                        } else {
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    } else {
+                        showNotification(data.error || 'Failed to clone campaign', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('An error occurred while cloning the campaign', 'error');
+                });
+        }
+    }
 
-    alertDiv.innerHTML = `
+    // Utility function for notifications
+    function showNotification(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        let bgClass = type === 'success' ? 'bg-success' : (type === 'error' ? 'bg-danger' : 'bg-secondary');
+
+        // Override bootstrap colors with theme colors if needed, but keeping standard classes for simplicity in JS
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 1050; min-width: 300px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);';
+
+        // Custom color mapping for notifications
+        if (type === 'success') alertDiv.style.backgroundColor = '#10b981';
+        if (type === 'error') alertDiv.style.backgroundColor = '#f43f5e';
+        if (type === 'info') alertDiv.style.backgroundColor = '#64748b';
+        alertDiv.style.color = 'white';
+        alertDiv.style.border = 'none';
+
+        alertDiv.innerHTML = `
         <div class="d-flex align-items-center">
             <div class="flex-grow-1">${message}</div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
         </div>
     `;
-    document.body.appendChild(alertDiv);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.parentNode.removeChild(alertDiv);
-        }
-    }, 5000);
-}
+        document.body.appendChild(alertDiv);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
 </script>
 {% endblock %}

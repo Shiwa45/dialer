@@ -4,571 +4,620 @@
 
 {% block extra_css %}
 <style>
-:root {
-    --theme-primary: #059669; /* Emerald 600 */
-    --theme-primary-dark: #047857; /* Emerald 700 */
-    --theme-primary-light: #10b981; /* Emerald 500 */
-    --theme-secondary: #64748b; /* Slate 500 */
-    --theme-bg: #f1f5f9; /* Slate 100 */
-    --theme-surface: #ffffff;
-    --theme-text: #1e293b; /* Slate 800 */
-    --theme-text-muted: #64748b; /* Slate 500 */
-    
-    --success-color: #10b981;
-    --success-dark: #059669;
-    --warning-color: #f59e0b;
-    --warning-dark: #d97706;
-    --danger-color: #ef4444;
-    --danger-dark: #dc2626;
-    --info-color: #0ea5e9; /* Sky 500 instead of Blue */
-    --info-dark: #0284c7;
-    
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    --card-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-body {
-    background-color: var(--theme-bg);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: var(--theme-text);
-}
-
-/* Campaign Header */
-.campaign-header {
-    background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%);
-    color: white;
-    border-radius: 20px;
-    padding: 2.5rem;
-    margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(5, 150, 105, 0.3);
-}
-
-.campaign-header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    border-radius: 50%;
-}
-
-.campaign-header::after {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -5%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-    border-radius: 50%;
-}
-
-.status-badge {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    font-size: 0.95rem;
-    padding: 0.6rem 1.2rem;
-    border-radius: 50px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(4px);
-}
-
-.campaign-header .badge.bg-light {
-    background: rgba(255, 255, 255, 0.2) !important;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white !important;
-}
-
-.campaign-header h1 {
-    font-weight: 700;
-    font-size: 2.2rem;
-    margin-bottom: 0.5rem;
-    position: relative;
-    z-index: 1;
-}
-
-.campaign-header p {
-    position: relative;
-    z-index: 1;
-    font-size: 1.05rem;
-    opacity: 0.9;
-}
-
-.campaign-header .btn {
-    border-radius: 10px;
-    font-weight: 600;
-    padding: 0.7rem 1.5rem;
-    transition: all 0.3s ease;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.campaign-header .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    border-color: rgba(255, 255, 255, 0.6);
-}
-
-/* Stat Cards */
-.stat-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.8rem;
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
-    border: 1px solid #e2e8f0;
-    height: 100%;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--card-shadow-lg);
-    border-color: var(--theme-primary-light);
-}
-
-.stat-number {
-    font-size: 2.8rem;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 0.5rem;
-}
-
-.stat-label {
-    color: var(--theme-text-muted);
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-weight: 600;
-}
-
-.stat-card .progress {
-    background-color: #e2e8f0;
-    border-radius: 10px;
-    height: 6px;
-}
-
-.stat-card .progress-bar {
-    border-radius: 10px;
-}
-
-/* Info Cards */
-.info-card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: var(--card-shadow);
-    margin-bottom: 2rem;
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.info-card:hover {
-    box-shadow: var(--card-shadow-lg);
-}
-
-.info-card-header {
-    background: linear-gradient(to right, #f8fafc, #f1f5f9);
-    padding: 1.5rem 2rem;
-    border-bottom: 2px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.info-card-header h5 {
-    font-weight: 700;
-    color: var(--theme-text);
-    margin: 0;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-}
-
-.info-card-header i {
-    color: var(--theme-primary);
-    margin-right: 0.5rem;
-}
-
-.info-card-body {
-    padding: 2rem;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 10px;
-    font-weight: 600;
-    padding: 0.6rem 1.4rem;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn-primary-custom {
-    background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-dark));
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);
-}
-
-.btn-primary-custom:hover {
-    background: linear-gradient(135deg, var(--theme-primary-dark), var(--theme-primary));
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(5, 150, 105, 0.4);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, var(--success-color), var(--success-dark));
-    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
-    color: white;
-}
-
-.btn-success:hover {
-    background: linear-gradient(135deg, var(--success-dark), var(--success-color));
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
-}
-
-.btn-warning {
-    background: linear-gradient(135deg, var(--warning-color), var(--warning-dark));
-    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
-    color: white;
-}
-
-.btn-warning:hover {
-    background: linear-gradient(135deg, var(--warning-dark), var(--warning-color));
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.4);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, var(--danger-color), var(--danger-dark));
-    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
-    color: white;
-}
-
-.btn-danger:hover {
-    background: linear-gradient(135deg, var(--danger-dark), var(--danger-color));
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
-}
-
-.btn-outline-primary {
-    border: 2px solid var(--theme-primary);
-    color: var(--theme-primary);
-    background: white;
-}
-
-.btn-outline-primary:hover {
-    background: var(--theme-primary);
-    color: white;
-    transform: translateY(-2px);
-}
-
-.btn-outline-light {
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    color: white;
-    background: transparent;
-}
-
-.btn-outline-light:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.6);
-    color: white;
-}
-
-/* Dropdown */
-.dropdown-menu {
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    box-shadow: var(--card-shadow-lg);
-    padding: 0.5rem;
-}
-
-.dropdown-item {
-    border-radius: 8px;
-    padding: 0.7rem 1rem;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    color: var(--theme-text);
-}
-
-.dropdown-item:hover {
-    background: var(--theme-bg);
-    color: var(--theme-primary);
-    transform: translateX(5px);
-}
-
-.dropdown-divider {
-    border-top: 1px solid #e2e8f0;
-    margin: 0.5rem 0;
-}
-
-/* Timeline */
-.timeline-item {
-    position: relative;
-    padding-left: 2.5rem;
-    padding-bottom: 1.5rem;
-    border-left: 2px solid #e2e8f0;
-    margin-left: 0.375rem;
-}
-
-.timeline-item:last-child {
-    border-left: 2px solid transparent;
-    padding-bottom: 0;
-}
-
-.timeline-item::before {
-    content: '';
-    position: absolute;
-    left: -0.5rem;
-    top: 0.25rem;
-    width: 1rem;
-    height: 1rem;
-    background: var(--theme-primary);
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 0 0 2px var(--theme-primary);
-    transition: all 0.3s ease;
-}
-
-.timeline-item:hover::before {
-    transform: scale(1.3);
-}
-
-.timeline-item.success::before {
-    background: var(--success-color);
-    box-shadow: 0 0 0 2px var(--success-color);
-}
-
-.timeline-item.warning::before {
-    background: var(--warning-color);
-    box-shadow: 0 0 0 2px var(--warning-color);
-}
-
-.timeline-item.danger::before {
-    background: var(--danger-color);
-    box-shadow: 0 0 0 2px var(--danger-color);
-}
-
-/* Progress Ring */
-.progress-ring {
-    width: 150px;
-    height: 150px;
-    margin: 0 auto;
-    position: relative;
-}
-
-.progress-ring-circle {
-    stroke: #e2e8f0;
-    stroke-width: 10;
-    fill: transparent;
-    r: 60;
-    cx: 75;
-    cy: 75;
-}
-
-.progress-ring-progress {
-    stroke: url(#progressGradient);
-    stroke-width: 10;
-    stroke-linecap: round;
-    fill: transparent;
-    r: 60;
-    cx: 75;
-    cy: 75;
-    stroke-dasharray: 376.99;
-    stroke-dashoffset: 376.99;
-    transition: stroke-dashoffset 0.8s ease;
-    transform: rotate(-90deg);
-    transform-origin: center;
-}
-
-/* Agent Avatar */
-.agent-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-light));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 1.2rem;
-    margin-right: 1rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.agent-card {
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.2rem;
-    transition: all 0.3s ease;
-    background: white;
-}
-
-.agent-card:hover {
-    border-color: var(--theme-primary);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-/* Quick Actions */
-.quick-actions {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.quick-action-btn {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    border: none;
-    color: white;
-}
-
-.quick-action-btn:hover {
-    transform: scale(1.15);
-    box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.4);
-}
-
-/* Quick Stats */
-.quick-stat-box {
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8fafc, white);
-    border-radius: 12px;
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s ease;
-}
-
-.quick-stat-box:hover {
-    border-color: var(--theme-primary);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.quick-stat-box .h5 {
-    font-weight: 700;
-}
-
-/* Chart Container */
-.chart-container {
-    height: 320px;
-    position: relative;
-}
-
-/* Configuration Grid */
-.config-item {
-    padding: 1rem 0;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.config-item:last-child {
-    border-bottom: none;
-}
-
-.config-item strong {
-    color: var(--theme-text);
-    font-weight: 600;
-}
-
-.config-item .text-muted {
-    color: var(--theme-text-muted) !important;
-}
-
-/* Status Indicators */
-.status-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-.status-indicator.enabled {
-    background: #d1fae5;
-    color: var(--success-dark);
-}
-
-.status-indicator.disabled {
-    background: #f1f5f9;
-    color: var(--theme-text-muted);
-}
-
-/* Text Colors Override for Theme */
-.text-primary { color: var(--theme-primary) !important; }
-.text-success { color: var(--success-color) !important; }
-.text-warning { color: var(--warning-color) !important; }
-.text-danger { color: var(--danger-color) !important; }
-.text-info { color: var(--info-color) !important; }
-.text-emerald-600 { color: var(--theme-primary) !important; }
-.text-emerald-700 { color: var(--theme-primary-dark) !important; }
-.bg-emerald-600 { background-color: var(--theme-primary) !important; }
-
-/* Responsive */
-@media (max-width: 768px) {
+    :root {
+        --theme-primary: #059669;
+        /* Emerald 600 */
+        --theme-primary-dark: #047857;
+        /* Emerald 700 */
+        --theme-primary-light: #10b981;
+        /* Emerald 500 */
+        --theme-secondary: #64748b;
+        /* Slate 500 */
+        --theme-bg: #f1f5f9;
+        /* Slate 100 */
+        --theme-surface: #ffffff;
+        --theme-text: #1e293b;
+        /* Slate 800 */
+        --theme-text-muted: #64748b;
+        /* Slate 500 */
+
+        --success-color: #10b981;
+        --success-dark: #059669;
+        --warning-color: #f59e0b;
+        --warning-dark: #d97706;
+        --danger-color: #ef4444;
+        --danger-dark: #dc2626;
+        --info-color: #0ea5e9;
+        /* Sky 500 instead of Blue */
+        --info-dark: #0284c7;
+
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --card-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+        background-color: var(--theme-bg);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: var(--theme-text);
+    }
+
+    /* Campaign Header */
     .campaign-header {
-        padding: 2rem 1.5rem;
+        background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(5, 150, 105, 0.3);
     }
+
+    .campaign-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .campaign-header::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -5%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .status-badge {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+        font-size: 0.95rem;
+        padding: 0.6rem 1.2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(4px);
+    }
+
+    .campaign-header .badge.bg-light {
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white !important;
+    }
+
     .campaign-header h1 {
-        font-size: 1.75rem;
-    }
-    .stat-number {
+        font-weight: 700;
         font-size: 2.2rem;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
     }
-    .quick-actions {
-        bottom: 1rem;
-        right: 1rem;
+
+    .campaign-header p {
+        position: relative;
+        z-index: 1;
+        font-size: 1.05rem;
+        opacity: 0.9;
     }
-    .quick-action-btn {
+
+    .campaign-header .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 0.7rem 1.5rem;
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .campaign-header .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.8rem;
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--card-shadow-lg);
+        border-color: var(--theme-primary-light);
+    }
+
+    .stat-number {
+        font-size: 2.8rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--theme-text-muted);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 600;
+    }
+
+    .stat-card .progress {
+        background-color: #e2e8f0;
+        border-radius: 10px;
+        height: 6px;
+    }
+
+    .stat-card .progress-bar {
+        border-radius: 10px;
+    }
+
+    /* Info Cards */
+    .info-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .info-card:hover {
+        box-shadow: var(--card-shadow-lg);
+    }
+
+    .info-card-header {
+        background: linear-gradient(to right, #f8fafc, #f1f5f9);
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .info-card-header h5 {
+        font-weight: 700;
+        color: var(--theme-text);
+        margin: 0;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .info-card-header i {
+        color: var(--theme-primary);
+        margin-right: 0.5rem;
+    }
+
+    .info-card-body {
+        padding: 2rem;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 0.6rem 1.4rem;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-dark));
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);
+    }
+
+    .btn-primary-custom:hover {
+        background: linear-gradient(135deg, var(--theme-primary-dark), var(--theme-primary));
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(5, 150, 105, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), var(--success-dark));
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, var(--success-dark), var(--success-color));
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, var(--warning-color), var(--warning-dark));
+        box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: linear-gradient(135deg, var(--warning-dark), var(--warning-color));
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger-color), var(--danger-dark));
+        box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: linear-gradient(135deg, var(--danger-dark), var(--danger-color));
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid var(--theme-primary);
+        color: var(--theme-primary);
+        background: white;
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--theme-primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-outline-light {
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        color: white;
+        background: transparent;
+    }
+
+    .btn-outline-light:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.6);
+        color: white;
+    }
+
+    /* Dropdown */
+    .dropdown-menu {
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: var(--card-shadow-lg);
+        padding: 0.5rem;
+    }
+
+    .dropdown-item {
+        border-radius: 8px;
+        padding: 0.7rem 1rem;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--theme-text);
+    }
+
+    .dropdown-item:hover {
+        background: var(--theme-bg);
+        color: var(--theme-primary);
+        transform: translateX(5px);
+    }
+
+    .dropdown-divider {
+        border-top: 1px solid #e2e8f0;
+        margin: 0.5rem 0;
+    }
+
+    /* Timeline */
+    .timeline-item {
+        position: relative;
+        padding-left: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-left: 2px solid #e2e8f0;
+        margin-left: 0.375rem;
+    }
+
+    .timeline-item:last-child {
+        border-left: 2px solid transparent;
+        padding-bottom: 0;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -0.5rem;
+        top: 0.25rem;
+        width: 1rem;
+        height: 1rem;
+        background: var(--theme-primary);
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px var(--theme-primary);
+        transition: all 0.3s ease;
+    }
+
+    .timeline-item:hover::before {
+        transform: scale(1.3);
+    }
+
+    .timeline-item.success::before {
+        background: var(--success-color);
+        box-shadow: 0 0 0 2px var(--success-color);
+    }
+
+    .timeline-item.warning::before {
+        background: var(--warning-color);
+        box-shadow: 0 0 0 2px var(--warning-color);
+    }
+
+    .timeline-item.danger::before {
+        background: var(--danger-color);
+        box-shadow: 0 0 0 2px var(--danger-color);
+    }
+
+    /* Progress Ring */
+    .progress-ring {
+        width: 150px;
+        height: 150px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    .progress-ring-circle {
+        stroke: #e2e8f0;
+        stroke-width: 10;
+        fill: transparent;
+        r: 60;
+        cx: 75;
+        cy: 75;
+    }
+
+    .progress-ring-progress {
+        stroke: url(#progressGradient);
+        stroke-width: 10;
+        stroke-linecap: round;
+        fill: transparent;
+        r: 60;
+        cx: 75;
+        cy: 75;
+        stroke-dasharray: 376.99;
+        stroke-dashoffset: 376.99;
+        transition: stroke-dashoffset 0.8s ease;
+        transform: rotate(-90deg);
+        transform-origin: center;
+    }
+
+    /* Agent Avatar */
+    .agent-avatar {
         width: 48px;
         height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-light));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-right: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-    .info-card-body {
+
+    .agent-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.2rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .agent-card:hover {
+        border-color: var(--theme-primary);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .quick-action-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        border: none;
+        color: white;
+    }
+
+    .quick-action-btn:hover {
+        transform: scale(1.15);
+        box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Quick Stats */
+    .quick-stat-box {
         padding: 1.5rem;
+        background: linear-gradient(135deg, #f8fafc, white);
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
     }
-}
 
-/* Animation */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+    .quick-stat-box:hover {
+        border-color: var(--theme-primary);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    .quick-stat-box .h5 {
+        font-weight: 700;
     }
-}
 
-.stat-card, .info-card {
-    animation: fadeInUp 0.6s ease forwards;
-}
+    /* Chart Container */
+    .chart-container {
+        height: 320px;
+        position: relative;
+    }
 
-.stat-card:nth-child(1) { animation-delay: 0.1s; }
-.stat-card:nth-child(2) { animation-delay: 0.2s; }
-.stat-card:nth-child(3) { animation-delay: 0.3s; }
-.stat-card:nth-child(4) { animation-delay: 0.4s; }
+    /* Configuration Grid */
+    .config-item {
+        padding: 1rem 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .config-item:last-child {
+        border-bottom: none;
+    }
+
+    .config-item strong {
+        color: var(--theme-text);
+        font-weight: 600;
+    }
+
+    .config-item .text-muted {
+        color: var(--theme-text-muted) !important;
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .status-indicator.enabled {
+        background: #d1fae5;
+        color: var(--success-dark);
+    }
+
+    .status-indicator.disabled {
+        background: #f1f5f9;
+        color: var(--theme-text-muted);
+    }
+
+    /* Text Colors Override for Theme */
+    .text-primary {
+        color: var(--theme-primary) !important;
+    }
+
+    .text-success {
+        color: var(--success-color) !important;
+    }
+
+    .text-warning {
+        color: var(--warning-color) !important;
+    }
+
+    .text-danger {
+        color: var(--danger-color) !important;
+    }
+
+    .text-info {
+        color: var(--info-color) !important;
+    }
+
+    .text-emerald-600 {
+        color: var(--theme-primary) !important;
+    }
+
+    .text-emerald-700 {
+        color: var(--theme-primary-dark) !important;
+    }
+
+    .bg-emerald-600 {
+        background-color: var(--theme-primary) !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .campaign-header {
+            padding: 2rem 1.5rem;
+        }
+
+        .campaign-header h1 {
+            font-size: 1.75rem;
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+        }
+
+        .quick-actions {
+            bottom: 1rem;
+            right: 1rem;
+        }
+
+        .quick-action-btn {
+            width: 48px;
+            height: 48px;
+        }
+
+        .info-card-body {
+            padding: 1.5rem;
+        }
+    }
+
+    /* Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card,
+    .info-card {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .stat-card:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .stat-card:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .stat-card:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .stat-card:nth-child(4) {
+        animation-delay: 0.4s;
+    }
 </style>
 {% endblock %}
 
@@ -582,13 +631,13 @@ body {
         {% elif campaign.status == 'completed' %}bg-info
         {% else %}bg-secondary{% endif %}">
             {% if campaign.status == 'active' %}
-                <i class="fas fa-play me-2"></i>Active
+            <i class="fas fa-play me-2"></i>Active
             {% elif campaign.status == 'paused' %}
-                <i class="fas fa-pause me-2"></i>Paused
+            <i class="fas fa-pause me-2"></i>Paused
             {% elif campaign.status == 'completed' %}
-                <i class="fas fa-check me-2"></i>Completed
+            <i class="fas fa-check me-2"></i>Completed
             {% else %}
-                <i class="fas fa-stop me-2"></i>Inactive
+            <i class="fas fa-stop me-2"></i>Inactive
             {% endif %}
         </span>
         <div class="row align-items-center">
@@ -602,11 +651,17 @@ body {
                     <span class="badge bg-light text-dark">
                         <i class="fas fa-phone me-1"></i>{{ campaign.get_dial_method_display }}
                     </span>
+                    {% if campaign.ai_enabled %}
+                    <span class="badge bg-light text-primary border-primary fw-bold">
+                        <i class="fas fa-robot me-1"></i>AI Agent Enabled
+                    </span>
+                    {% endif %}
                     <span class="badge bg-light text-dark">
                         <i class="fas fa-calendar me-1"></i>Created {{ campaign.created_at|date:"M d, Y" }}
                     </span>
                     <span class="badge bg-light text-dark">
-                        <i class="fas fa-user me-1"></i>{{ campaign.created_by.get_full_name|default:campaign.created_by.username }}
+                        <i class="fas fa-user me-1"></i>{{
+                        campaign.created_by.get_full_name|default:campaign.created_by.username }}
                     </span>
                 </div>
             </div>
@@ -638,16 +693,26 @@ body {
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'campaigns:update' campaign.pk %}">
-                                <i class="fas fa-edit me-2 text-primary"></i>Edit Campaign</a></li>
+                                    <i class="fas fa-edit me-2 text-primary"></i>Edit Campaign</a></li>
                             <li><a class="dropdown-item" href="{% url 'campaigns:agents' campaign.pk %}">
-                                <i class="fas fa-users me-2 text-success"></i>Manage Agents</a></li>
+                                    <i class="fas fa-users me-2 text-success"></i>Manage Agents</a></li>
                             <li><a class="dropdown-item" href="{% url 'campaigns:scripts' campaign.pk %}">
-                                <i class="fas fa-file-alt me-2 text-info"></i>Manage Scripts</a></li>
+                                    <i class="fas fa-file-alt me-2 text-info"></i>Manage Scripts</a></li>
                             <li><a class="dropdown-item" href="{% url 'campaigns:dispositions' campaign.pk %}">
-                                <i class="fas fa-tags me-2 text-warning"></i>Manage Dispositions</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                                    <i class="fas fa-tags me-2 text-warning"></i>Manage Dispositions</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            {% if campaign.ai_enabled %}
+                            <li><a class="dropdown-item fw-bold text-primary"
+                                    href="{% url 'campaigns:ai_agent_config' campaign.pk %}">
+                                    <i class="fas fa-robot me-2 text-primary"></i>Configure AI Agent</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            {% endif %}
                             <li><a class="dropdown-item" href="#" onclick="cloneCampaign({{ campaign.pk }})">
-                                <i class="fas fa-copy me-2 text-secondary"></i>Clone Campaign</a></li>
+                                    <i class="fas fa-copy me-2 text-secondary"></i>Clone Campaign</a></li>
                         </ul>
                     </div>
                 </div>
@@ -674,7 +739,8 @@ body {
                                 <div class="fw-bold text-dark fs-6">
                                     {{ campaign.get_dial_speed_display|default:campaign.dial_speed }}
                                     {% if campaign.dial_speed == 'custom' %}
-                                    <span class="badge bg-primary ms-1">{{ campaign.custom_dials_per_agent }} per agent</span>
+                                    <span class="badge bg-primary ms-1">{{ campaign.custom_dials_per_agent }} per
+                                        agent</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -688,7 +754,8 @@ body {
                         <div class="col-md-3">
                             <div class="config-item">
                                 <div class="small text-uppercase fw-semibold text-muted mb-2">Fallback Trunk</div>
-                                <div class="fw-bold text-dark fs-6">{{ campaign.outbound_carrier.name|default:'-' }}</div>
+                                <div class="fw-bold text-dark fs-6">{{ campaign.outbound_carrier.name|default:'-' }}
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -696,7 +763,7 @@ body {
                                 <div class="small text-uppercase fw-semibold text-muted mb-2">Outbound Trunks</div>
                                 <div class="fw-bold text-dark fs-6">
                                     {% if trunks %}
-                                        {% for t in trunks %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    {% for t in trunks %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                                     {% else %}-{% endif %}
                                 </div>
                             </div>
@@ -814,7 +881,8 @@ body {
                             {% endif %}
                             <div class="config-item">
                                 <strong>Daily Hours:</strong>
-                                <span class="text-muted ms-2">{{ campaign.daily_start_time }} - {{ campaign.daily_end_time }}</span>
+                                <span class="text-muted ms-2">{{ campaign.daily_start_time }} - {{
+                                    campaign.daily_end_time }}</span>
                             </div>
                             <div class="config-item">
                                 <strong>Timezone:</strong>
@@ -852,8 +920,10 @@ body {
                             <div class="config-item">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span><strong>Call Recording:</strong></span>
-                                    <span class="status-indicator {% if campaign.enable_recording %}enabled{% else %}disabled{% endif %}">
-                                        <i class="fas fa-{% if campaign.enable_recording %}check-circle{% else %}times-circle{% endif %}"></i>
+                                    <span
+                                        class="status-indicator {% if campaign.enable_recording %}enabled{% else %}disabled{% endif %}">
+                                        <i
+                                            class="fas fa-{% if campaign.enable_recording %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.enable_recording|yesno:"Enabled,Disabled" }}
                                     </span>
                                 </div>
@@ -861,8 +931,10 @@ body {
                             <div class="config-item">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span><strong>Agent Monitoring:</strong></span>
-                                    <span class="status-indicator {% if campaign.monitor_agents %}enabled{% else %}disabled{% endif %}">
-                                        <i class="fas fa-{% if campaign.monitor_agents %}check-circle{% else %}times-circle{% endif %}"></i>
+                                    <span
+                                        class="status-indicator {% if campaign.monitor_agents %}enabled{% else %}disabled{% endif %}">
+                                        <i
+                                            class="fas fa-{% if campaign.monitor_agents %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.monitor_agents|yesno:"Enabled,Disabled" }}
                                     </span>
                                 </div>
@@ -875,8 +947,10 @@ body {
                             <div class="config-item">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span><strong>Internal DNC:</strong></span>
-                                    <span class="status-indicator {% if campaign.use_internal_dnc %}enabled{% else %}disabled{% endif %}">
-                                        <i class="fas fa-{% if campaign.use_internal_dnc %}check-circle{% else %}times-circle{% endif %}"></i>
+                                    <span
+                                        class="status-indicator {% if campaign.use_internal_dnc %}enabled{% else %}disabled{% endif %}">
+                                        <i
+                                            class="fas fa-{% if campaign.use_internal_dnc %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.use_internal_dnc|yesno:"Enabled,Disabled" }}
                                     </span>
                                 </div>
@@ -884,8 +958,10 @@ body {
                             <div class="config-item">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <span><strong>AMD Detection:</strong></span>
-                                    <span class="status-indicator {% if campaign.amd_enabled %}enabled{% else %}disabled{% endif %}">
-                                        <i class="fas fa-{% if campaign.amd_enabled %}check-circle{% else %}times-circle{% endif %}"></i>
+                                    <span
+                                        class="status-indicator {% if campaign.amd_enabled %}enabled{% else %}disabled{% endif %}">
+                                        <i
+                                            class="fas fa-{% if campaign.amd_enabled %}check-circle{% else %}times-circle{% endif %}"></i>
                                         {{ campaign.amd_enabled|yesno:"Enabled,Disabled" }}
                                     </span>
                                 </div>
@@ -917,11 +993,14 @@ body {
                                         {{ agent.user.first_name.0|default:agent.user.username.0|upper }}
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="mb-1 fw-bold text-dark">{{ agent.user.get_full_name|default:agent.user.username }}</h6>
+                                        <h6 class="mb-1 fw-bold text-dark">{{
+                                            agent.user.get_full_name|default:agent.user.username }}</h6>
                                         <div class="small text-muted">
-                                            <i class="fas fa-phone me-1 text-primary"></i>{{ agent.calls_made|default:0 }} calls
+                                            <i class="fas fa-phone me-1 text-primary"></i>{{ agent.calls_made|default:0
+                                            }} calls
                                             {% if agent.sales_made %}
-                                            <i class="fas fa-trophy ms-2 me-1 text-warning"></i>{{ agent.sales_made }} sales
+                                            <i class="fas fa-trophy ms-2 me-1 text-warning"></i>{{ agent.sales_made }}
+                                            sales
                                             {% endif %}
                                         </div>
                                     </div>
@@ -987,7 +1066,8 @@ body {
                             <circle class="progress-ring-progress" id="progressCircle"></circle>
                         </svg>
                         <div class="position-absolute top-50 start-50 translate-middle">
-                            <div class="display-6 fw-bold text-primary mb-0" id="progressPercent">{{ campaign.completion_percentage|default:0 }}%</div>
+                            <div class="display-6 fw-bold text-primary mb-0" id="progressPercent">{{
+                                campaign.completion_percentage|default:0 }}%</div>
                             <small class="text-muted fw-semibold">Complete</small>
                         </div>
                     </div>
@@ -1048,7 +1128,8 @@ body {
                     <div class="row g-3">
                         <div class="col-6">
                             <div class="quick-stat-box text-center">
-                                <div class="h5 mb-1 text-primary fw-bold">{{ campaign.average_call_duration|default:"0:00" }}</div>
+                                <div class="h5 mb-1 text-primary fw-bold">{{
+                                    campaign.average_call_duration|default:"0:00" }}</div>
                                 <small class="text-muted fw-semibold">Avg Duration</small>
                             </div>
                         </div>
@@ -1078,14 +1159,17 @@ body {
 
     <!-- Quick Actions Floating Menu -->
     <div class="quick-actions">
-        <button class="btn btn-primary-custom quick-action-btn" onclick="refreshStats()" title="Refresh Stats" data-bs-toggle="tooltip">
+        <button class="btn btn-primary-custom quick-action-btn" onclick="refreshStats()" title="Refresh Stats"
+            data-bs-toggle="tooltip">
             <i class="fas fa-sync-alt"></i>
         </button>
         {% if user.is_staff or campaign.created_by == user %}
-        <button class="btn btn-success quick-action-btn" onclick="exportData()" title="Export Data" data-bs-toggle="tooltip">
+        <button class="btn btn-success quick-action-btn" onclick="exportData()" title="Export Data"
+            data-bs-toggle="tooltip">
             <i class="fas fa-download"></i>
         </button>
-        <button class="btn btn-warning text-white quick-action-btn" onclick="generateReport()" title="Generate Report" data-bs-toggle="tooltip">
+        <button class="btn btn-warning text-white quick-action-btn" onclick="generateReport()" title="Generate Report"
+            data-bs-toggle="tooltip">
             <i class="fas fa-chart-bar"></i>
         </button>
         {% endif %}
@@ -1096,230 +1180,230 @@ body {
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Campaign control functions
-function controlCampaign(campaignId, action) {
-    const actionMessages = {
-        'start': 'Starting campaign...',
-        'pause': 'Pausing campaign...',
-        'stop': 'Stopping campaign...',
-        'resume': 'Resuming campaign...'
-    };
-    if (confirm(`Are you sure you want to ${action} this campaign?`)) {
-        const buttons = document.querySelectorAll('button[onclick*="controlCampaign"]');
-        buttons.forEach(btn => {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + actionMessages[action];
-        });
-        fetch(`/campaigns/${campaignId}/control/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify({ action: action })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (typeof toastr !== 'undefined') {
-                    toastr.success(data.message);
-                } else {
-                    alert(data.message);
-                }
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                if (typeof toastr !== 'undefined') {
-                    toastr.error(data.error || 'Operation failed');
-                } else {
-                    alert(data.error || 'Operation failed');
-                }
-                buttons.forEach(btn => {
-                    btn.disabled = false;
-                    btn.innerHTML = btn.getAttribute('data-original-html');
+    // Campaign control functions
+    function controlCampaign(campaignId, action) {
+        const actionMessages = {
+            'start': 'Starting campaign...',
+            'pause': 'Pausing campaign...',
+            'stop': 'Stopping campaign...',
+            'resume': 'Resuming campaign...'
+        };
+        if (confirm(`Are you sure you want to ${action} this campaign?`)) {
+            const buttons = document.querySelectorAll('button[onclick*="controlCampaign"]');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + actionMessages[action];
+            });
+            fetch(`/campaigns/${campaignId}/control/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ action: action })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success(data.message);
+                        } else {
+                            alert(data.message);
+                        }
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(data.error || 'Operation failed');
+                        } else {
+                            alert(data.error || 'Operation failed');
+                        }
+                        buttons.forEach(btn => {
+                            btn.disabled = false;
+                            btn.innerHTML = btn.getAttribute('data-original-html');
+                        });
+                    }
+                })
+                .catch(error => {
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error('Network error occurred');
+                    } else {
+                        alert('Network error occurred');
+                    }
+                    console.error('Error:', error);
                 });
-            }
-        })
-        .catch(error => {
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Network error occurred');
-            } else {
-                alert('Network error occurred');
-            }
-            console.error('Error:', error);
-        });
-    }
-}
-
-function cloneCampaign(campaignId) {
-    if (confirm('This will create a copy of this campaign. Continue?')) {
-        fetch(`/campaigns/${campaignId}/clone/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (typeof toastr !== 'undefined') {
-                    toastr.success('Campaign cloned successfully!');
-                } else {
-                    alert('Campaign cloned successfully!');
-                }
-                setTimeout(() => window.location.href = data.redirect_url, 1000);
-            } else {
-                if (typeof toastr !== 'undefined') {
-                    toastr.error(data.error || 'Failed to clone campaign');
-                } else {
-                    alert(data.error || 'Failed to clone campaign');
-                }
-            }
-        });
-    }
-}
-
-function refreshStats() {
-    fetch(`/campaigns/{{ campaign.pk }}/api/stats/`)
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('totalLeads').textContent = data.total_leads || 0;
-        document.getElementById('callsMade').textContent = data.calls_made || 0;
-        document.getElementById('callsAnswered').textContent = data.calls_answered || 0;
-        document.getElementById('salesMade').textContent = data.sales_made || 0;
-        updateProgressCircle(data.completion_percentage || 0);
-        if (typeof toastr !== 'undefined') {
-            toastr.success('Stats refreshed!');
         }
-    })
-    .catch(error => {
-        if (typeof toastr !== 'undefined') {
-            toastr.error('Failed to refresh stats');
-        }
-        console.error('Error:', error);
-    });
-}
+    }
 
-function exportData() {
-    window.open(`/campaigns/{{ campaign.pk }}/export/`, '_blank');
-}
-
-function generateReport() {
-    window.open(`/campaigns/{{ campaign.pk }}/reports/`, '_blank');
-}
-
-function updateProgressCircle(percentage) {
-    const circle = document.getElementById('progressCircle');
-    const circumference = 2 * Math.PI * 60;
-    const offset = circumference - (percentage / 100) * circumference;
-    circle.style.strokeDashoffset = offset;
-    document.getElementById('progressPercent').textContent = `${percentage}%`;
-}
-
-// Initialize performance chart
-function initPerformanceChart() {
-    const ctx = document.getElementById('performanceChart').getContext('2d');
-    const chartData = {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [
-            {
-                label: 'Calls Made',
-                data: [45, 52, 38, 65, 42, 30, 25],
-                borderColor: '#059669', // Emerald
-                backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                tension: 0.4,
-                fill: true,
-                borderWidth: 3
-            },
-            {
-                label: 'Calls Answered',
-                data: [32, 38, 28, 45, 32, 22, 18],
-                borderColor: '#10b981', // Emerald Light
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                tension: 0.4,
-                fill: true,
-                borderWidth: 3
-            },
-            {
-                label: 'Sales Made',
-                data: [8, 12, 7, 15, 10, 6, 4],
-                borderColor: '#f59e0b', // Amber
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                tension: 0.4,
-                fill: true,
-                borderWidth: 3
-            }
-        ]
-    };
-    new Chart(ctx, {
-        type: 'line',
-        data: chartData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 15,
-                        font: {
-                            size: 12,
-                            weight: '600'
+    function cloneCampaign(campaignId) {
+        if (confirm('This will create a copy of this campaign. Continue?')) {
+            fetch(`/campaigns/${campaignId}/clone/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success('Campaign cloned successfully!');
+                        } else {
+                            alert('Campaign cloned successfully!');
                         }
+                        setTimeout(() => window.location.href = data.redirect_url, 1000);
+                    } else {
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(data.error || 'Failed to clone campaign');
+                        } else {
+                            alert(data.error || 'Failed to clone campaign');
+                        }
+                    }
+                });
+        }
+    }
+
+    function refreshStats() {
+        fetch(`/campaigns/{{ campaign.pk }}/api/stats/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalLeads').textContent = data.total_leads || 0;
+                document.getElementById('callsMade').textContent = data.calls_made || 0;
+                document.getElementById('callsAnswered').textContent = data.calls_answered || 0;
+                document.getElementById('salesMade').textContent = data.sales_made || 0;
+                updateProgressCircle(data.completion_percentage || 0);
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Stats refreshed!');
+                }
+            })
+            .catch(error => {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Failed to refresh stats');
+                }
+                console.error('Error:', error);
+            });
+    }
+
+    function exportData() {
+        window.open(`/campaigns/{{ campaign.pk }}/export/`, '_blank');
+    }
+
+    function generateReport() {
+        window.open(`/campaigns/{{ campaign.pk }}/reports/`, '_blank');
+    }
+
+    function updateProgressCircle(percentage) {
+        const circle = document.getElementById('progressCircle');
+        const circumference = 2 * Math.PI * 60;
+        const offset = circumference - (percentage / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+        document.getElementById('progressPercent').textContent = `${percentage}%`;
+    }
+
+    // Initialize performance chart
+    function initPerformanceChart() {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const chartData = {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [
+                {
+                    label: 'Calls Made',
+                    data: [45, 52, 38, 65, 42, 30, 25],
+                    borderColor: '#059669', // Emerald
+                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Calls Answered',
+                    data: [32, 38, 28, 45, 32, 22, 18],
+                    borderColor: '#10b981', // Emerald Light
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Sales Made',
+                    data: [8, 12, 7, 15, 10, 6, 4],
+                    borderColor: '#f59e0b', // Amber
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                }
+            ]
+        };
+        new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12,
+                                weight: '600'
+                            }
+                        }
+                    },
+                    title: {
+                        display: false
                     }
                 },
-                title: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.05)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        font: {
-                            size: 11
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
                         }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false,
-                        drawBorder: false
                     },
-                    ticks: {
-                        font: {
-                            size: 11
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
                         }
                     }
                 }
             }
-        }
-    });
-}
-
-// Auto-refresh functionality
-let autoRefreshInterval;
-function startAutoRefresh() {
-    autoRefreshInterval = setInterval(refreshStats, 30000);
-}
-
-function stopAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
+        });
     }
-}
 
-// Initialize everything when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('button[onclick*="controlCampaign"]').forEach(btn => {
-        btn.setAttribute('data-original-html', btn.innerHTML);
-    });
-    initPerformanceChart();
-    updateProgressCircle({{ campaign.completion_percentage|default:0 }});
+    // Auto-refresh functionality
+    let autoRefreshInterval;
+    function startAutoRefresh() {
+        autoRefreshInterval = setInterval(refreshStats, 30000);
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    }
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('button[onclick*="controlCampaign"]').forEach(btn => {
+            btn.setAttribute('data-original-html', btn.innerHTML);
+        });
+        initPerformanceChart();
+        updateProgressCircle({{ campaign.completion_percentage|default:0 }});
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -1331,31 +1415,31 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('beforeunload', stopAutoRefresh);
 });
 
-// Real-time updates via WebSocket (if available)
-{% if campaign.status == 'active' %}
-function initWebSocket() {
-    const wsUrl = `ws://${window.location.host}/ws/campaign/{{ campaign.pk }}/`;
-    const socket = new WebSocket(wsUrl);
-    socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'stats_update') {
-            document.getElementById('totalLeads').textContent = data.stats.total_leads || 0;
-            document.getElementById('callsMade').textContent = data.stats.calls_made || 0;
-            document.getElementById('callsAnswered').textContent = data.stats.calls_answered || 0;
-            document.getElementById('salesMade').textContent = data.stats.sales_made || 0;
-            updateProgressCircle(data.stats.completion_percentage || 0);
-        }
-    };
-    socket.onclose = function(event) {
-        console.log('WebSocket connection closed');
-        setTimeout(initWebSocket, 5000);
-    };
-    socket.onerror = function(error) {
-        console.error('WebSocket error:', error);
-    };
-}
-initWebSocket();
-{% endif %}
+    // Real-time updates via WebSocket (if available)
+    {% if campaign.status == 'active' %}
+    function initWebSocket() {
+        const wsUrl = `ws://${window.location.host}/ws/campaign/{{ campaign.pk }}/`;
+        const socket = new WebSocket(wsUrl);
+        socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'stats_update') {
+                document.getElementById('totalLeads').textContent = data.stats.total_leads || 0;
+                document.getElementById('callsMade').textContent = data.stats.calls_made || 0;
+                document.getElementById('callsAnswered').textContent = data.stats.calls_answered || 0;
+                document.getElementById('salesMade').textContent = data.stats.sales_made || 0;
+                updateProgressCircle(data.stats.completion_percentage || 0);
+            }
+        };
+        socket.onclose = function (event) {
+            console.log('WebSocket connection closed');
+            setTimeout(initWebSocket, 5000);
+        };
+        socket.onerror = function (error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+    initWebSocket();
+    {% endif %}
 </script>
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 {% endblock %}
